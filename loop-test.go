@@ -57,10 +57,17 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 						Payload:  "volume_48!",
 						Qos:      2,
 						Retained: false,
+						Wait:     2 * time.Second,
+					},
+					{
+						Topic:    "rotel/command/send",
+						Payload:  "opt1!",
+						Qos:      2,
+						Retained: false,
 						Wait:     3 * time.Second,
 					},
 				}
-				for i := 1; i < 20; i++ {
+				for i := int64(1); i < 20; i++ {
 					p := MQTTPublish{
 						Topic:    "samsungremote/key/send",
 						Payload:  "KEY_VOLDOWN",
@@ -69,6 +76,9 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 						Wait:     time.Duration(i) * time.Second,
 					}
 					returnList = append(returnList, p)
+				}
+				for _, x := range returnList {
+					fmt.Printf("returnlist %s %f\n", x.Topic, float64(x.Wait)/float64(time.Second))
 				}
 				return returnList
 			} else {
