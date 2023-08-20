@@ -107,8 +107,10 @@ func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 				if !h.dryRun {
 					go func() {
 						if r.Wait != 0 {
+							fmt.Printf("Sleeping")
 							time.Sleep(r.Wait)
 						}
+						fmt.Printf("Publishing %s sleeping %f seconds \n", r.Topic, float64(r.Wait)/float64(time.Second))
 						h.client.Publish(r.Topic, r.Qos, r.Retained, r.Payload)
 					}()
 				}
