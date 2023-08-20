@@ -44,13 +44,19 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 						Qos:      2,
 						Retained: false,
 					},
+					{
+						Topic:    "rotel/command/send",
+						Payload:  "power_on!",
+						Qos:      2,
+						Retained: false,
+					},
+					{
+						Topic:    "rotel/command/send",
+						Payload:  "volume_48!",
+						Qos:      2,
+						Retained: false,
+					},
 				}
-				returnList = append(returnList, MQTTPublish{
-					Topic:    "rotel/command/send",
-					Payload:  "power_on!",
-					Qos:      2,
-					Retained: false,
-				})
 				for i := 0; i < 10; i++ {
 					returnList = append(returnList, MQTTPublish{
 						Topic:    "samsungremote/key/send",
