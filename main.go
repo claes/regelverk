@@ -89,6 +89,8 @@ func (h *mqttMessageHandler) handle(_ mqtt.Client, m mqtt.Message) {
 	h.handleEvent(ev)
 }
 
+var count int64 = 0
+
 func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 	for _, l := range h.loops {
 		l := l // copy
@@ -103,14 +105,16 @@ func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 				return
 			}
 			for _, r := range results {
+				count = count + 1
 				//log.Printf("publishing: %+v", r)
 				if !h.dryRun {
 					go func() {
 						if r.Wait != 0 {
-							fmt.Printf("Sleeping")
+							fmt.Printf("Sleeping %f seconds \n", float64(r.Wait)/float64(time.Second))
 							time.Sleep(r.Wait)
+							fmt.Printf("Finished %f seconds \n", float64(r.Wait)/float64(time.Second))
 						}
-						fmt.Printf("Publishing %s sleeping %f seconds \n", r.Topic, float64(r.Wait)/float64(time.Second))
+						fmt.Printf("Publishing %d topic %s after sleeping %f seconds \n", count, r.Topic, float64(r.Wait)/float64(time.Second))
 						h.client.Publish(r.Topic, r.Qos, r.Retained, r.Payload)
 					}()
 				}
