@@ -37,7 +37,7 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 		fmt.Printf("regelverk/state/tvpower %t state change: %t \n", tvPower, tvPowerStateChange)
 		if tvPowerStateChange {
 			if tvPower {
-				return []MQTTPublish{
+				returnList := []MQTTPublish{
 					{
 						Topic:    "zigbee2mqtt/ikea_uttag/set",
 						Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
@@ -45,6 +45,21 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 						Retained: false,
 					},
 				}
+				returnList = append(returnList, MQTTPublish{
+					Topic:    "rotel/command/send",
+					Payload:  "power_on!",
+					Qos:      2,
+					Retained: false,
+				})
+				for i := 0; i < 10; i++ {
+					returnList = append(returnList, MQTTPublish{
+						Topic:    "samsungremote/key/send",
+						Payload:  "KEY_VOLDOWN",
+						Qos:      2,
+						Retained: false,
+					})
+				}
+				return returnList
 			} else {
 				return []MQTTPublish{
 					{

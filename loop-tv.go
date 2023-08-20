@@ -17,7 +17,7 @@ func (l *tvLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	case "zigbee2mqtt/tv":
 		m := parseJSONPayload(ev)
 		power := m["power"].(float64)
-		if power > 70.0 {
+		if power > 5.0 {
 			//			l.tvLastActive = time.Now()
 			l.tvOn = true
 			return []MQTTPublish{
