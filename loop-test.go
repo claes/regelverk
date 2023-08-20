@@ -43,12 +43,14 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 						Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
 						Qos:      2,
 						Retained: false,
+						Wait:     0 * time.Second,
 					},
 					{
 						Topic:    "rotel/command/send",
 						Payload:  "power_on!",
 						Qos:      2,
 						Retained: false,
+						Wait:     0 * time.Second,
 					},
 					{
 						Topic:    "rotel/command/send",
@@ -75,6 +77,7 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 						Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
 						Qos:      2,
 						Retained: false,
+						Wait:     0,
 					},
 				}
 			}
