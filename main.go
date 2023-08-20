@@ -104,19 +104,19 @@ func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 			if len(results) == 0 {
 				return
 			}
-			for _, r := range results {
+			for _, result := range results {
 				count = count + 1
 				//log.Printf("publishing: %+v", r)
 				if !h.dryRun {
-					go func() {
-						if r.Wait != 0 {
-							fmt.Printf("Sleeping %f seconds \n", float64(r.Wait)/float64(time.Second))
-							time.Sleep(r.Wait)
-							fmt.Printf("Finished %f seconds \n", float64(r.Wait)/float64(time.Second))
+					go func(resultToPublish MQTTPublish) {
+						if resultToPublish.Wait != 0 {
+							fmt.Printf("Sleeping %f seconds \n", float64(resultToPublish.Wait)/float64(time.Second))
+							time.Sleep(result.Wait)
+							fmt.Printf("Finished %f seconds \n", float64(resultToPublish.Wait)/float64(time.Second))
 						}
-						fmt.Printf("Publishing %d topic %s after sleeping %f seconds \n", count, r.Topic, float64(r.Wait)/float64(time.Second))
-						h.client.Publish(r.Topic, r.Qos, r.Retained, r.Payload)
-					}()
+						fmt.Printf("Publishing %d topic %s after sleeping %f seconds \n", count, resultToPublish.Topic, float64(resultToPublish.Wait)/float64(time.Second))
+						h.client.Publish(resultToPublish.Topic, resultToPublish.Qos, resultToPublish.Retained, resultToPublish.Payload)
+					}(result)
 				}
 			}
 		}()
