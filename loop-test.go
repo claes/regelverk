@@ -61,13 +61,14 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					},
 				}
 				for i := 1; i < 20; i++ {
-					returnList = append(returnList, MQTTPublish{
+					p := MQTTPublish{
 						Topic:    "samsungremote/key/send",
 						Payload:  "KEY_VOLDOWN",
 						Qos:      2,
 						Retained: false,
 						Wait:     time.Duration(i) * time.Second,
-					})
+					}
+					returnList = append(returnList, p)
 				}
 				return returnList
 			} else {
