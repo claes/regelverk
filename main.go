@@ -4,13 +4,18 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
+	"os/signal"
 	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
+
+var debug *bool
+var dryRun *bool
+
+// Mostly reused from https://github.com/stapelberg/regelwerk
 
 type MQTTEvent struct {
 	Timestamp time.Time
@@ -81,7 +86,6 @@ func (h *mqttMessageHandler) handle(_ mqtt.Client, m mqtt.Message) {
 		Payload:   m.Payload(),
 	}
 	h.handleEvent(ev)
-
 }
 
 func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
@@ -107,16 +111,10 @@ func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 	}
 }
 
-func regelverk() error {
-	dryRun := flag.Bool("dry_run",
-		false,
-		"dry run (do not publish)")
-	flag.Parse()
+func regelverk(broker string) error {
 
 	// Enable file names in logs:
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
-	mux := http.NewServeMux()
 
 	host, err := os.Hostname()
 	if err != nil {
@@ -129,7 +127,7 @@ func regelverk() error {
 	}
 
 	opts := mqtt.NewClientOptions().
-		AddBroker("tcp://192.168.88.174:1883").
+		AddBroker(broker).
 		SetClientID("regelverk-" + host).
 		SetOnConnectHandler(func(client mqtt.Client) {
 			// TODO: add MQTTTopics() []string to controlLoop interface and
@@ -137,28 +135,25 @@ func regelverk() error {
 			const topic = "#"
 			token := client.Subscribe(
 				topic,
-				0, /* minimal QoS level zero: at most once, best-effort delivery */
+				1, /* minimal QoS level zero: at most once, best-effort delivery */
 				mqttMessageHandler.handle)
 			if token.Wait() && token.Error() != nil {
 				log.Fatal(token.Error())
 			}
-			log.Printf("subscribed to %q", topic)
+			fmt.Printf("Subscribed to %q\n", topic)
 		}).
 		SetConnectRetry(true)
-
-	go func() {
-		if err := http.ListenAndServe(":37731", mux); err != nil {
-			log.Fatal(err)
-		}
-	}()
 
 	client := mqtt.NewClient(opts)
 	mqttMessageHandler.client = client
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		// This can indeed fail, e.g. if the broker DNS is not resolvable.
 		return fmt.Errorf("MQTT connection failed: %v", token.Error())
+	} else if *debug {
+		fmt.Printf("Connected to MQTT broker: %s\n", broker)
 	}
-	log.Printf("MQTT subscription established")
+
+	fmt.Printf("MQTT subscription established\n")
 	for tick := range time.Tick(1 * time.Second) {
 		ev := MQTTEvent{
 			Timestamp: tick,
@@ -170,8 +165,37 @@ func regelverk() error {
 	select {} // loop forever
 }
 
+func printHelp() {
+	fmt.Println("Usage: regelverk [OPTIONS]")
+	fmt.Println("Options:")
+	flag.PrintDefaults()
+}
+
 func main() {
-	if err := regelverk(); err != nil {
-		log.Fatal(err)
+
+	mqttBroker := flag.String("broker", "tcp://localhost:1883", "MQTT broker URL")
+	help := flag.Bool("help", false, "Print help")
+	debug = flag.Bool("debug", false, "Debug logging")
+	dryRun = flag.Bool("dry_run", false, "Dry run (do not publish)")
+	flag.Parse()
+
+	if *help {
+		printHelp()
+		os.Exit(0)
 	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	fmt.Printf("Started\n")
+
+	go func() {
+		if err := regelverk(*mqttBroker); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	<-c
+	fmt.Printf("Shut down\n")
+	os.Exit(0)
+
 }

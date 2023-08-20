@@ -5,5 +5,10 @@ package main
 
 var loops = []controlLoop{
 	&tvLoop{},
+	&testLoop{},
 	//&rotelLoop{}
+}
+
+type regelverkState struct {
+	TVPowerOn bool
 }
