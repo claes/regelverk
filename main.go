@@ -28,6 +28,7 @@ type MQTTPublish struct {
 	Qos      byte
 	Retained bool
 	Payload  interface{}
+	Wait     time.Duration
 }
 
 type controlLoop interface {
@@ -104,7 +105,12 @@ func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 			for _, r := range results {
 				//log.Printf("publishing: %+v", r)
 				if !h.dryRun {
-					h.client.Publish(r.Topic, r.Qos, r.Retained, r.Payload)
+					go func() {
+						if r.Wait != 0 {
+							time.Sleep(r.Wait)
+						}
+						h.client.Publish(r.Topic, r.Qos, r.Retained, r.Payload)
+					}()
 				}
 			}
 		}()
