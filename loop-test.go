@@ -70,7 +70,7 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 				// Need to wait here since a newly started TV is not receptive first 20 or so seconds
 				for i := int64(25); i < 20; i++ {
 					returnList = append(returnList, MQTTPublish{
-						Topic:    "samsungremote/key/send",
+						Topic:    "samsungremote/key/reconnectsend",
 						Payload:  "KEY_VOLDOWN",
 						Qos:      2,
 						Retained: false,
