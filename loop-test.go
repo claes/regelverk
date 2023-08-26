@@ -74,7 +74,7 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 						Payload:  "KEY_VOLDOWN",
 						Qos:      2,
 						Retained: false,
-						Wait:     time.Duration(i) * time.Second,
+						Wait:     time.Duration(i) * time.Second / 2,
 					}
 					returnList = append(returnList, p)
 				}
@@ -97,6 +97,16 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	}
 	return nil
 }
+
+// TODO automation notes
+//
+// HDMI -> opt 1
+// IEC958 ->  opt 2
+// change of these to switch source
+//
+// snapcast / snapserver / snapclients
+
+// mpd > pulseaudio profile > opt2
 
 func (l *testLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	return l.turnOnAmpWhenTVOn(ev)
