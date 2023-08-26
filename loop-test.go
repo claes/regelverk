@@ -91,6 +91,32 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 				}
 			}
 		}
+	case "regelverk/state/mpdplay":
+		fmt.Println("regelverk/state/mpdplay")
+		mpdPlay, err := strconv.ParseBool(string(ev.Payload.([]byte)))
+		if err != nil {
+			fmt.Println("Error:", err)
+			return nil
+		}
+		if mpdPlay {
+			returnList := []MQTTPublish{
+				{
+					Topic:    "rotel/command/send",
+					Payload:  "power_on!",
+					Qos:      2,
+					Retained: false,
+					Wait:     0 * time.Second,
+				},
+				{
+					Topic:    "rotel/command/send",
+					Payload:  "opt2!",
+					Qos:      2,
+					Retained: false,
+					Wait:     0 * time.Second,
+				},
+			}
+			return returnList
+		}
 
 	default:
 		return nil

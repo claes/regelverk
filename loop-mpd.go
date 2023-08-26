@@ -37,5 +37,5 @@ func (l *mpdLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 			}
 		}
 	}
-	return nil // did not influence state
+	return nil
 }
