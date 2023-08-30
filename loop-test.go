@@ -66,6 +66,13 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 						Retained: false,
 						Wait:     3 * time.Second,
 					},
+					{
+						Topic:    "pulseaudio/cardprofile/0/set",
+						Payload:  "output:hdmi-stereo",
+						Qos:      2,
+						Retained: false,
+						Wait:     3 * time.Second,
+					},
 				}
 				// Need to wait here since a newly started TV is not receptive first 20 or so seconds
 				for i := int64(15); i < 40; i++ {
@@ -110,6 +117,13 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 				{
 					Topic:    "rotel/command/send",
 					Payload:  "opt2!",
+					Qos:      2,
+					Retained: false,
+					Wait:     0 * time.Second,
+				},
+				{
+					Topic:    "pulseaudio/cardprofile/0/set",
+					Payload:  "output:iec958-stereo+input:analog-stereo",
 					Qos:      2,
 					Retained: false,
 					Wait:     0 * time.Second,
