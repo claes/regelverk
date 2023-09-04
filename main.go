@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -34,44 +35,18 @@ type MQTTPublish struct {
 type controlLoop interface {
 	sync.Locker
 
-	StatusString() string
+	Init()
 
 	ProcessEvent(MQTTEvent) []MQTTPublish
 }
 
 type statusLoop struct {
 	mu sync.Mutex
-
-	statusMu   sync.Mutex
-	status     string
-	statusPrev string
 }
 
-func (l *statusLoop) Lock()   { l.mu.Lock() }
+func (l *statusLoop) Lock() { l.mu.Lock() }
+
 func (l *statusLoop) Unlock() { l.mu.Unlock() }
-
-func (l *statusLoop) StatusString() string {
-	l.statusMu.Lock()
-	defer l.statusMu.Unlock()
-	return l.status
-}
-
-func (l *statusLoop) statusf(format string, v ...interface{}) {
-	l.statusMu.Lock()
-	defer l.statusMu.Unlock()
-	l.status = fmt.Sprintf(format, v...)
-	if l.status != l.statusPrev {
-		log.Output(2, fmt.Sprintf("status: %s", l.status))
-		l.statusPrev = l.status
-	}
-}
-
-type invocationLog struct {
-	Time    time.Time
-	Loop    controlLoop
-	Event   MQTTEvent
-	Results []MQTTPublish
-}
 
 type mqttMessageHandler struct {
 	dryRun bool
@@ -93,14 +68,14 @@ var count int64 = 0
 
 func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 	for _, l := range h.loops {
-		l := l // copy
+		loop := l // copy
 		go func() {
 			// For reliability, we call each loop in its own goroutine (yes, one
 			// per message), so that one loop can be stuck while others still
 			// make progress.
-			l.Lock()
-			results := l.ProcessEvent(ev)
-			l.Unlock()
+			loop.Lock()
+			results := loop.ProcessEvent(ev)
+			loop.Unlock()
 			if len(results) == 0 {
 				return
 			}
@@ -132,6 +107,10 @@ func regelverk(broker string) error {
 	mqttMessageHandler := &mqttMessageHandler{
 		dryRun: *dryRun,
 		loops:  loops,
+	}
+
+	for _, l := range loops {
+		l.Init()
 	}
 
 	opts := mqtt.NewClientOptions().
@@ -170,6 +149,7 @@ func regelverk(broker string) error {
 		}
 		mqttMessageHandler.handleEvent(ev)
 	}
+
 	select {} // loop forever
 }
 
@@ -198,6 +178,15 @@ func main() {
 
 	go func() {
 		if err := regelverk(*mqttBroker); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	//inithttp()
+
+	go func() {
+		err := http.ListenAndServe(":8080", nil)
+		if err != nil {
 			log.Fatal(err)
 		}
 	}()

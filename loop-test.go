@@ -12,6 +12,8 @@ type testLoop struct {
 	tvPowerLastState       bool
 }
 
+func (l *testLoop) Init() {}
+
 func (l *testLoop) updateTvPower(tvPower bool) bool {
 	if l.tvPowerLastStateChange.Add(1 * time.Second).Before(time.Now()) {
 		stateChanged := (tvPower != l.tvPowerLastState)
@@ -151,3 +153,29 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 func (l *testLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	return l.turnOnAmpWhenTVOn(ev)
 }
+
+// https://github.com/void-spark/kodi2mqtt/
+// https://github.com/mqtt-smarthome/mqtt-smarthome/blob/master/Software.md
+
+// cec
+// kodi active source
+// tx 1f:82:40:00
+
+//chromecast active source
+// tx 4f:84:30:00:04
+// tx 4f:82:30:00
+
+// https://www.cec-o-matic.com/
+
+// tv activre source
+// 0f:82:00:00
+// 0f:80:40:00:00:00
+// tx 4f:82:00:00
+// tx 0f:80:30:00:00:00
+
+// https://github.com/chbmuc/cec
+// https://github.com/tobiash/hdmi-cec-mqtt
+// https://www.mankier.com/1/cec-ctl
+// https://forum.libreelec.tv/thread/22882-cec-client-does-not-work-on-nightly-9-8-rpi-4b/
+// https://git.linuxtv.org/v4l-utils.git
+// https://search.nixos.org/packages?channel=23.05&show=v4l-utils&from=0&size=50&sort=relevance&type=packages&query=cec-ctl

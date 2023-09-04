@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strconv"
 )
 
@@ -10,8 +9,10 @@ type mpdLoop struct {
 	hasMuted bool
 }
 
+func (l *mpdLoop) Init() {}
+
 func (l *mpdLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	fmt.Printf("Mpdloop topic %v, payload %v \n", ev.Topic, ev.Payload)
+	//fmt.Printf("Mpdloop topic %v, payload %v \n", ev.Topic, ev.Payload)
 
 	switch ev.Topic {
 	case "mpd/status":
