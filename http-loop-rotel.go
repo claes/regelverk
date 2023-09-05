@@ -39,8 +39,6 @@ func (l *rotelHttpLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 func (l *rotelHttpLoop) mainHandler(w http.ResponseWriter, r *http.Request) {
 
-	pageVariables := PageVariables{}
-
 	data, readErr := content2.ReadFile("templates/rotel.html")
 	if readErr != nil {
 		http.Error(w, "Failed to read embedded template", http.StatusInternalServerError)
@@ -53,7 +51,7 @@ func (l *rotelHttpLoop) mainHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	execErr := t.Execute(w, pageVariables)
+	execErr := t.Execute(w, nil)
 	if execErr != nil {
 		http.Error(w, "Failed to render template: "+execErr.Error(), http.StatusInternalServerError)
 		return
