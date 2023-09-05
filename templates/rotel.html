@@ -5,12 +5,21 @@
     <script src="https://unpkg.com/htmx.org@1.9.5" 
     integrity="sha384-xcuj3WpfgjlKF+FXhSQFQ0ZNr39ln+hwjN3npfM9VBnUskLolQAcN80McRIVOPuO" 
     crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>    
 </head>
 <body>
     <div>
         <label>Sources</label>
-        <button hx-get="/rotel/state" hx-trigger="click" hx-target="#rotel-state" >Get state</button>
+        <button hx-get="/rotel/state" hx-trigger="click" hx-target="#rotel-state-manual" >Get state</button>
     </div>
-    <div id="rotel-state"></div>
+    <div id="rotel-state-manual"></div>
+
+    <button hx-get="/rotel/state/init" hx-target="#ws-output" hx-swap="outerHTML">
+        Connect WS
+    </button>
+
+    <div id="ws-output">
+
+    </div>    
 </body>
 </html>
