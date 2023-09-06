@@ -22,13 +22,13 @@ type rotelHttpLoop struct {
 }
 
 func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
-	fmt.Println("Rotel http init")
 	l.mqttMessageHandler = m
 	http.HandleFunc("/", l.mainHandler)
 	http.HandleFunc("/rotel/state", l.stateHandler)
 	http.HandleFunc("/rotel/state/init", l.rotelStateInitWs)
 	http.HandleFunc("/rotel/state/ws", l.rotelStateWs)
 	http.HandleFunc("/rotel/source", l.rotelSourceHandler)
+	http.HandleFunc("/rotel/volume", l.rotelVolumeHandler)
 }
 
 func (l *rotelHttpLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
@@ -37,7 +37,6 @@ func (l *rotelHttpLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		l.rotelState = parseJSONPayload(ev)
 		rotelStateUpdated <- struct{}{}
 	}
-
 	return nil
 }
 
@@ -89,13 +88,25 @@ func (l *rotelHttpLoop) rotelSourceRenderer(w io.Writer, currentSource string) {
 	var sources = []string{"opt1", "opt2", "coax1", "coax2"}
 	fmt.Fprintf(w, "<select id='rotel-source' name='rotel-source' hx-post='/rotel/source' hx-trigger='change' hx-swap-oob='true'>")
 	for _, source := range sources {
+		selected := ""
 		if source == currentSource {
-			fmt.Fprintf(w, "<option value='%s' selected >%s</option>", source, source)
-		} else {
-			fmt.Fprintf(w, "<option value='%s'>%s</option>", source, source)
+			selected = "selected"
 		}
+		fmt.Fprintf(w, "<option value='%s' %s >%s</option>", source, selected, source)
 	}
 	fmt.Fprintf(w, "</select>")
+}
+
+func (l *rotelHttpLoop) rotelVolumeHandler(w http.ResponseWriter, r *http.Request) {
+	volume := r.FormValue("rotel-volume")
+	fmt.Println("Selected: " + volume)
+	//TODO - refactor?
+	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "volume_"+volume+"!")
+	l.rotelVolumeRenderer(w, volume)
+}
+
+func (l *rotelHttpLoop) rotelVolumeRenderer(w io.Writer, currentVolume string) {
+	fmt.Fprintf(w, "<input type='range' id='rotel-volume' name='rotel-volume' value='%s' min='0' max='96' hx-post='/rotel/volume' hx-trigger='change' hx-swap-oob='true' />", currentVolume)
 }
 
 var upgrader = websocket.Upgrader{}
@@ -106,7 +117,6 @@ func (l *rotelHttpLoop) rotelStateInitWs(w http.ResponseWriter, req *http.Reques
 		<div id="rotel-state"></div>
 	</div>
 	`
-
 	tmpl := template.New("ws-output")
 	tmpl.Parse(responseTemplate)
 
@@ -142,16 +152,8 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(socketWriter, "</div>")
 
 		l.rotelSourceRenderer(socketWriter, l.rotelState["source"].(string))
-		//var sources = []string{"opt1", "opt2", "coax1", "coax2"}
-		// fmt.Fprintf(socketWriter, "<select id='rotel-source' name='rotel-source' hx-post='/rotel/source' hx-trigger='change' hx-swap-oob='true'>")
-		// for _, source := range sources {
-		// 	if source == l.rotelState["source"] {
-		// 		fmt.Fprintf(socketWriter, "<option value='%s' selected >%s</option>", source, source)
-		// 	} else {
-		// 		fmt.Fprintf(socketWriter, "<option value='%s'>%s</option>", source, source)
-		// 	}
-		// }
-		// fmt.Fprintf(socketWriter, "</select>")
+
+		l.rotelVolumeRenderer(socketWriter, l.rotelState["volume"].(string))
 
 		socketWriter.Close()
 
