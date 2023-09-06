@@ -12,7 +12,7 @@ type testLoop struct {
 	tvPowerLastState       bool
 }
 
-func (l *testLoop) Init() {}
+func (l *testLoop) Init(m *mqttMessageHandler) {}
 
 func (l *testLoop) updateTvPower(tvPower bool) bool {
 	if l.tvPowerLastStateChange.Add(1 * time.Second).Before(time.Now()) {

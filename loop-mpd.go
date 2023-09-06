@@ -9,7 +9,7 @@ type mpdLoop struct {
 	hasMuted bool
 }
 
-func (l *mpdLoop) Init() {}
+func (l *mpdLoop) Init(m *mqttMessageHandler) {}
 
 func (l *mpdLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	//fmt.Printf("Mpdloop topic %v, payload %v \n", ev.Topic, ev.Payload)

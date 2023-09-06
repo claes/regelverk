@@ -35,13 +35,14 @@ type MQTTPublish struct {
 type controlLoop interface {
 	sync.Locker
 
-	Init()
+	Init(*mqttMessageHandler)
 
 	ProcessEvent(MQTTEvent) []MQTTPublish
 }
 
 type statusLoop struct {
 	mu sync.Mutex
+	m  *mqttMessageHandler
 }
 
 func (l *statusLoop) Lock() { l.mu.Lock() }
@@ -109,10 +110,6 @@ func regelverk(broker string) error {
 		loops:  loops,
 	}
 
-	for _, l := range loops {
-		l.Init()
-	}
-
 	opts := mqtt.NewClientOptions().
 		AddBroker(broker).
 		SetClientID("regelverk-" + host).
@@ -138,6 +135,10 @@ func regelverk(broker string) error {
 		return fmt.Errorf("MQTT connection failed: %v", token.Error())
 	} else if *debug {
 		fmt.Printf("Connected to MQTT broker: %s\n", broker)
+	}
+
+	for _, l := range loops {
+		l.Init(mqttMessageHandler)
 	}
 
 	fmt.Printf("MQTT subscription established\n")
@@ -181,8 +182,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
-
-	//inithttp()
 
 	go func() {
 		err := http.ListenAndServe(":8080", nil)
