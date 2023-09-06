@@ -8,7 +8,10 @@
     <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>    
 </head>
 <body>
-    <div id="rotel-source">HELLO</div>
+    <div id="rotel-source">source</div>
+    <hr/>
+    <div id="rotel-volume">volume</div>
+    <hr/>
     <div>
         <label>Sources</label>
         <button hx-get="/rotel/state" hx-trigger="click" hx-target="#rotel-state-manual" >Get state</button>
