@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -29,6 +31,7 @@ func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
 	http.HandleFunc("/rotel/state/ws", l.rotelStateWs)
 	http.HandleFunc("/rotel/source", l.rotelSourceHandler)
 	http.HandleFunc("/rotel/volume", l.rotelVolumeHandler)
+	http.HandleFunc("/rotel/balance", l.rotelBalanceHandler)
 }
 
 func (l *rotelHttpLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
@@ -78,8 +81,6 @@ func (l *rotelHttpLoop) stateHandler(w http.ResponseWriter, r *http.Request) {
 
 func (l *rotelHttpLoop) rotelSourceHandler(w http.ResponseWriter, r *http.Request) {
 	selectedSource := r.FormValue("rotel-source")
-	fmt.Println("Selected: " + selectedSource)
-	//TODO - refactor?
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, selectedSource+"!")
 	l.rotelSourceRenderer(w, selectedSource)
 }
@@ -99,8 +100,6 @@ func (l *rotelHttpLoop) rotelSourceRenderer(w io.Writer, currentSource string) {
 
 func (l *rotelHttpLoop) rotelVolumeHandler(w http.ResponseWriter, r *http.Request) {
 	volume := r.FormValue("rotel-volume")
-	fmt.Println("Selected: " + volume)
-	//TODO - refactor?
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "volume_"+volume+"!")
 	l.rotelVolumeRenderer(w, volume)
 }
@@ -108,6 +107,73 @@ func (l *rotelHttpLoop) rotelVolumeHandler(w http.ResponseWriter, r *http.Reques
 func (l *rotelHttpLoop) rotelVolumeRenderer(w io.Writer, currentVolume string) {
 	fmt.Fprintf(w, "<input type='range' id='rotel-volume' name='rotel-volume' value='%s' min='0' max='96' hx-post='/rotel/volume' hx-trigger='change' hx-swap-oob='true' />", currentVolume)
 }
+
+func (l *rotelHttpLoop) rotelBalanceHandler(w http.ResponseWriter, r *http.Request) {
+	b, err := strconv.Atoi(r.FormValue("rotel-balance"))
+	if err != nil {
+		fmt.Println("Could not parse balance:", err)
+		return
+	}
+	balance, err := intToBalance(b)
+	if err != nil {
+		fmt.Println("Could not parse balance:", err)
+		return
+	}
+	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "balance_"+balance+"!")
+	l.rotelBalanceRenderer(w, balance)
+}
+
+func (l *rotelHttpLoop) rotelBalanceRenderer(w io.Writer, currentBalance string) {
+	// L15 -- 000 -- R15
+	balance, err := balanceToInt(currentBalance)
+	if err != nil {
+		fmt.Printf("Error %v\n", err)
+	}
+	fmt.Fprintf(w, "<input type='range' id='rotel-balance' name='rotel-balance' value='%d' min='-15' max='15' hx-post='/rotel/balance' hx-trigger='change' hx-swap-oob='true' />", balance)
+}
+
+func balanceToInt(s string) (int, error) {
+	switch {
+	case strings.HasPrefix(s, "L"):
+		val, err := strconv.Atoi(s[1:])
+		if err != nil {
+			return 0, err
+		}
+		return -val, nil
+	case strings.HasPrefix(s, "R"):
+		val, err := strconv.Atoi(s[1:])
+		if err != nil {
+			return 0, err
+		}
+		return val, nil
+	case s == "000":
+		return 0, nil
+	default:
+		return 0, fmt.Errorf("invalid string format")
+	}
+}
+
+func intToBalance(n int) (string, error) {
+	if n < -15 || n > 15 {
+		return "", fmt.Errorf("number out of range")
+	}
+
+	switch {
+	case n < 0:
+		return fmt.Sprintf("L%02d", -n), nil
+	case n > 0:
+		return fmt.Sprintf("R%02d", n), nil
+	case n == 0:
+		return "000", nil
+	}
+	return "", fmt.Errorf("unexpected number value: %d", n)
+}
+
+// balance
+
+// treble
+
+// bass
 
 var upgrader = websocket.Upgrader{}
 
@@ -154,6 +220,8 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 		l.rotelSourceRenderer(socketWriter, l.rotelState["source"].(string))
 
 		l.rotelVolumeRenderer(socketWriter, l.rotelState["volume"].(string))
+
+		l.rotelBalanceRenderer(socketWriter, l.rotelState["balance"].(string))
 
 		socketWriter.Close()
 
