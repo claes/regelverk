@@ -30,6 +30,8 @@ func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
 	http.HandleFunc("/rotel/state/init", l.rotelStateInitWs)
 	http.HandleFunc("/rotel/state/ws", l.rotelStateWs)
 	http.HandleFunc("/rotel/source", l.rotelSourceHandler)
+	http.HandleFunc("/rotel/tone", l.rotelToneHandler)
+	http.HandleFunc("/rotel/mute", l.rotelMuteHandler)
 	http.HandleFunc("/rotel/volume", l.rotelVolumeHandler)
 	http.HandleFunc("/rotel/balance", l.rotelBalanceHandler)
 	http.HandleFunc("/rotel/bass", l.rotelBassHandler)
@@ -96,6 +98,44 @@ func (l *rotelHttpLoop) rotelSourceRenderer(w io.Writer, currentSource string) {
 			selected = "selected"
 		}
 		fmt.Fprintf(w, "<option value='%s' %s >%s</option>", source, selected, source)
+	}
+	fmt.Fprintf(w, "</select>")
+}
+
+func (l *rotelHttpLoop) rotelToneHandler(w http.ResponseWriter, r *http.Request) {
+	tone := r.FormValue("rotel-tone")
+	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "tone_"+tone+"!")
+	l.rotelToneRenderer(w, tone)
+}
+
+func (l *rotelHttpLoop) rotelToneRenderer(w io.Writer, currentTone string) {
+	var tones = []string{"on", "off"}
+	fmt.Fprintf(w, "<select id='rotel-tone' name='rotel-tone' hx-post='/rotel/tone' hx-trigger='change' hx-swap-oob='true'>")
+	for _, tone := range tones {
+		selected := ""
+		if tone == currentTone {
+			selected = "selected"
+		}
+		fmt.Fprintf(w, "<option value='%s' %s >%s</option>", tone, selected, tone)
+	}
+	fmt.Fprintf(w, "</select>")
+}
+
+func (l *rotelHttpLoop) rotelMuteHandler(w http.ResponseWriter, r *http.Request) {
+	mute := r.FormValue("rotel-mute")
+	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "mute_"+mute+"!")
+	l.rotelMuteRenderer(w, mute)
+}
+
+func (l *rotelHttpLoop) rotelMuteRenderer(w io.Writer, currentMute string) {
+	var mutes = []string{"on", "off"}
+	fmt.Fprintf(w, "<select id='rotel-mute' name='rotel-mute' hx-post='/rotel/mute' hx-trigger='change' hx-swap-oob='true'>")
+	for _, mute := range mutes {
+		selected := ""
+		if mute == currentMute {
+			selected = "selected"
+		}
+		fmt.Fprintf(w, "<option value='%s' %s >%s</option>", mute, selected, mute)
 	}
 	fmt.Fprintf(w, "</select>")
 }
@@ -304,6 +344,10 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(socketWriter, "</div>")
 
 		l.rotelSourceRenderer(socketWriter, l.rotelState["source"].(string))
+
+		l.rotelToneRenderer(socketWriter, l.rotelState["tone"].(string))
+
+		l.rotelMuteRenderer(socketWriter, l.rotelState["mute"].(string))
 
 		l.rotelVolumeRenderer(socketWriter, l.rotelState["volume"].(string))
 
