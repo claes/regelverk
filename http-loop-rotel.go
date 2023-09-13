@@ -32,6 +32,8 @@ func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
 	http.HandleFunc("/rotel/source", l.rotelSourceHandler)
 	http.HandleFunc("/rotel/volume", l.rotelVolumeHandler)
 	http.HandleFunc("/rotel/balance", l.rotelBalanceHandler)
+	http.HandleFunc("/rotel/bass", l.rotelBassHandler)
+	http.HandleFunc("/rotel/treble", l.rotelTrebleHandler)
 }
 
 func (l *rotelHttpLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
@@ -128,6 +130,7 @@ func (l *rotelHttpLoop) rotelBalanceRenderer(w io.Writer, currentBalance string)
 	balance, err := balanceToInt(currentBalance)
 	if err != nil {
 		fmt.Printf("Error %v\n", err)
+		return
 	}
 	fmt.Fprintf(w, "<input type='range' id='rotel-balance' name='rotel-balance' value='%d' min='-15' max='15' hx-post='/rotel/balance' hx-trigger='change' hx-swap-oob='true' />", balance)
 }
@@ -149,7 +152,7 @@ func balanceToInt(s string) (int, error) {
 	case s == "000":
 		return 0, nil
 	default:
-		return 0, fmt.Errorf("invalid string format")
+		return 0, fmt.Errorf("invalid string format, %s", s)
 	}
 }
 
@@ -157,7 +160,6 @@ func intToBalance(n int) (string, error) {
 	if n < -15 || n > 15 {
 		return "", fmt.Errorf("number out of range")
 	}
-
 	switch {
 	case n < 0:
 		return fmt.Sprintf("L%02d", -n), nil
@@ -166,14 +168,98 @@ func intToBalance(n int) (string, error) {
 	case n == 0:
 		return "000", nil
 	}
-	return "", fmt.Errorf("unexpected number value: %d", n)
+	return "", fmt.Errorf("Unexpected number value: %d", n)
 }
-
-// balance
 
 // treble
 
+func (l *rotelHttpLoop) rotelTrebleHandler(w http.ResponseWriter, r *http.Request) {
+	b, err := strconv.Atoi(r.FormValue("rotel-treble"))
+	if err != nil {
+		fmt.Println("Could not parse treble:", err)
+		return
+	}
+	treble, err := intToBassOrTreble(b)
+	if err != nil {
+		fmt.Println("Could not parse treble:", err)
+		return
+	}
+	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "treble_"+treble+"!")
+	l.rotelTrebleRenderer(w, treble)
+}
+
+func (l *rotelHttpLoop) rotelTrebleRenderer(w io.Writer, currentTreble string) {
+	// -10 -- 000 -- +10
+	treble, err := bassOrTrebleToInt(currentTreble)
+	if err != nil {
+		fmt.Printf("Error %v\n", err)
+		return
+	}
+	fmt.Fprintf(w, "<input type='range' id='rotel-treble' name='rotel-treble' value='%d' min='-10' max='10' hx-post='/rotel/treble' hx-trigger='change' hx-swap-oob='true' />", treble)
+}
+
+func bassOrTrebleToInt(s string) (int, error) {
+	switch {
+	case strings.HasPrefix(s, "-"):
+		val, err := strconv.Atoi(s[1:])
+		if err != nil {
+			return 0, err
+		}
+		return -val, nil
+	case strings.HasPrefix(s, "+"):
+		val, err := strconv.Atoi(s[1:])
+		if err != nil {
+			return 0, err
+		}
+		return val, nil
+	case s == "000":
+		return 0, nil
+	default:
+		return 0, fmt.Errorf("invalid string format, %s", s)
+	}
+}
+
+func intToBassOrTreble(n int) (string, error) {
+	if n < -10 || n > 10 {
+		return "", fmt.Errorf("number out of range")
+	}
+	switch {
+	case n < 0:
+		return fmt.Sprintf("-%02d", -n), nil
+	case n > 0:
+		return fmt.Sprintf("+%02d", n), nil
+	case n == 0:
+		return "000", nil
+	}
+	return "", fmt.Errorf("Unexpected number value: %d", n)
+}
+
 // bass
+
+func (l *rotelHttpLoop) rotelBassHandler(w http.ResponseWriter, r *http.Request) {
+	b, err := strconv.Atoi(r.FormValue("rotel-bass"))
+	if err != nil {
+		fmt.Println("Could not parse bass:", err)
+		return
+	}
+	bass, err := intToBassOrTreble(b)
+	if err != nil {
+		fmt.Println("Could not parse bass:", err)
+		return
+	}
+	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "bass_"+bass+"!")
+	l.rotelBassRenderer(w, bass)
+}
+
+func (l *rotelHttpLoop) rotelBassRenderer(w io.Writer, currentBass string) {
+	// -10 -- 000 -- +10
+	bass, err := bassOrTrebleToInt(currentBass)
+	if err != nil {
+		fmt.Printf("Error %v\n", err)
+		return
+	}
+	fmt.Fprintf(w, "<input type='range' id='rotel-bass' name='rotel-bass' value='%d' min='-10' max='10' hx-post='/rotel/bass' hx-trigger='change' hx-swap-oob='true' />", bass)
+}
 
 var upgrader = websocket.Upgrader{}
 
@@ -222,6 +308,10 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 		l.rotelVolumeRenderer(socketWriter, l.rotelState["volume"].(string))
 
 		l.rotelBalanceRenderer(socketWriter, l.rotelState["balance"].(string))
+
+		l.rotelBassRenderer(socketWriter, l.rotelState["bass"].(string))
+
+		l.rotelTrebleRenderer(socketWriter, l.rotelState["treble"].(string))
 
 		socketWriter.Close()
 
