@@ -7,8 +7,9 @@
     crossorigin="anonymous"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>    
 </head>
-<body>
+<body hx-get="/rotel/state/init" hx-target="#ws-output" hx-swap="innerHTML" hx-trigger="load">
 
+    <div  >
     <label for="rotel-source">Source</label><div id="rotel-source"></div>
     <hr/>
     <label for="rotel-tone">Tone</label><div id="rotel-tone"></div>
@@ -22,19 +23,9 @@
     <label for="rotel-bass">Bass</label><div id="rotel-bass"></div>
     <hr/>
     <label for="rotel-treble">Treble</label><div id="rotel-treble"></div>
-    <hr/>
-    <div>
-        <label>Sources</label>
-        <button hx-get="/rotel/state" hx-trigger="click" hx-target="#rotel-state-manual" >Get state</button>
     </div>
-    <div id="rotel-state-manual"></div>
-
-    <button hx-get="/rotel/state/init" hx-target="#ws-output" hx-swap="outerHTML">
-        Connect WS
-    </button>
 
     <div id="ws-output">
-
     </div>    
 </body>
 </html>

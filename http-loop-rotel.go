@@ -6,7 +6,6 @@ import (
 	"html/template"
 	"io"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -26,7 +25,6 @@ type rotelHttpLoop struct {
 func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
 	l.mqttMessageHandler = m
 	http.HandleFunc("/", l.mainHandler)
-	http.HandleFunc("/rotel/state", l.stateHandler)
 	http.HandleFunc("/rotel/state/init", l.rotelStateInitWs)
 	http.HandleFunc("/rotel/state/ws", l.rotelStateWs)
 	http.HandleFunc("/rotel/source", l.rotelSourceHandler)
@@ -68,21 +66,6 @@ func (l *rotelHttpLoop) mainHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to render template: "+execErr.Error(), http.StatusInternalServerError)
 		return
 	}
-}
-
-func (l *rotelHttpLoop) stateHandler(w http.ResponseWriter, r *http.Request) {
-
-	var keys []string
-	for k := range l.rotelState {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	fmt.Fprintf(w, "<div>")
-	for _, key := range keys {
-		fmt.Fprintf(w, "<div>%s: %s</div>", key, l.rotelState[key])
-	}
-	fmt.Fprintf(w, "</div>")
 }
 
 func (l *rotelHttpLoop) rotelSourceHandler(w http.ResponseWriter, r *http.Request) {
@@ -334,16 +317,16 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 
-		var keys []string
-		for k := range l.rotelState {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		fmt.Fprintf(socketWriter, "<div id='rotel-state' hx-swap-oob='true'>")
-		for _, key := range keys {
-			fmt.Fprintf(socketWriter, "<div>%s: %s</div>", key, l.rotelState[key])
-		}
-		fmt.Fprintf(socketWriter, "</div>")
+		// var keys []string
+		// for k := range l.rotelState {
+		// 	keys = append(keys, k)
+		// }
+		// sort.Strings(keys)
+		// fmt.Fprintf(socketWriter, "<div id='rotel-state' hx-swap-oob='true'>")
+		// for _, key := range keys {
+		// 	fmt.Fprintf(socketWriter, "<div>%s: %s</div>", key, l.rotelState[key])
+		// }
+		// fmt.Fprintf(socketWriter, "</div>")
 
 		l.rotelSourceRenderer(socketWriter, l.rotelState["source"].(string))
 
