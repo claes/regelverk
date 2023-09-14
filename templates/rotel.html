@@ -1,31 +1,51 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title></title>
-    <script src="https://unpkg.com/htmx.org@1.9.5" 
-    integrity="sha384-xcuj3WpfgjlKF+FXhSQFQ0ZNr39ln+hwjN3npfM9VBnUskLolQAcN80McRIVOPuO" 
-    crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>    
+    <script src="https://unpkg.com/htmx.org@1.9.5"
+        integrity="sha384-xcuj3WpfgjlKF+FXhSQFQ0ZNr39ln+hwjN3npfM9VBnUskLolQAcN80McRIVOPuO"
+        crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/missing.css@v0.2.1/missing.min.css" />
 </head>
+
 <body hx-get="/rotel/state/init" hx-target="#ws-output" hx-swap="innerHTML" hx-trigger="load">
 
-    <div  >
-    <label for="rotel-source">Source</label><div id="rotel-source"></div>
-    <hr/>
-    <label for="rotel-tone">Tone</label><div id="rotel-tone"></div>
-    <hr/>
-    <label for="rotel-mute">Mute</label><div id="rotel-mute"></div>
-    <hr/>
-    <label for="rotel-volume">Volume</label><div id="rotel-volume"></div>
-    <hr/>
-    <label for="rotel-balance">Balance</label><div id="rotel-balance"></div>
-    <hr/>
-    <label for="rotel-bass">Bass</label><div id="rotel-bass"></div>
-    <hr/>
-    <label for="rotel-treble">Treble</label><div id="rotel-treble"></div>
+    <div>
+        <div>
+            <label for="rotel-source">Source</label>
+            <div id="rotel-source"></div>
+        </div>
+        <div>
+            <label for="rotel-tone">Tone</label>
+            <div id="rotel-tone"></div>
+        </div>
+        <div>
+            <label for="rotel-mute">Mute</label>
+            <div id="rotel-mute"></div>
+        </div>
+        <div>
+            <label for="rotel-volume">Volume</label>
+            <div id="rotel-volume"></div>
+        </div>
+        <div>
+            <label for="rotel-balance">Balance</label>
+            <div id="rotel-balance"></div>
+        </div>
+        <div>
+            <label for="rotel-bass">Bass</label>
+            <div id="rotel-bass"></div>
+        </div>
+        <div>
+            <label for="rotel-treble">Treble</label>
+            <div id="rotel-treble"></div>
+        </div>
     </div>
 
     <div id="ws-output">
-    </div>    
+    </div>
 </body>
+
 </html>
