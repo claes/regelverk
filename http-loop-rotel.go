@@ -14,7 +14,7 @@ import (
 )
 
 //go:embed templates/rotel.html
-var content2 embed.FS
+var content embed.FS
 var rotelStateUpdated = make(chan struct{})
 
 type rotelHttpLoop struct {
@@ -36,6 +36,8 @@ func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
 	http.HandleFunc("/rotel/balance", l.rotelBalanceHandler)
 	http.HandleFunc("/rotel/bass", l.rotelBassHandler)
 	http.HandleFunc("/rotel/treble", l.rotelTrebleHandler)
+
+	l.mqttMessageHandler.client.Publish("rotel/command/initialize", 2, false, "true")
 }
 
 func (l *rotelHttpLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
@@ -49,7 +51,7 @@ func (l *rotelHttpLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 func (l *rotelHttpLoop) mainHandler(w http.ResponseWriter, r *http.Request) {
 
-	data, readErr := content2.ReadFile("templates/rotel.html")
+	data, readErr := content.ReadFile("templates/rotel.html")
 	if readErr != nil {
 		http.Error(w, "Failed to read embedded template", http.StatusInternalServerError)
 		return
