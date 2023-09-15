@@ -7,13 +7,49 @@
         integrity="sha384-xcuj3WpfgjlKF+FXhSQFQ0ZNr39ln+hwjN3npfM9VBnUskLolQAcN80McRIVOPuO"
         crossorigin="anonymous"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"> -->
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/yegor256/tacit@gh-pages/tacit-css-1.6.0.min.css"/> -->
+    <!-- <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css"> -->
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css"> 
+    <!-- <link rel="stylesheet" href="https://unpkg.com/mvp.css">   -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        .lcd-display {
+            /* Background color typical of LCD screens */
+            background-color: #333;
 
-    <link rel="stylesheet" href="https://unpkg.com/missing.css@v0.2.1/missing.min.css" />
+            /* Use a monospace font to emulate digital characters */
+            font-family: 'Courier New', Courier, monospace;
+
+            /* Add some padding and set text color */
+            padding: 10px 20px;
+            color: #0f0;  /* Green, like many LCDs */
+
+            /* Optional: Give it some dimension with a shadow */
+            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+
+            /* Set width and break words to prevent overflow */
+            width: 300px;
+            word-wrap: break-word;
+
+            /* Optional: Add slight gradient for a more authentic look */
+            background-image: linear-gradient(to bottom, #222, #444);
+
+            /* Center the text */
+            text-align: center;
+
+            /* Add spacing between characters */
+            letter-spacing: 2px;
+        }
+    </style>
 </head>
 
-<body hx-get="/rotel/state/init" hx-target="#ws-output" hx-swap="innerHTML" hx-trigger="load">
+<body>
 
     <div>
+        <div>
+            <div id="rotel-display"></div>
+        </div>
         <div>
             <label for="rotel-source">Source</label>
             <div id="rotel-source"></div>
@@ -43,7 +79,7 @@
             <div id="rotel-treble"></div>
         </div>
     </div>
-
+    <div hx-get="/rotel/state/init" hx-target="#ws-output" hx-swap="innerHTML" hx-trigger="load"></div>
     <div id="ws-output">
     </div>
 </body>

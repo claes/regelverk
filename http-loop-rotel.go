@@ -128,6 +128,7 @@ func (l *rotelHttpLoop) rotelMuteRenderer(w io.Writer, currentMute string) {
 func (l *rotelHttpLoop) rotelVolumeHandler(w http.ResponseWriter, r *http.Request) {
 	volume := r.FormValue("rotel-volume")
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "volume_"+volume+"!")
+	//	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "get_display!")
 	l.rotelVolumeRenderer(w, volume)
 }
 
@@ -286,6 +287,10 @@ func (l *rotelHttpLoop) rotelBassRenderer(w io.Writer, currentBass string) {
 	fmt.Fprintf(w, "<input type='range' id='rotel-bass' name='rotel-bass' value='%d' min='-10' max='10' hx-post='/rotel/bass' hx-trigger='change' hx-swap-oob='true' />", bass)
 }
 
+func (l *rotelHttpLoop) rotelDisplayRenderer(w io.Writer, text string) {
+	fmt.Fprintf(w, "<div class='lcd-display' id='rotel-display' name='rotel-display' hx-swap-oob='true'>%s</div>", text)
+}
+
 var upgrader = websocket.Upgrader{}
 
 func (l *rotelHttpLoop) rotelStateInitWs(w http.ResponseWriter, req *http.Request) {
@@ -327,6 +332,8 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 		// 	fmt.Fprintf(socketWriter, "<div>%s: %s</div>", key, l.rotelState[key])
 		// }
 		// fmt.Fprintf(socketWriter, "</div>")
+
+		l.rotelDisplayRenderer(socketWriter, l.rotelState["display"].(string))
 
 		l.rotelSourceRenderer(socketWriter, l.rotelState["source"].(string))
 
