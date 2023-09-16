@@ -314,21 +314,6 @@ func (l *rotelHttpLoop) rotelStateInitWs(w http.ResponseWriter, req *http.Reques
 	tmpl.Execute(w, nil)
 }
 
-func (l *rotelHttpLoop) stateChanged(key string) bool {
-	fmt.Printf("cur state %v\nprev state: %v\n\n", l.rotelState, l.rotelPreviousState)
-	if !l.isInitialized {
-		return true
-	}
-	if key, hasKey := l.rotelPreviousState[key]; key != "" && !hasKey {
-		return true
-	}
-
-	if l.rotelState[key].(string) != l.rotelPreviousState[key].(string) {
-		return true
-	}
-	return false
-}
-
 func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 
 	c, err := upgrader.Upgrade(w, req, nil)
@@ -346,37 +331,21 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 
-		if l.stateChanged("display") {
-			l.rotelDisplayRenderer(socketWriter, l.rotelState["display"].(string))
-		}
+		l.rotelDisplayRenderer(socketWriter, l.rotelState["display"].(string))
 
-		if l.stateChanged("source") {
-			l.rotelSourceRenderer(socketWriter, l.rotelState["source"].(string))
-		}
+		l.rotelSourceRenderer(socketWriter, l.rotelState["source"].(string))
 
-		if l.stateChanged("tone") {
-			l.rotelToneRenderer(socketWriter, l.rotelState["tone"].(string))
-		}
+		l.rotelToneRenderer(socketWriter, l.rotelState["tone"].(string))
 
-		if l.stateChanged("mute") {
-			l.rotelMuteRenderer(socketWriter, l.rotelState["mute"].(string))
-		}
+		l.rotelMuteRenderer(socketWriter, l.rotelState["mute"].(string))
 
-		if l.stateChanged("volume") {
-			l.rotelVolumeRenderer(socketWriter, l.rotelState["volume"].(string))
-		}
+		l.rotelVolumeRenderer(socketWriter, l.rotelState["volume"].(string))
 
-		if l.stateChanged("balance") {
-			l.rotelBalanceRenderer(socketWriter, l.rotelState["balance"].(string))
-		}
+		l.rotelBalanceRenderer(socketWriter, l.rotelState["balance"].(string))
 
-		if l.stateChanged("bass") {
-			l.rotelBassRenderer(socketWriter, l.rotelState["bass"].(string))
-		}
+		l.rotelBassRenderer(socketWriter, l.rotelState["bass"].(string))
 
-		if l.stateChanged("treble") {
-			l.rotelTrebleRenderer(socketWriter, l.rotelState["treble"].(string))
-		}
+		l.rotelTrebleRenderer(socketWriter, l.rotelState["treble"].(string))
 
 		socketWriter.Close()
 
