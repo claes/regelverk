@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -52,6 +53,20 @@ func (l *rotelHttpLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		l.rotelPreviousState = l.rotelState
 		l.rotelState = parseJSONPayload(ev)
 		rotelStateUpdated <- struct{}{}
+	case "regelverk/ticker/1s":
+		_, _, second := time.Now().Clock()
+		if second%10 == 0 {
+			returnList := []MQTTPublish{
+				{
+					Topic:    "rotel/command/initialize",
+					Payload:  "true",
+					Qos:      2,
+					Retained: false,
+					Wait:     0 * time.Second,
+				},
+			}
+			return returnList
+		}
 	}
 	return nil
 }
