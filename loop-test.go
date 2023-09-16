@@ -30,7 +30,7 @@ func (l *testLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 func (l *testLoop) turnOffAmpWhenTVOff(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
-	case "regelwerk/ticker/1s":
+	case "regelverk/ticker/1s":
 		fmt.Printf("Tick, power state is %v \n", l.tvPowerLastState)
 		if !l.tvPowerLastState {
 			hour, _, _ := time.Now().Clock()
