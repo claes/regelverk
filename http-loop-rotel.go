@@ -12,8 +12,9 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-//go:embed templates/rotel.html
+//go:embed templates/rotel.html templates/styles.css
 var content embed.FS
+
 var rotelStateUpdated = make(chan struct{})
 
 type rotelHttpLoop struct {
@@ -34,6 +35,13 @@ func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
 	http.HandleFunc("/rotel/balance", l.rotelBalanceHandler)
 	http.HandleFunc("/rotel/bass", l.rotelBassHandler)
 	http.HandleFunc("/rotel/treble", l.rotelTrebleHandler)
+	http.HandleFunc("/styles.css", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Foo")
+		data, _ := content.ReadFile("templates/styles.css")
+		w.Header().Add("Content-Type", "text/css")
+		fmt.Println(string(data))
+		w.Write(data)
+	})
 
 	l.mqttMessageHandler.client.Publish("rotel/command/initialize", 2, false, "true")
 }

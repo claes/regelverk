@@ -1,0 +1,27 @@
+.lcd-display {
+    /* Background color typical of LCD screens */
+    background-color: #333;
+
+    /* Use a monospace font to emulate digital characters */
+    font-family: 'Courier New', Courier, monospace;
+
+    /* Add some padding and set text color */
+    padding: 10px 20px;
+    color: #0f0;  /* Green, like many LCDs */
+
+    /* Optional: Give it some dimension with a shadow */
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+
+    /* Set width and break words to prevent overflow */
+    width: 300px;
+    word-wrap: break-word;
+
+    /* Optional: Add slight gradient for a more authentic look */
+    background-image: linear-gradient(to bottom, #222, #444);
+
+    /* Center the text */
+    text-align: center;
+
+    /* Add spacing between characters */
+    letter-spacing: 2px;
+}
