@@ -14,16 +14,41 @@ type testLoop struct {
 
 func (l *testLoop) Init(m *mqttMessageHandler) {}
 
-func (l *testLoop) updateTvPower(tvPower bool) bool {
-	if l.tvPowerLastStateChange.Add(1 * time.Second).Before(time.Now()) {
-		stateChanged := (tvPower != l.tvPowerLastState)
-		if stateChanged {
-			l.tvPowerLastStateChange = time.Now()
-			l.tvPowerLastState = tvPower
-		}
-		return stateChanged
+func (l *testLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
+	loopRules := []func(MQTTEvent) []MQTTPublish{
+		l.turnOnAmpWhenTVOn,
+		l.turnOffAmpWhenTVOff,
 	}
-	return false
+	for _, loopRule := range loopRules {
+		result := loopRule(ev)
+		if result != nil {
+			return result
+		}
+	}
+	return nil
+}
+
+func (l *testLoop) turnOffAmpWhenTVOff(ev MQTTEvent) []MQTTPublish {
+	switch ev.Topic {
+	case "regelwerk/ticker/1s":
+		if !l.tvPowerLastState {
+			hour, min, _ := time.Now().Clock()
+			// if after midnight
+			if hour >= 0 && min == 0 && hour <= 6 {
+				returnList := []MQTTPublish{
+					{
+						Topic:    "rotel/command/send",
+						Payload:  "power_off!",
+						Qos:      2,
+						Retained: false,
+						Wait:     0 * time.Second,
+					},
+				}
+				return returnList
+			}
+		}
+	}
+	return nil
 }
 
 func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
@@ -140,6 +165,18 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	return nil
 }
 
+func (l *testLoop) updateTvPower(tvPower bool) bool {
+	if l.tvPowerLastStateChange.Add(1 * time.Second).Before(time.Now()) {
+		stateChanged := (tvPower != l.tvPowerLastState)
+		if stateChanged {
+			l.tvPowerLastStateChange = time.Now()
+			l.tvPowerLastState = tvPower
+		}
+		return stateChanged
+	}
+	return false
+}
+
 // TODO automation notes
 //
 // HDMI -> opt 1
@@ -149,10 +186,6 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 // snapcast / snapserver / snapclients
 
 // mpd > pulseaudio profile > opt2
-
-func (l *testLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	return l.turnOnAmpWhenTVOn(ev)
-}
 
 // https://github.com/void-spark/kodi2mqtt/
 // https://github.com/mqtt-smarthome/mqtt-smarthome/blob/master/Software.md

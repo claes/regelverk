@@ -163,6 +163,7 @@ func printHelp() {
 func main() {
 
 	mqttBroker := flag.String("broker", "tcp://localhost:1883", "MQTT broker URL")
+	listenAddr := flag.String("listenAddr", ":8080", "HTTP listen address")
 	help := flag.Bool("help", false, "Print help")
 	debug = flag.Bool("debug", false, "Debug logging")
 	dryRun = flag.Bool("dry_run", false, "Dry run (do not publish)")
@@ -184,7 +185,7 @@ func main() {
 	}()
 
 	go func() {
-		err := http.ListenAndServe(":8080", nil)
+		err := http.ListenAndServe(*listenAddr, nil)
 		if err != nil {
 			log.Fatal(err)
 		}
