@@ -20,6 +20,7 @@ var rotelStateUpdated = make(chan struct{})
 type rotelHttpLoop struct {
 	statusLoop
 	mqttMessageHandler *mqttMessageHandler
+	rotelPreviousState map[string]interface{}
 	rotelState         map[string]interface{}
 }
 
@@ -36,10 +37,8 @@ func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
 	http.HandleFunc("/rotel/bass", l.rotelBassHandler)
 	http.HandleFunc("/rotel/treble", l.rotelTrebleHandler)
 	http.HandleFunc("/styles.css", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Foo")
 		data, _ := content.ReadFile("templates/styles.css")
 		w.Header().Add("Content-Type", "text/css")
-		fmt.Println(string(data))
 		w.Write(data)
 	})
 
@@ -49,6 +48,7 @@ func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
 func (l *rotelHttpLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 	case "rotel/state":
+		l.rotelPreviousState = l.rotelState
 		l.rotelState = parseJSONPayload(ev)
 		rotelStateUpdated <- struct{}{}
 	}
@@ -83,6 +83,7 @@ func (l *rotelHttpLoop) rotelSourceHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (l *rotelHttpLoop) rotelSourceRenderer(w io.Writer, currentSource string) {
+	fmt.Println("Source render", currentSource)
 	var sources = []string{"opt1", "opt2", "coax1", "coax2"}
 	fmt.Fprintf(w, "<select id='rotel-source' name='rotel-source' hx-post='/rotel/source' hx-trigger='change' hx-swap-oob='true'>")
 	for _, source := range sources {
@@ -313,6 +314,21 @@ func (l *rotelHttpLoop) rotelStateInitWs(w http.ResponseWriter, req *http.Reques
 	tmpl.Execute(w, nil)
 }
 
+func (l *rotelHttpLoop) stateChanged(key string) bool {
+	fmt.Printf("cur state %v\nprev state: %v\n\n", l.rotelState, l.rotelPreviousState)
+	if !l.isInitialized {
+		return true
+	}
+	if key, hasKey := l.rotelPreviousState[key]; key != "" && !hasKey {
+		return true
+	}
+
+	if l.rotelState[key].(string) != l.rotelPreviousState[key].(string) {
+		return true
+	}
+	return false
+}
+
 func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 
 	c, err := upgrader.Upgrade(w, req, nil)
@@ -330,32 +346,37 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 
-		// var keys []string
-		// for k := range l.rotelState {
-		// 	keys = append(keys, k)
-		// }
-		// sort.Strings(keys)
-		// fmt.Fprintf(socketWriter, "<div id='rotel-state' hx-swap-oob='true'>")
-		// for _, key := range keys {
-		// 	fmt.Fprintf(socketWriter, "<div>%s: %s</div>", key, l.rotelState[key])
-		// }
-		// fmt.Fprintf(socketWriter, "</div>")
+		if l.stateChanged("display") {
+			l.rotelDisplayRenderer(socketWriter, l.rotelState["display"].(string))
+		}
 
-		l.rotelDisplayRenderer(socketWriter, l.rotelState["display"].(string))
+		if l.stateChanged("source") {
+			l.rotelSourceRenderer(socketWriter, l.rotelState["source"].(string))
+		}
 
-		l.rotelSourceRenderer(socketWriter, l.rotelState["source"].(string))
+		if l.stateChanged("tone") {
+			l.rotelToneRenderer(socketWriter, l.rotelState["tone"].(string))
+		}
 
-		l.rotelToneRenderer(socketWriter, l.rotelState["tone"].(string))
+		if l.stateChanged("mute") {
+			l.rotelMuteRenderer(socketWriter, l.rotelState["mute"].(string))
+		}
 
-		l.rotelMuteRenderer(socketWriter, l.rotelState["mute"].(string))
+		if l.stateChanged("volume") {
+			l.rotelVolumeRenderer(socketWriter, l.rotelState["volume"].(string))
+		}
 
-		l.rotelVolumeRenderer(socketWriter, l.rotelState["volume"].(string))
+		if l.stateChanged("balance") {
+			l.rotelBalanceRenderer(socketWriter, l.rotelState["balance"].(string))
+		}
 
-		l.rotelBalanceRenderer(socketWriter, l.rotelState["balance"].(string))
+		if l.stateChanged("bass") {
+			l.rotelBassRenderer(socketWriter, l.rotelState["bass"].(string))
+		}
 
-		l.rotelBassRenderer(socketWriter, l.rotelState["bass"].(string))
-
-		l.rotelTrebleRenderer(socketWriter, l.rotelState["treble"].(string))
+		if l.stateChanged("treble") {
+			l.rotelTrebleRenderer(socketWriter, l.rotelState["treble"].(string))
+		}
 
 		socketWriter.Close()
 
