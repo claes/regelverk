@@ -103,22 +103,24 @@ func (l *rotelHttpLoop) rotelToneHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (l *rotelHttpLoop) rotelToneRenderer(w io.Writer, currentTone string) {
-	var tones = []string{"on", "off"}
-	fmt.Fprintf(w, "<select id='rotel-tone' name='rotel-tone' hx-post='/rotel/tone' hx-trigger='change' hx-swap-oob='true'>")
-	for _, tone := range tones {
-		selected := ""
-		if tone == currentTone {
-			selected = "selected"
-		}
-		fmt.Fprintf(w, "<option value='%s' %s >%s</option>", tone, selected, tone)
+
+	checked := ""
+	if currentTone == "on" {
+		checked = "checked"
 	}
-	fmt.Fprintf(w, "</select>")
+	fmt.Fprintf(w, "<input type='checkbox' %s id='rotel-tone' name='rotel-tone' hx-post='/rotel/tone' hx-trigger='change' hx-swap-oob='true' />", checked)
 }
 
 func (l *rotelHttpLoop) rotelMuteHandler(w http.ResponseWriter, r *http.Request) {
 	mute := r.FormValue("rotel-mute")
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "mute_"+mute+"!")
 	l.rotelMuteRenderer(w, mute)
+}
+
+func (l *rotelHttpLoop) rotelMuteRendererRadio(w io.Writer, currentMute string) {
+	//TODO
+	fmt.Fprintf(w, "<input type='radio' id='rotel-mute-on' name='rotel-mute-on' hx-post='/rotel/mute' hx-trigger='change' hx-swap-oob='true'>")
+	fmt.Fprintf(w, "<select type='radio' id='rotel-mute-on' name='rotel-mute-on' hx-post='/rotel/mute' hx-trigger='change' hx-swap-oob='true'>")
 }
 
 func (l *rotelHttpLoop) rotelMuteRenderer(w io.Writer, currentMute string) {
