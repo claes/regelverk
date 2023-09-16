@@ -136,6 +136,7 @@ func (l *rotelHttpLoop) rotelPowerHandler(w http.ResponseWriter, r *http.Request
 		power = "off"
 	}
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "power_"+power+"!")
+	l.mqttMessageHandler.client.Publish("rotel/command/initialize", 2, false, "true")
 	l.rotelPowerRenderer(w, power)
 }
 
