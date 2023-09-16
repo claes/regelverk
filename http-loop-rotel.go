@@ -83,7 +83,6 @@ func (l *rotelHttpLoop) rotelSourceHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (l *rotelHttpLoop) rotelSourceRenderer(w io.Writer, currentSource string) {
-	fmt.Println("Source render", currentSource)
 	var sources = []string{"opt1", "opt2", "coax1", "coax2"}
 	fmt.Fprintf(w, "<select id='rotel-source' name='rotel-source' hx-post='/rotel/source' hx-trigger='change' hx-swap-oob='true'>")
 	for _, source := range sources {
@@ -98,32 +97,39 @@ func (l *rotelHttpLoop) rotelSourceRenderer(w io.Writer, currentSource string) {
 
 func (l *rotelHttpLoop) rotelToneHandler(w http.ResponseWriter, r *http.Request) {
 	tone := r.FormValue("rotel-tone")
+	if tone != "on" {
+		tone = "off"
+	}
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "tone_"+tone+"!")
 	l.rotelToneRenderer(w, tone)
 }
 
 func (l *rotelHttpLoop) rotelToneRenderer(w io.Writer, currentTone string) {
-
 	checked := ""
 	if currentTone == "on" {
 		checked = "checked"
 	}
-	fmt.Fprintf(w, "<input type='checkbox' %s id='rotel-tone' name='rotel-tone' hx-post='/rotel/tone' hx-trigger='change' hx-swap-oob='true' />", checked)
+	fmt.Fprintf(w, "<input type='checkbox' %s id='rotel-tone' name='rotel-tone' value='on' hx-post='/rotel/tone' hx-trigger='change' hx-swap-oob='true' />", checked)
 }
 
 func (l *rotelHttpLoop) rotelMuteHandler(w http.ResponseWriter, r *http.Request) {
 	mute := r.FormValue("rotel-mute")
+	if mute != "on" {
+		mute = "off"
+	}
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "mute_"+mute+"!")
 	l.rotelMuteRenderer(w, mute)
 }
 
-func (l *rotelHttpLoop) rotelMuteRendererRadio(w io.Writer, currentMute string) {
-	//TODO
-	fmt.Fprintf(w, "<input type='radio' id='rotel-mute-on' name='rotel-mute-on' hx-post='/rotel/mute' hx-trigger='change' hx-swap-oob='true'>")
-	fmt.Fprintf(w, "<select type='radio' id='rotel-mute-on' name='rotel-mute-on' hx-post='/rotel/mute' hx-trigger='change' hx-swap-oob='true'>")
+func (l *rotelHttpLoop) rotelMuteRenderer(w io.Writer, currentMute string) {
+	checked := ""
+	if currentMute == "on" {
+		checked = "checked"
+	}
+	fmt.Fprintf(w, "<input type='checkbox' %s id='rotel-mute' name='rotel-mute' value='on' hx-post='/rotel/mute' hx-trigger='change' hx-swap-oob='true' />", checked)
 }
 
-func (l *rotelHttpLoop) rotelMuteRenderer(w io.Writer, currentMute string) {
+func (l *rotelHttpLoop) rotelMuteRendererOld(w io.Writer, currentMute string) {
 	var mutes = []string{"on", "off"}
 	fmt.Fprintf(w, "<select id='rotel-mute' name='rotel-mute' hx-post='/rotel/mute' hx-trigger='change' hx-swap-oob='true'>")
 	for _, mute := range mutes {
@@ -299,7 +305,10 @@ func (l *rotelHttpLoop) rotelBassRenderer(w io.Writer, currentBass string) {
 }
 
 func (l *rotelHttpLoop) rotelDisplayRenderer(w io.Writer, text string) {
-	fmt.Fprintf(w, "<div class='lcd-display' id='rotel-display' name='rotel-display' hx-swap-oob='true'>%s</div>", text)
+
+	pos := 20
+	t := text[:pos] + "\n" + text[pos:]
+	fmt.Fprintf(w, "<pre class='lcd-display' id='rotel-display' name='rotel-display' hx-swap-oob='true'>%s</pre>", t)
 }
 
 var upgrader = websocket.Upgrader{}
