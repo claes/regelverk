@@ -44,7 +44,7 @@ func (l *tvAudioLoop) turnOffAmpWhenTVOff(ev MQTTEvent) []MQTTPublish {
 		if !l.tvPowerLastState && l.rotelState["state"] == "on" {
 			hour, minute, _ := time.Now().Clock()
 			// if after midnight
-			if hour >= 0 && hour <= 6 && minute%15 == 0 {
+			if hour >= 0 && hour <= 6 && minute%20 == 0 {
 				returnList := []MQTTPublish{
 					{
 						Topic:    "rotel/command/send",
