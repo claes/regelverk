@@ -3,7 +3,6 @@ package main
 var loops = []controlLoop{
 	&tvLoop{},
 	&mpdLoop{},
-	&testLoop{},
+	&tvAudioLoop{},
 	&rotelHttpLoop{},
-	//&rotelLoop{}
 }

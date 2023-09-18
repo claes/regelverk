@@ -6,16 +6,18 @@ import (
 	"time"
 )
 
-type testLoop struct {
+type tvAudioLoop struct {
 	statusLoop
 	tvPowerLastStateChange time.Time
 	tvPowerLastState       bool
+	rotelState             map[string]interface{}
 }
 
-func (l *testLoop) Init(m *mqttMessageHandler) {}
+func (l *tvAudioLoop) Init(m *mqttMessageHandler) {}
 
-func (l *testLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
+func (l *tvAudioLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	loopRules := []func(MQTTEvent) []MQTTPublish{
+		l.updateRotelState,
 		l.turnOnAmpWhenTVOn,
 		l.turnOffAmpWhenTVOff,
 	}
@@ -28,15 +30,21 @@ func (l *testLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	return nil
 }
 
-func (l *testLoop) turnOffAmpWhenTVOff(ev MQTTEvent) []MQTTPublish {
+func (l *tvAudioLoop) updateRotelState(ev MQTTEvent) []MQTTPublish {
+	switch ev.Topic {
+	case "rotel/state":
+		l.rotelState = parseJSONPayload(ev)
+	}
+	return nil
+}
+
+func (l *tvAudioLoop) turnOffAmpWhenTVOff(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 	case "regelverk/ticker/1s":
-		fmt.Printf("Tick, power state is %v \n", l.tvPowerLastState)
-		if !l.tvPowerLastState {
-			hour, _, _ := time.Now().Clock()
+		if !l.tvPowerLastState && l.rotelState["state"] == "on" {
+			hour, minute, _ := time.Now().Clock()
 			// if after midnight
-			fmt.Printf("TV Power off, hour is %d \n", hour)
-			if hour >= 0 && hour <= 6 {
+			if hour >= 0 && hour <= 6 && minute%15 == 0 {
 				returnList := []MQTTPublish{
 					{
 						Topic:    "rotel/command/send",
@@ -53,7 +61,7 @@ func (l *testLoop) turnOffAmpWhenTVOff(ev MQTTEvent) []MQTTPublish {
 	return nil
 }
 
-func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
+func (l *tvAudioLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 	case "regelverk/state/tvpower":
 		fmt.Println("regelverk/state/tvpower")
@@ -167,7 +175,7 @@ func (l *testLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	return nil
 }
 
-func (l *testLoop) updateTvPower(tvPower bool) bool {
+func (l *tvAudioLoop) updateTvPower(tvPower bool) bool {
 	if l.tvPowerLastStateChange.Add(1 * time.Second).Before(time.Now()) {
 		stateChanged := (tvPower != l.tvPowerLastState)
 		if stateChanged {
@@ -202,7 +210,7 @@ func (l *testLoop) updateTvPower(tvPower bool) bool {
 
 // https://www.cec-o-matic.com/
 
-// tv activre source
+// tv active source
 // 0f:82:00:00
 // 0f:80:40:00:00:00
 // tx 4f:82:00:00

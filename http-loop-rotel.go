@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -36,6 +37,7 @@ func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
 	http.HandleFunc("/rotel/balance", l.rotelBalanceHandler)
 	http.HandleFunc("/rotel/bass", l.rotelBassHandler)
 	http.HandleFunc("/rotel/treble", l.rotelTrebleHandler)
+	http.HandleFunc("/rotel/power", l.rotelPowerHandler)
 	http.HandleFunc("/styles.css", func(w http.ResponseWriter, r *http.Request) {
 		data, _ := content.ReadFile("templates/styles.css")
 		w.Header().Add("Content-Type", "text/css")
@@ -51,6 +53,20 @@ func (l *rotelHttpLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		l.rotelPreviousState = l.rotelState
 		l.rotelState = parseJSONPayload(ev)
 		rotelStateUpdated <- struct{}{}
+	case "regelverk/ticker/1s":
+		_, _, second := time.Now().Clock()
+		if second%10 == 0 {
+			returnList := []MQTTPublish{
+				{
+					Topic:    "rotel/command/initialize",
+					Payload:  "true",
+					Qos:      2,
+					Retained: false,
+					Wait:     0 * time.Second,
+				},
+			}
+			return returnList
+		}
 	}
 	return nil
 }
@@ -129,17 +145,22 @@ func (l *rotelHttpLoop) rotelMuteRenderer(w io.Writer, currentMute string) {
 	fmt.Fprintf(w, "<input type='checkbox' %s id='rotel-mute' name='rotel-mute' value='on' hx-post='/rotel/mute' hx-trigger='change' hx-swap-oob='true' />", checked)
 }
 
-func (l *rotelHttpLoop) rotelMuteRendererOld(w io.Writer, currentMute string) {
-	var mutes = []string{"on", "off"}
-	fmt.Fprintf(w, "<select id='rotel-mute' name='rotel-mute' hx-post='/rotel/mute' hx-trigger='change' hx-swap-oob='true'>")
-	for _, mute := range mutes {
-		selected := ""
-		if mute == currentMute {
-			selected = "selected"
-		}
-		fmt.Fprintf(w, "<option value='%s' %s >%s</option>", mute, selected, mute)
+func (l *rotelHttpLoop) rotelPowerHandler(w http.ResponseWriter, r *http.Request) {
+	power := r.FormValue("rotel-power")
+	if power != "on" {
+		power = "off"
 	}
-	fmt.Fprintf(w, "</select>")
+	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "power_"+power+"!")
+	l.mqttMessageHandler.client.Publish("rotel/command/initialize", 2, false, "true")
+	l.rotelPowerRenderer(w, power)
+}
+
+func (l *rotelHttpLoop) rotelPowerRenderer(w io.Writer, currentPower string) {
+	checked := ""
+	if currentPower == "on" {
+		checked = "checked"
+	}
+	fmt.Fprintf(w, "<input type='checkbox' %s id='rotel-power' name='rotel-power' value='on' hx-post='/rotel/power' hx-trigger='change' hx-swap-oob='true' />", checked)
 }
 
 func (l *rotelHttpLoop) rotelVolumeHandler(w http.ResponseWriter, r *http.Request) {
@@ -357,6 +378,8 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 		l.rotelBassRenderer(socketWriter, l.rotelState["bass"].(string))
 
 		l.rotelTrebleRenderer(socketWriter, l.rotelState["treble"].(string))
+
+		l.rotelPowerRenderer(socketWriter, l.rotelState["state"].(string))
 
 		socketWriter.Close()
 
