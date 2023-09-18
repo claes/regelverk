@@ -176,7 +176,7 @@ func main() {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-	fmt.Printf("Started\n")
+	fmt.Printf("Started!\n")
 
 	go func() {
 		if err := regelverk(*mqttBroker); err != nil {

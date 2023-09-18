@@ -32,6 +32,7 @@ func (l *tvAudioLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 func (l *tvAudioLoop) updateRotelState(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
+<<<<<<< HEAD:loop-tv-audio.go
 	case "rotel/state":
 		l.rotelState = parseJSONPayload(ev)
 	}
@@ -45,6 +46,15 @@ func (l *tvAudioLoop) turnOffAmpWhenTVOff(ev MQTTEvent) []MQTTPublish {
 			hour, minute, _ := time.Now().Clock()
 			// if after midnight
 			if hour >= 0 && hour <= 6 && minute%15 == 0 {
+=======
+	case "regelverk/ticker/1s":
+		fmt.Printf("Tick, power state is %v \n", l.tvPowerLastState)
+		if !l.tvPowerLastState {
+			hour, _, _ := time.Now().Clock()
+			// if after midnight
+			fmt.Printf("TV Power off, hour is %d \n", hour)
+			if hour >= 0 && hour <= 6 {
+>>>>>>> master:loop-test.go
 				returnList := []MQTTPublish{
 					{
 						Topic:    "rotel/command/send",
