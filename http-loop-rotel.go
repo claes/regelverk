@@ -328,7 +328,12 @@ func (l *rotelHttpLoop) rotelBassRenderer(w io.Writer, currentBass string) {
 func (l *rotelHttpLoop) rotelDisplayRenderer(w io.Writer, text string) {
 
 	pos := 20
-	t := text[:pos] + "\n" + text[pos:]
+	var t string
+	if len(text) >= 20 {
+		t = text[:pos] + "\n" + text[pos:]
+	} else {
+		t = text
+	}
 	fmt.Fprintf(w, "<pre class='lcd-display' id='rotel-display' name='rotel-display' hx-swap-oob='true'>%s</pre>", t)
 }
 
