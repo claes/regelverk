@@ -48,7 +48,8 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 				keycode = uinput.KeyPagedown
 
 			case 145:
-				keycode = uinput.KeyMenu
+				keycode = uinput.KeyProps
+				//keycode = uinput.KeyMenu
 			case 13:
 				keycode = uinput.KeyBackspace
 
@@ -89,11 +90,14 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 			case 69:
 				keycode = uinput.KeyStop
 			case 70:
-				keycode = uinput.KeyPause
+				keycode = uinput.KeySpace
+				//keycode = uinput.KeyPause
 			case 72:
-				keycode = uinput.KeyRewind
+				keycode = uinput.KeyVideoPrev
+				//keycode = uinput.KeyRewind
 			case 73:
-				keycode = uinput.KeyFastforward
+				keycode = uinput.KeyVideoNext
+				//keycode = uinput.KeyFastforward
 			}
 
 			if keycode >= 0 {
