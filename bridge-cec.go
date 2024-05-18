@@ -27,7 +27,7 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 
 	bridge.CECConnection.KeyPresses = make(chan *cec.KeyPress, 20) // Buffered channel
 	for keyPress := range bridge.CECConnection.KeyPresses {
-		slog.Debug("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
+		slog.Info("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
 		if keyPress.Duration == 0 {
 			keycode := -1
 			switch keyPress.KeyCode {
@@ -46,11 +46,11 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 			case 49:
 				keycode = uinput.KeyPagedown
 			case 145:
+				keycode = uinput.KeyC // contextual menu / playlist
 				// Menu key,
 				// see https://stackoverflow.com/questions/32815986/which-key-macro-in-linux-input-h-matches-the-menu-key
 				//keycode = uinput.KeyCompose
 				//keycode = uinput.KeyProps
-				keycode = uinput.KeyC // contextual menu / playlist
 				//keycode = uinput.KeyMenu
 			case 13:
 				keycode = uinput.KeyBackspace
