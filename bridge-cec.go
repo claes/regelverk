@@ -48,7 +48,8 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 			case 145:
 				// Menu key,
 				// see https://stackoverflow.com/questions/32815986/which-key-macro-in-linux-input-h-matches-the-menu-key
-				keycode = uinput.KeyProps
+				keycode = uinput.KeyCompose
+				//keycode = uinput.KeyProps
 				//keycode = uinput.KeyC // contextual menu / playlist
 				//keycode = uinput.KeyMenu
 			case 13:
