@@ -27,7 +27,7 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 
 	bridge.CECConnection.KeyPresses = make(chan *cec.KeyPress, 20) // Buffered channel
 	for keyPress := range bridge.CECConnection.KeyPresses {
-		slog.Info("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
+		slog.Debug("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
 		if keyPress.Duration == 0 {
 			keycode := -1
 			switch keyPress.KeyCode {
@@ -100,6 +100,7 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 			}
 
 			if keycode >= 0 {
+				slog.Info("Send keypress", "keycode", keycode)
 				keyboard.KeyPress(keycode)
 			}
 		}
