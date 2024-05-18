@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log/slog"
 	"strconv"
 )
 
@@ -19,11 +18,7 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 
 	case "cec/command":
 		command := string(ev.Payload.([]byte))
-		//command := ev.Payload.(string)
-		//command := fmt.Sprintf("%v", ev.Payload)
-		slog.Info("cec/command payload", "command", command)
 		if command == "01:90:00:00:00" {
-			slog.Info("tv power true")
 			return []MQTTPublish{
 				{
 					Topic:    "regelverk/state/tvpower",
@@ -33,7 +28,6 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 				},
 			}
 		} else if command == "01:90:01:00:00" {
-			slog.Info("tv power false")
 			return []MQTTPublish{
 				{
 					Topic:    "regelverk/state/tvpower",
@@ -42,8 +36,6 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					Retained: true,
 				},
 			}
-		} else {
-			slog.Info("no tv power match")
 		}
 	default:
 		return nil
