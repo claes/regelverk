@@ -1,9 +1,10 @@
 package main
 
 var loops = []controlLoop{
-	&tvLoop{},
+	//&tvLoop{},
 	&mpdLoop{},
 	&tvAudioLoop{},
+	&cecLoop{},
 	&rotelHttpLoop{},
 }
 

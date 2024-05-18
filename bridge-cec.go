@@ -25,12 +25,14 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 	}
 	defer keyboard.Close()
 
-	bridge.CECConnection.KeyPresses = make(chan *cec.KeyPress, 10) // Buffered channel
+	bridge.CECConnection.KeyPresses = make(chan *cec.KeyPress, 20) // Buffered channel
 	for keyPress := range bridge.CECConnection.KeyPresses {
 		slog.Debug("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
 		if keyPress.Duration == 0 {
 			keycode := -1
 			switch keyPress.KeyCode {
+			case 0:
+				keycode = uinput.KeyEnter
 			case 1:
 				keycode = uinput.KeyUp
 			case 2:
@@ -39,20 +41,18 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 				keycode = uinput.KeyLeft
 			case 4:
 				keycode = uinput.KeyRight
-			case 0:
-				keycode = uinput.KeyEnter
-
 			case 48:
 				keycode = uinput.KeyPageup
 			case 49:
 				keycode = uinput.KeyPagedown
-
 			case 145:
+				// Menu key,
+				// see https://stackoverflow.com/questions/32815986/which-key-macro-in-linux-input-h-matches-the-menu-key
 				keycode = uinput.KeyProps
+				//keycode = uinput.KeyC // contextual menu / playlist
 				//keycode = uinput.KeyMenu
 			case 13:
 				keycode = uinput.KeyBackspace
-
 			case 32: //0
 				keycode = uinput.Key0
 			case 33:
@@ -73,7 +73,6 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 				keycode = uinput.Key8
 			case 41:
 				keycode = uinput.Key9
-
 			case 113: //Blue
 				keycode = uinput.KeyEnter
 			case 114: //Red
@@ -84,7 +83,6 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 				keycode = uinput.KeyEnter
 			case 83: //Guide
 				keycode = uinput.KeyEnter
-
 			case 68:
 				keycode = uinput.KeyPlay
 			case 69:

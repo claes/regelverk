@@ -1,34 +1,27 @@
 package main
 
 import (
+	"log/slog"
 	"strconv"
-	"time"
 )
 
 type cecLoop struct {
 	statusLoop
-	tvLastActive time.Time
-	tvOn         bool
 }
 
 func (l *cecLoop) Init(m *mqttMessageHandler) {}
 
 func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
+	// 	// "01:90:00:00:00" //power on
+	// 	// "01:90:01:00:00" //standby
+	// 	// "0F:36" //standby
 	switch ev.Topic {
 
-	case "zigbee2mqtt/tv":
-		m := parseJSONPayload(ev)
-		power := m["power"].(float64)
-		if power > 5.0 {
-			//			l.tvLastActive = time.Now()
-			l.tvOn = true
+	case "cec/command":
+		slog.Info("cec/command payload", "command", ev.Payload)
+		command := ev.Payload
+		if command == "01:90:00:00:00" {
 			return []MQTTPublish{
-				// {
-				// 	Topic:    "zigbee2mqtt/ikea_uttag/set",
-				// 	Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
-				// 	Qos:      1,
-				// 	Retained: false,
-				// },
 				{
 					Topic:    "regelverk/state/tvpower",
 					Payload:  strconv.FormatBool(true),
@@ -36,8 +29,7 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					Retained: true,
 				},
 			}
-		} else {
-			//			l.tvOn = false
+		} else if command == "01:90:01:00:00" {
 			return []MQTTPublish{
 				{
 					Topic:    "regelverk/state/tvpower",
@@ -46,21 +38,7 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					Retained: true,
 				},
 			}
-
 		}
-	// case "regelverk/ticker/1s":
-	// 	//fmt.Printf("Tick %v %v\n", l.tvOn, l.tvLastActive)
-	// 	if !l.tvOn && l.tvLastActive.Add(1*time.Minute).Before(time.Now()) {
-	// 		return []MQTTPublish{
-	// 			{
-	// 				Topic:    "zigbee2mqtt/ikea_uttag/set",
-	// 				Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
-	// 				Qos:      1,
-	// 				Retained: false,
-	// 			},
-	// 		}
-	// 	}
-
 	default:
 		return nil
 	}
@@ -69,4 +47,5 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 
 func (l *cecLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	return l.turnOnAmpWhenTVOn(ev)
+
 }
