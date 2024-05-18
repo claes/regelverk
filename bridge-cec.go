@@ -31,62 +31,126 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 		if keyPress.Duration == 0 {
 			keycode := -1
 			switch keyPress.KeyCode {
-			case 0x01:
+			case 1:
 				keycode = uinput.KeyUp
-			case 0x02:
+			case 2:
 				keycode = uinput.KeyDown
-			case 0x03:
+			case 3:
 				keycode = uinput.KeyLeft
-			case 0x04:
+			case 4:
 				keycode = uinput.KeyRight
-			case 0x2B:
+			case 0:
 				keycode = uinput.KeyEnter
-			case 0x41:
-				keycode = uinput.KeyVolumeup
-			case 0x42:
-				keycode = uinput.KeyVolumedown
-			case 0x43:
-				keycode = uinput.KeyMute
-			case 0x44:
+
+			case 30:
+				keycode = uinput.KeyPageup
+			case 31:
+				keycode = uinput.KeyPagedown
+
+			case 91:
+				keycode = uinput.KeyMenu
+
+			case 20: //0  // 32
+				keycode = uinput.Key0
+			case 33: //21
+				keycode = uinput.Key1
+			case 22:
+				keycode = uinput.Key2
+			case 23:
+				keycode = uinput.Key3
+			case 24:
+				keycode = uinput.Key4
+			case 25:
+				keycode = uinput.Key5
+			case 26:
+				keycode = uinput.Key6
+			case 27:
+				keycode = uinput.Key7
+			case 28:
+				keycode = uinput.Key8
+			case 29:
+				keycode = uinput.Key9
+
+			case 71: //Blue
+				keycode = uinput.KeyFastforward
+			case 72: //Red
+				keycode = uinput.KeyFastforward
+			case 73: //Green
+				keycode = uinput.KeyFastforward
+			case 74: //Yellow
+				keycode = uinput.KeyFastforward
+			case 53: //Guide
+				keycode = uinput.KeyFastforward
+
+			case 44:
 				keycode = uinput.KeyPlay
-			case 0x45:
+			case 45:
 				keycode = uinput.KeyStop
-			case 0x46:
+			case 46:
 				keycode = uinput.KeyPause
-			case 0x47:
+			case 47:
 				keycode = uinput.KeyRecord
-			case 0x48:
+			case 48:
 				keycode = uinput.KeyRewind
-			case 0x49:
+			case 49:
 				keycode = uinput.KeyFastforward
-			case 0x71: //Blue
-				keycode = uinput.KeyFastforward
-			case 0x72: //Red
-				keycode = uinput.KeyFastforward
-			case 0x73: //Green
-				keycode = uinput.KeyFastforward
-			case 0x74: //Yellow
-				keycode = uinput.KeyFastforward
-			case 0x20: //0
-				keycode = uinput.KeyFastforward
-			case 0x21:
-				keycode = uinput.KeyFastforward
-			case 0x22:
-				keycode = uinput.KeyFastforward
-			case 0x23:
-				keycode = uinput.KeyFastforward
-			case 0x24:
-				keycode = uinput.KeyFastforward
-			case 0x25:
-				keycode = uinput.KeyFastforward
-			case 0x26:
-				keycode = uinput.KeyFastforward
-			case 0x27:
-				keycode = uinput.KeyFastforward
-			case 0x28:
-				keycode = uinput.KeyFastforward
-			case 0x29:
-				keycode = uinput.KeyFastforward
+
+				// case 0x01:
+				// 	keycode = uinput.KeyUp
+				// case 0x02:
+				// 	keycode = uinput.KeyDown
+				// case 0x03:
+				// 	keycode = uinput.KeyLeft
+				// case 0x04:
+				// 	keycode = uinput.KeyRight
+				// case 0x2B:
+				// 	keycode = uinput.KeyEnter
+				// case 0x41:
+				// 	keycode = uinput.KeyVolumeup
+				// case 0x42:
+				// 	keycode = uinput.KeyVolumedown
+				// case 0x43:
+				// 	keycode = uinput.KeyMute
+				// case 0x44:
+				// 	keycode = uinput.KeyPlay
+				// case 0x45:
+				// 	keycode = uinput.KeyStop
+				// case 0x46:
+				// 	keycode = uinput.KeyPause
+				// case 0x47:
+				// 	keycode = uinput.KeyRecord
+				// case 0x48:
+				// 	keycode = uinput.KeyRewind
+				// case 0x49:
+				// 	keycode = uinput.KeyFastforward
+				// case 0x71: //Blue
+				// 	keycode = uinput.KeyFastforward
+				// case 0x72: //Red
+				// 	keycode = uinput.KeyFastforward
+				// case 0x73: //Green
+				// 	keycode = uinput.KeyFastforward
+				// case 0x74: //Yellow
+				// 	keycode = uinput.KeyFastforward
+				// case 0x20: //0
+				// 	keycode = uinput.KeyFastforward
+				// case 0x21:
+				// 	keycode = uinput.KeyFastforward
+				// case 0x22:
+				// 	keycode = uinput.KeyFastforward
+				// case 0x23:
+				// 	keycode = uinput.KeyFastforward
+				// case 0x24:
+				// 	keycode = uinput.KeyFastforward
+				// case 0x25:
+				// 	keycode = uinput.KeyFastforward
+				// case 0x26:
+				// 	keycode = uinput.KeyFastforward
+				// case 0x27:
+				// 	keycode = uinput.KeyFastforward
+				// case 0x28:
+				// 	keycode = uinput.KeyFastforward
+				// case 0x29:
+				// 	keycode = uinput.KeyFastforward
 
 			}
 
