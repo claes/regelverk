@@ -12,7 +12,7 @@ import (
 
 func CreateCECBridge(mqttClient mqtt.Client) *cecmqtt.CecMQTTBridge {
 	bridge := cecmqtt.NewCecMQTTBridge(cecmqtt.
-		CreateCECConnection("Regelverk", "/dev/ttyACM0"),
+		CreateCECConnection("/dev/ttyACM0", "Regelverk"),
 		mqttClient)
 	return bridge
 }
