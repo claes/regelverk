@@ -11,9 +11,9 @@ type cecLoop struct {
 	tvOn         bool
 }
 
-func (l *tvLoop) Init(m *mqttMessageHandler) {}
+func (l *cecLoop) Init(m *mqttMessageHandler) {}
 
-func (l *tvLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
+func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 
 	case "zigbee2mqtt/tv":
@@ -67,6 +67,6 @@ func (l *tvLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	return nil
 }
 
-func (l *tvLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
+func (l *cecLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	return l.turnOnAmpWhenTVOn(ev)
 }

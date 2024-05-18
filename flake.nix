@@ -44,7 +44,11 @@
         # remeber to bump this hash when your dependencies change.
         #vendorSha256 = pkgs.lib.fakeSha256;
 
-        vendorHash = "sha256-ekuwgcXBnGr9gfeXOGhR0OEv+ThBKvMS2Kh99Mm58ds=";
+        nativeBuildInputs = [pkgs.pkg-config];
+
+        buildInputs = [pkgs.libcec pkgs.libcec_platform];
+
+        vendorHash = "sha256-13hAISLbelMVJF5KbJf2789cEY5h5Cq4LrASTcO64m4=";
       };
     });
 
@@ -53,7 +57,19 @@
       pkgs = nixpkgsFor.${system};
     in {
       default = pkgs.mkShell {
-        buildInputs = with pkgs; [go gopls gotools go-tools go-outline godef delve mqttui];
+        buildInputs = with pkgs; [
+          go
+          gopls
+          gotools
+          go-tools
+          go-outline
+          godef
+          delve
+          mqttui
+          libcec
+          libcec_platform
+          pkg-config
+        ];
       };
     });
 
