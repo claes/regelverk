@@ -41,7 +41,7 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 				},
 			}
 		} else {
-			slog.info("no tv power match")
+			slog.Info("no tv power match")
 		}
 	default:
 		return nil
