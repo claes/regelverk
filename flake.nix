@@ -2,7 +2,7 @@
   description = "Regelverk";
 
   # Nixpkgs / NixOS version to use.
-  inputs.nixpkgs.url = "nixpkgs/nixos-23.05";
+  inputs.nixpkgs.url = "nixpkgs/nixos-23.11";
 
   outputs = {
     self,
@@ -44,7 +44,7 @@
         # remeber to bump this hash when your dependencies change.
         #vendorSha256 = pkgs.lib.fakeSha256;
 
-        vendorSha256 = "sha256-9kMOGKDvWZXi5whDTwgbSUkEN9DBdQ8OFOCZRnO+n2Q=";
+        vendorHash = "sha256-ekuwgcXBnGr9gfeXOGhR0OEv+ThBKvMS2Kh99Mm58ds=";
       };
     });
 

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -56,7 +57,7 @@ type mqttMessageHandler struct {
 }
 
 func (h *mqttMessageHandler) handle(_ mqtt.Client, m mqtt.Message) {
-	//log.Printf("MQTT: %s %s", m.Topic(), m.Payload())
+	slog.Debug("MQTT handle", "topic", m.Topic(), "payload", m.Payload())
 	ev := MQTTEvent{
 		Timestamp: time.Now(), // consistent for all loops
 		Topic:     m.Topic(),
@@ -115,16 +116,18 @@ func regelverk(broker string) error {
 		SetClientID("regelverk-" + host).
 		SetOnConnectHandler(func(client mqtt.Client) {
 			// TODO: add MQTTTopics() []string to controlLoop interface and
-			// subscribe to the union of topics, with the same handler that feeds to the source control loops
+			// subscribe to the union of topics, with the same handler that
+			// feeds to the source control loops
 			const topic = "#"
 			token := client.Subscribe(
 				topic,
 				1, /* minimal QoS level zero: at most once, best-effort delivery */
 				mqttMessageHandler.handle)
 			if token.Wait() && token.Error() != nil {
-				log.Fatal(token.Error())
+				slog.Error("Fatal error", "error", token.Error())
+				os.Exit(1)
 			}
-			fmt.Printf("Subscribed to %q\n", topic)
+			slog.Info("Subscribed to topic", "topic", topic)
 		}).
 		SetConnectRetry(true)
 
@@ -134,14 +137,16 @@ func regelverk(broker string) error {
 		// This can indeed fail, e.g. if the broker DNS is not resolvable.
 		return fmt.Errorf("MQTT connection failed: %v", token.Error())
 	} else if *debug {
-		fmt.Printf("Connected to MQTT broker: %s\n", broker)
+		slog.Info("Connected to MQTT broker", "broker", broker)
 	}
 
-	for _, l := range loops {
-		l.Init(mqttMessageHandler)
-	}
+	// Initialize MQTT bridges running in-process
+	initBridges(client)
 
-	fmt.Printf("MQTT subscription established\n")
+	initLoops(mqttMessageHandler)
+
+	slog.Info("MQTT subscription established")
+
 	for tick := range time.Tick(1 * time.Second) {
 		ev := MQTTEvent{
 			Timestamp: tick,
@@ -176,23 +181,25 @@ func main() {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-	fmt.Printf("Started!\n")
+	slog.Info("Started!")
 
 	go func() {
 		if err := regelverk(*mqttBroker); err != nil {
-			log.Fatal(err)
+			slog.Error("Fatal error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	go func() {
 		err := http.ListenAndServe(*listenAddr, nil)
 		if err != nil {
-			log.Fatal(err)
+			slog.Error("Fatal error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	<-c
-	fmt.Printf("Shut down\n")
+	slog.Info("Shut down")
 	os.Exit(0)
 
 }

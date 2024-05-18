@@ -6,3 +6,9 @@ var loops = []controlLoop{
 	&tvAudioLoop{},
 	&rotelHttpLoop{},
 }
+
+func initLoops(msgHandler *mqttMessageHandler) {
+	for _, l := range loops {
+		l.Init(msgHandler)
+	}
+}
