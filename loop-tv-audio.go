@@ -217,6 +217,8 @@ func (l *tvAudioLoop) updateTvPower(tvPower bool) bool {
 // tx 4f:82:00:00
 // tx 0f:80:30:00:00:00
 
+// Blue ray "0f:86:20:00" "playback broadcast 2.0.0.0 active"
+
 // https://github.com/chbmuc/cec
 // https://github.com/tobiash/hdmi-cec-mqtt
 // https://www.mankier.com/1/cec-ctl

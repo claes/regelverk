@@ -124,7 +124,7 @@ func regelverk(broker string) error {
 				1, /* minimal QoS level zero: at most once, best-effort delivery */
 				mqttMessageHandler.handle)
 			if token.Wait() && token.Error() != nil {
-				slog.Error("Fatal error", "error", token.Error())
+				slog.Error("Error creating MQTT client", "error", token.Error())
 				os.Exit(1)
 			}
 			slog.Info("Subscribed to topic", "topic", topic)
@@ -193,7 +193,7 @@ func main() {
 
 	go func() {
 		if err := regelverk(*mqttBroker); err != nil {
-			slog.Error("Fatal error", "error", err)
+			slog.Error("Error initializing MQTT", "error", err)
 			os.Exit(1)
 		}
 	}()
@@ -201,7 +201,7 @@ func main() {
 	go func() {
 		err := http.ListenAndServe(*listenAddr, nil)
 		if err != nil {
-			slog.Error("Fatal error", "error", err)
+			slog.Error("Error initializing HTTP server", "error", err)
 			os.Exit(1)
 		}
 	}()
