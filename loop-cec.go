@@ -66,9 +66,9 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					Retained: true,
 				},
 			}
-		case "4F:82:30:00:00:00":
+		case "8F:82:30:00:00:00":
 			fallthrough
-		case "4F:82:30:00":
+		case "8F:82:30:00":
 			slog.Debug("Chromecast active source")
 			return []MQTTPublish{
 				{
