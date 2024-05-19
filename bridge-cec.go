@@ -136,7 +136,7 @@ func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 func cecBridgeMainLoop(bridge *cecmqtt.CecMQTTBridge) {
 	for {
 		bridge.CECConnection.Transmit("10:8F") //"Recording 1" asks TV for power status
-		bridge.CECConnection.Transmit("1F:85") //"Recording 1" asks TV for active source
+		//bridge.CECConnection.Transmit("1F:85") //"Recording 1" asks TV for active source
 		time.Sleep(10 * time.Second)
 	}
 }
