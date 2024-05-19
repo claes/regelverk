@@ -15,7 +15,10 @@ func (l *cecLoop) Init(m *mqttMessageHandler) {}
 func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 
-	case "cec/command":
+	// case "cec/command":
+	case "message/hex/rx":
+		fallthrough
+	case "message/hex/tx":
 		command := strings.ToUpper(string(ev.Payload.([]byte)))
 		slog.Debug("CEC command", "command", command)
 		switch command {
@@ -76,6 +79,8 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 				},
 			}
 		case "4F:82:20:00:00:00":
+			fallthrough
+		case "4F:82:20:00":
 			slog.Debug("Bluray active source")
 			return []MQTTPublish{
 				{
