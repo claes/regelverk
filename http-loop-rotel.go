@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -177,12 +178,12 @@ func (l *rotelHttpLoop) rotelVolumeRenderer(w io.Writer, currentVolume string) {
 func (l *rotelHttpLoop) rotelBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	b, err := strconv.Atoi(r.FormValue("rotel-balance"))
 	if err != nil {
-		fmt.Println("Could not parse balance:", err)
+		slog.Error("Could not parse balance", "error", err)
 		return
 	}
 	balance, err := intToBalance(b)
 	if err != nil {
-		fmt.Println("Could not parse balance:", err)
+		slog.Error("Could not parse balance", "error", err)
 		return
 	}
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "balance_"+balance+"!")
@@ -193,7 +194,7 @@ func (l *rotelHttpLoop) rotelBalanceRenderer(w io.Writer, currentBalance string)
 	// L15 -- 000 -- R15
 	balance, err := balanceToInt(currentBalance)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
+		slog.Error("Could not parse balance as int", "error", err)
 		return
 	}
 	fmt.Fprintf(w, "<input type='range' id='rotel-balance' name='rotel-balance' value='%d' min='-15' max='15' hx-post='/rotel/balance' hx-trigger='change' hx-swap-oob='true' />", balance)
@@ -240,12 +241,12 @@ func intToBalance(n int) (string, error) {
 func (l *rotelHttpLoop) rotelTrebleHandler(w http.ResponseWriter, r *http.Request) {
 	b, err := strconv.Atoi(r.FormValue("rotel-treble"))
 	if err != nil {
-		fmt.Println("Could not parse treble:", err)
+		slog.Error("Could not parse treble", "error", err)
 		return
 	}
 	treble, err := intToBassOrTreble(b)
 	if err != nil {
-		fmt.Println("Could not parse treble:", err)
+		slog.Error("Could not parse treble", "error", err)
 		return
 	}
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "treble_"+treble+"!")
@@ -256,7 +257,7 @@ func (l *rotelHttpLoop) rotelTrebleRenderer(w io.Writer, currentTreble string) {
 	// -10 -- 000 -- +10
 	treble, err := bassOrTrebleToInt(currentTreble)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
+		slog.Error("Could not parse treble as int", "error", err)
 		return
 	}
 	fmt.Fprintf(w, "<input type='range' id='rotel-treble' name='rotel-treble' value='%d' min='-10' max='10' hx-post='/rotel/treble' hx-trigger='change' hx-swap-oob='true' />", treble)
@@ -303,12 +304,12 @@ func intToBassOrTreble(n int) (string, error) {
 func (l *rotelHttpLoop) rotelBassHandler(w http.ResponseWriter, r *http.Request) {
 	b, err := strconv.Atoi(r.FormValue("rotel-bass"))
 	if err != nil {
-		fmt.Println("Could not parse bass:", err)
+		slog.Error("Could not parse bass", "error", err)
 		return
 	}
 	bass, err := intToBassOrTreble(b)
 	if err != nil {
-		fmt.Println("Could not parse bass:", err)
+		slog.Error("Could not parse bass", "error", err)
 		return
 	}
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "bass_"+bass+"!")
@@ -319,7 +320,7 @@ func (l *rotelHttpLoop) rotelBassRenderer(w io.Writer, currentBass string) {
 	// -10 -- 000 -- +10
 	bass, err := bassOrTrebleToInt(currentBass)
 	if err != nil {
-		fmt.Printf("Error %v\n", err)
+		slog.Error("Could not parse bass as int", "error", err)
 		return
 	}
 	fmt.Fprintf(w, "<input type='range' id='rotel-bass' name='rotel-bass' value='%d' min='-10' max='10' hx-post='/rotel/bass' hx-trigger='change' hx-swap-oob='true' />", bass)
@@ -355,7 +356,7 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 
 	c, err := upgrader.Upgrade(w, req, nil)
 	if err != nil {
-		fmt.Printf("Error trying to upgrade: %v\n", err)
+		slog.Error("Error trying to upgrade", "error", err)
 		return
 	}
 	defer c.Close()
@@ -364,7 +365,7 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 		socketWriter, err := c.NextWriter(websocket.TextMessage)
 
 		if err != nil {
-			fmt.Printf("Error getting socket writer %v\n", err)
+			slog.Error("Error getting socket writer", "error", err)
 			break
 		}
 

@@ -179,6 +179,15 @@ func main() {
 		os.Exit(0)
 	}
 
+	if *debug {
+		// new(slog.LevelVar).Set(slog.LevelDebug)
+		// var programLevel = new(slog.LevelVar)
+		// programLevel.Set(slog.LevelDebug)
+		handler := slog.NewTextHandler(os.Stderr,
+			&slog.HandlerOptions{Level: new(slog.LevelVar).Set(slog.LevelDebug)})
+		slog.SetDefault(slog.New(handler))
+	}
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	slog.Info("Started!")

@@ -23,12 +23,12 @@ func (l *tvLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 			//			l.tvLastActive = time.Now()
 			l.tvOn = true
 			return []MQTTPublish{
-				// {
-				// 	Topic:    "zigbee2mqtt/ikea_uttag/set",
-				// 	Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
-				// 	Qos:      1,
-				// 	Retained: false,
-				// },
+				{
+					Topic:    "zigbee2mqtt/ikea_uttag/set",
+					Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
+					Qos:      1,
+					Retained: false,
+				},
 				{
 					Topic:    "regelverk/state/tvpower",
 					Payload:  strconv.FormatBool(true),

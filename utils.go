@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 )
 
 func parseJSONPayload(ev MQTTEvent) map[string]interface{} {
@@ -10,7 +10,7 @@ func parseJSONPayload(ev MQTTEvent) map[string]interface{} {
 	payloadJson := string(ev.Payload.([]byte))
 	err := json.Unmarshal([]byte(payloadJson), &payload)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Error parsing JSON payload", "payload", ev.Payload)
 		return nil
 	}
 	m := payload.(map[string]interface{})
