@@ -180,11 +180,10 @@ func main() {
 	}
 
 	if *debug {
-		// new(slog.LevelVar).Set(slog.LevelDebug)
-		// var programLevel = new(slog.LevelVar)
-		// programLevel.Set(slog.LevelDebug)
+		var programLevel = new(slog.LevelVar)
+		programLevel.Set(slog.LevelDebug)
 		handler := slog.NewTextHandler(os.Stderr,
-			&slog.HandlerOptions{Level: new(slog.LevelVar).Set(slog.LevelDebug)})
+			&slog.HandlerOptions{Level: programLevel})
 		slog.SetDefault(slog.New(handler))
 	}
 
