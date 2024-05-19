@@ -22,6 +22,8 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 		command := strings.ToUpper(string(ev.Payload.([]byte)))
 		slog.Debug("CEC command", "command", command)
 		switch command {
+		case "01:90:00":
+			fallthrough
 		case "01:90:00:00:00":
 			slog.Debug("TV power")
 			return []MQTTPublish{
@@ -32,6 +34,8 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					Retained: true,
 				},
 			}
+		case "01:90:01":
+			fallthrough
 		case "01:90:01:00:00":
 			slog.Debug("TV standby")
 			return []MQTTPublish{
