@@ -2,7 +2,6 @@ package main
 
 import (
 	"log/slog"
-	"regexp"
 	"time"
 
 	"github.com/bendahl/uinput"
@@ -18,32 +17,30 @@ func CreateCECBridge(mqttClient mqtt.Client) *cecmqtt.CecMQTTBridge {
 	return bridge
 }
 
-func bridgeMessages(bridge *cecmqtt.CecMQTTBridge) {
+// func bridgeMessages(bridge *cecmqtt.CecMQTTBridge) {
+// 	pattern := `^(>>|<<)\s([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)`
+// 	regex, err := regexp.Compile(pattern)
+// 	if err != nil {
+// 		slog.Info("Error compiling regex", "error", err)
+// 		return
+// 	}
 
-	//pattern := `^(>>|<<)\s(([0-9A-Fa-f]{2})(:[0-9A-Fa-f]{2})*)`
-	pattern := `^(>>|<<)\s([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)`
-	regex, err := regexp.Compile(pattern)
-	if err != nil {
-		slog.Info("Error compiling regex", "error", err)
-		return
-	}
-
-	bridge.CECConnection.Messages = make(chan string, 20) // Buffered channel
-	for message := range bridge.CECConnection.Messages {
-		slog.Info("CEC Message", "message", message)
-		matches := regex.FindStringSubmatch(message)
-		if matches != nil {
-			prefix := matches[1]
-			hexPart := matches[2]
-			slog.Info("CEC Message payload match", "prefix", prefix, "hex", hexPart)
-			if prefix == "<<" {
-				bridge.PublishMQTT("cec/msg/rx", hexPart, true)
-			} else if prefix == ">>" {
-				bridge.PublishMQTT("cec/msg/tx", hexPart, true)
-			}
-		}
-	}
-}
+// 	bridge.CECConnection.Messages = make(chan string, 20) // Buffered channel
+// 	for message := range bridge.CECConnection.Messages {
+// 		slog.Info("CEC Message", "message", message)
+// 		matches := regex.FindStringSubmatch(message)
+// 		if matches != nil {
+// 			prefix := matches[1]
+// 			hexPart := matches[2]
+// 			slog.Info("CEC Message payload match", "prefix", prefix, "hex", hexPart)
+// 			if prefix == "<<" {
+// 				bridge.PublishMQTT("cec/msg/rx", hexPart, true)
+// 			} else if prefix == ">>" {
+// 				bridge.PublishMQTT("cec/msg/tx", hexPart, true)
+// 			}
+// 		}
+// 	}
+// }
 
 func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
 	keyboard, err := uinput.CreateKeyboard("/dev/uinput", []byte("regelverk"))
@@ -148,9 +145,8 @@ func initCECBridge(bridge *cecmqtt.CecMQTTBridge) {
 
 	go bridge.PublishCommands()
 	//go bridge.PublishKeyPresses()
-	//go bridge.PublishMessages(true)
+	go bridge.PublishMessages(true)
 	go bridge.PublishSourceActivations()
 	go bridgeKeyPresses(bridge)
-	go bridgeMessages(bridge)
 	go cecBridgeMainLoop(bridge)
 }
