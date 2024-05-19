@@ -16,9 +16,9 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 
 	// case "cec/command":
-	case "message/hex/rx":
+	case "cec/message/hex/rx":
 		fallthrough
-	case "message/hex/tx":
+	case "cec/message/hex/tx":
 		command := strings.ToUpper(string(ev.Payload.([]byte)))
 		slog.Debug("CEC command", "command", command)
 		switch command {
