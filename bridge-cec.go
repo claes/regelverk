@@ -2,6 +2,7 @@ package main
 
 import (
 	"log/slog"
+	"regexp"
 	"time"
 
 	"github.com/bendahl/uinput"
@@ -15,6 +16,33 @@ func CreateCECBridge(mqttClient mqtt.Client) *cecmqtt.CecMQTTBridge {
 		CreateCECConnection("/dev/ttyACM0", "Regelverk"),
 		mqttClient)
 	return bridge
+}
+
+func bridgeMessages(bridge *cecmqtt.CecMQTTBridge) {
+
+	//pattern := `^(>>|<<)\s(([0-9A-Fa-f]{2})(:[0-9A-Fa-f]{2})*)`
+	pattern := `^(>>|<<)\s([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)`
+	regex, err := regexp.Compile(pattern)
+	if err != nil {
+		slog.Info("Error compiling regex", "error", err)
+		return
+	}
+
+	bridge.CECConnection.Messages = make(chan string, 20) // Buffered channel
+	for message := range bridge.CECConnection.Messages {
+		slog.Info("CEC Message", "message", message)
+		matches := regex.FindStringSubmatch(message)
+		if matches != nil {
+			prefix := matches[1]
+			hexPart := matches[2]
+			slog.Info("CEC Message payload match", "prefix", prefix, "hex", hexPart)
+			if prefix == "<<" {
+				bridge.PublishMQTT("cec/msg/rx", hexPart, true)
+			} else if prefix == ">>" {
+				bridge.PublishMQTT("cec/msg/tx", hexPart, true)
+			}
+		}
+	}
 }
 
 func bridgeKeyPresses(bridge *cecmqtt.CecMQTTBridge) {
@@ -112,6 +140,7 @@ func cecBridgeMainLoop(bridge *cecmqtt.CecMQTTBridge) {
 	for {
 		time.Sleep(10 * time.Second)
 		bridge.CECConnection.Transmit("10:8F") //"Recording 1" asks TV for power status
+		//bridge.CECConnection.Transmit("1F:85") //"Recording 1" asks TV for active source
 	}
 }
 
@@ -122,5 +151,6 @@ func initCECBridge(bridge *cecmqtt.CecMQTTBridge) {
 	//go bridge.PublishMessages(true)
 	go bridge.PublishSourceActivations()
 	go bridgeKeyPresses(bridge)
+	go bridgeMessages(bridge)
 	go cecBridgeMainLoop(bridge)
 }
