@@ -119,8 +119,8 @@ func initCECBridge(bridge *cecmqtt.CecMQTTBridge) {
 
 	go bridge.PublishCommands()
 	//go bridge.PublishKeyPresses()
-	//go bridge.PublishSourceActivations()
 	//go bridge.PublishMessages(true)
+	go bridge.PublishSourceActivations()
 	go bridgeKeyPresses(bridge)
 	go cecBridgeMainLoop(bridge)
 }

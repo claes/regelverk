@@ -39,6 +39,8 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					Retained: true,
 				},
 			}
+		case "0F:82:00:00:00:00":
+			fallthrough
 		case "0F:82:00:00":
 			slog.Debug("TV active source")
 			return []MQTTPublish{
@@ -49,6 +51,8 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					Retained: true,
 				},
 			}
+		case "1F:82:40:00:00:00":
+			fallthrough
 		case "1F:82:40:00":
 			slog.Debug("Mediaflix active source")
 			return []MQTTPublish{
@@ -59,6 +63,8 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					Retained: true,
 				},
 			}
+		case "4F:82:30:00:00:00":
+			fallthrough
 		case "4F:82:30:00":
 			slog.Debug("Chromecast active source")
 			return []MQTTPublish{
@@ -69,7 +75,7 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					Retained: true,
 				},
 			}
-		case "0F:86:20:00":
+		case "4F:82:20:00:00:00":
 			slog.Debug("Bluray active source")
 			return []MQTTPublish{
 				{
