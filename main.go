@@ -19,6 +19,14 @@ var dryRun *bool
 
 // Mostly reused from https://github.com/stapelberg/regelwerk
 
+type BridgeConfig struct {
+	rotelSerialPort  string
+	samsungTvAddress string
+	mpdServer        string
+	mpdPassword      string
+	pulseserver      string
+}
+
 type MQTTEvent struct {
 	Timestamp time.Time
 	Topic     string
@@ -96,7 +104,7 @@ func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 	}
 }
 
-func regelverk(broker string) error {
+func regelverk(broker string, bridgeConfig BridgeConfig) error {
 
 	// Enable file names in logs:
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -141,7 +149,7 @@ func regelverk(broker string) error {
 	}
 
 	// Initialize MQTT bridges running in-process
-	initBridges(client)
+	initBridges(client, bridgeConfig)
 
 	initLoops(mqttMessageHandler)
 
@@ -169,6 +177,11 @@ func main() {
 
 	mqttBroker := flag.String("broker", "tcp://localhost:1883", "MQTT broker URL")
 	listenAddr := flag.String("listenAddr", ":8080", "HTTP listen address")
+	rotelSerialPort := flag.String("rotelSerialPort", "", "Rotel serial port")
+	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
+	mpdServer := flag.String("mpdServer", "", "MPD server")
+	pulseServer := flag.String("pulseServer", "", "Pulse server")
+	mpdPassword := flag.String("mpdPassword", "", "MPD password")
 	help := flag.Bool("help", false, "Print help")
 	debug = flag.Bool("debug", false, "Debug logging")
 	dryRun = flag.Bool("dry_run", false, "Dry run (do not publish)")
@@ -191,7 +204,14 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 
 	go func() {
-		err := regelverk(*mqttBroker)
+		err := regelverk(*mqttBroker,
+			BridgeConfig{
+				rotelSerialPort:  *rotelSerialPort,
+				samsungTvAddress: *samsungTVAddress,
+				mpdServer:        *mpdServer,
+				mpdPassword:      *mpdPassword,
+				pulseserver:      *pulseServer},
+		)
 		if err != nil {
 			slog.Error("Error initializing MQTT", "error", err)
 			os.Exit(1)
