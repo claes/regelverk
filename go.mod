@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/bendahl/uinput v1.7.0
 	github.com/claes/cec v0.0.0-20240517192915-921b101aae97
-	github.com/claes/cec-mqtt v0.0.0-20240602071748-02334fb6b429
+	github.com/claes/cec-mqtt v0.0.0-20240602082920-14575d456ebb
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/gorilla/websocket v1.5.1
 )
