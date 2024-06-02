@@ -189,20 +189,25 @@ func main() {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-	slog.Info("Started!")
 
 	go func() {
-		if err := regelverk(*mqttBroker); err != nil {
+		err := regelverk(*mqttBroker)
+		if err != nil {
 			slog.Error("Error initializing MQTT", "error", err)
 			os.Exit(1)
+		} else {
+			slog.Info("Initialized MQTT server", "mqttBroker", mqttBroker)
 		}
 	}()
 
 	go func() {
 		err := http.ListenAndServe(*listenAddr, nil)
 		if err != nil {
-			slog.Error("Error initializing HTTP server", "error", err)
+			slog.Error("Error initializing HTTP server",
+				"listenAddr", listenAddr, "error", err)
 			os.Exit(1)
+		} else {
+			slog.Info("Initialized HTTP server", "listenAddr", listenAddr)
 		}
 	}()
 

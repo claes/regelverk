@@ -8,6 +8,7 @@ import (
 
 type tvAudioLoop struct {
 	statusLoop
+	tvSource               string
 	tvPowerLastStateChange time.Time
 	tvPowerLastState       bool
 	rotelState             map[string]interface{}
@@ -18,6 +19,7 @@ func (l *tvAudioLoop) Init(m *mqttMessageHandler) {}
 func (l *tvAudioLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	loopRules := []func(MQTTEvent) []MQTTPublish{
 		l.updateRotelState,
+		//		l.updateTvSourceState,
 		l.turnOnAmpWhenTVOn,
 		l.turnOffAmpWhenTVOff,
 	}
@@ -34,6 +36,40 @@ func (l *tvAudioLoop) updateRotelState(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 	case "rotel/state":
 		l.rotelState = parseJSONPayload(ev)
+	}
+	return nil
+}
+
+func (l *tvAudioLoop) updateTvSourceState(ev MQTTEvent) []MQTTPublish {
+	switch ev.Topic {
+	case "regelverk/state/tvsource":
+		l.tvSource = string(ev.Payload.([]byte))
+		switch l.tvSource {
+		case "tv":
+			fallthrough
+		case "chromecast":
+			fallthrough
+		case "bluray":
+			return []MQTTPublish{
+				{
+					Topic:    "pulseaudio/cardprofile/0/set",
+					Payload:  "output:hdmi-stereo",
+					Qos:      2,
+					Retained: false,
+					Wait:     0,
+				},
+			}
+		case "mediaflix":
+			return []MQTTPublish{
+				{
+					Topic:    "pulseaudio/cardprofile/0/set",
+					Payload:  "output:iec958-stereo+input:analog-stereo",
+					Qos:      2,
+					Retained: false,
+					Wait:     0,
+				},
+			}
+		}
 	}
 	return nil
 }
@@ -71,7 +107,9 @@ func (l *tvAudioLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 			return nil
 		}
 		tvPowerStateChange := l.updateTvPower(tvPower)
-		slog.Debug("regelverk/state/tvpower", "value", tvPower, "stateChange", tvPowerStateChange)
+		slog.Debug("regelverk/state/tvpower",
+			"value", tvPower,
+			"stateChange", tvPowerStateChange)
 		if tvPowerStateChange {
 			if tvPower {
 				returnList := []MQTTPublish{
@@ -114,8 +152,8 @@ func (l *tvAudioLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 				// Need to wait here since a newly started TV is not receptive first 20 or so seconds
 				for i := int64(15); i < 40; i++ {
 					p := MQTTPublish{
-						Topic:    "samsungremote/key/reconnectsend",
-						Payload:  "KEY_VOLDOWN",
+						Topic:    "cec/key/send",
+						Payload:  "{\"address\": 0, \"key\": \"VolumeDown\"}",
 						Qos:      2,
 						Retained: false,
 						Wait:     time.Duration(i) * time.Second / 2,
