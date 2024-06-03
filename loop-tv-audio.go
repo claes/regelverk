@@ -129,7 +129,7 @@ func (l *tvAudioLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					},
 					{
 						Topic:    "rotel/command/send",
-						Payload:  "volume_30!",
+						Payload:  "volume_38!",
 						Qos:      2,
 						Retained: false,
 						Wait:     2 * time.Second,
@@ -152,8 +152,8 @@ func (l *tvAudioLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 				// Need to wait here since a newly started TV is not receptive first 20 or so seconds
 				for i := int64(15); i < 40; i++ {
 					p := MQTTPublish{
-						Topic:    "cec/key/send",
-						Payload:  "{\"address\": 0, \"key\": \"VolumeDown\"}",
+						Topic:    "samsungremote/key/reconnectsend",
+						Payload:  "KEY_VOLDOWN",
 						Qos:      2,
 						Retained: false,
 						Wait:     time.Duration(i) * time.Second / 2,

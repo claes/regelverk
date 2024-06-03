@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"net/http"
@@ -167,6 +168,21 @@ func regelverk(broker string, bridgeConfig BridgeConfig) error {
 	select {} // loop forever
 }
 
+func fileToString(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
+}
+
 func printHelp() {
 	fmt.Println("Usage: regelverk [OPTIONS]")
 	fmt.Println("Options:")
@@ -181,7 +197,7 @@ func main() {
 	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
 	mpdServer := flag.String("mpdServer", "", "MPD server")
 	pulseServer := flag.String("pulseServer", "", "Pulse server")
-	mpdPassword := flag.String("mpdPassword", "", "MPD password")
+	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password")
 	help := flag.Bool("help", false, "Print help")
 	debug = flag.Bool("debug", false, "Debug logging")
 	dryRun = flag.Bool("dry_run", false, "Dry run (do not publish)")
@@ -204,12 +220,20 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 
 	go func() {
-		err := regelverk(*mqttBroker,
+
+		mpdPassword, err := fileToString(*mpdPasswordFile)
+		if err != nil {
+			slog.Error("Error reading mpd password",
+				"mpdPasswordFile", mpdPasswordFile, "error", err)
+			os.Exit(1)
+		}
+
+		err = regelverk(*mqttBroker,
 			BridgeConfig{
 				rotelSerialPort:  *rotelSerialPort,
 				samsungTvAddress: *samsungTVAddress,
 				mpdServer:        *mpdServer,
-				mpdPassword:      *mpdPassword,
+				mpdPassword:      mpdPassword,
 				pulseserver:      *pulseServer},
 		)
 		if err != nil {
