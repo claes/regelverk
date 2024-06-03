@@ -195,8 +195,8 @@ func main() {
 	listenAddr := flag.String("listenAddr", ":8080", "HTTP listen address")
 	rotelSerialPort := flag.String("rotelSerialPort", "", "Rotel serial port")
 	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
-	mpdServer := flag.String("mpdServer", "", "MPD server")
 	pulseServer := flag.String("pulseServer", "", "Pulse server")
+	mpdServer := flag.String("mpdServer", "", "MPD server")
 	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password")
 	help := flag.Bool("help", false, "Print help")
 	debug = flag.Bool("debug", false, "Debug logging")
@@ -228,6 +228,7 @@ func main() {
 			os.Exit(1)
 		}
 
+		slog.Info("MPD password", "password", mpdPassword)
 		err = regelverk(*mqttBroker,
 			BridgeConfig{
 				rotelSerialPort:  *rotelSerialPort,
