@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"time"
 
@@ -180,7 +181,7 @@ func fileToString(filePath string) (string, error) {
 		return "", err
 	}
 
-	return string(data), nil
+	return strings.TrimSpace(string(data)), nil
 }
 
 func printHelp() {
