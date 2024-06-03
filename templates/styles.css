@@ -19,9 +19,7 @@
     /* Optional: Add slight gradient for a more authentic look */
     background-image: linear-gradient(to bottom, #222, #444);
 
-    /* Center the text */
     text-align: center;
 
-    /* Add spacing between characters */
     letter-spacing: 2px;
 }
