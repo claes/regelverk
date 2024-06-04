@@ -13,12 +13,12 @@ require (
 )
 
 require (
-	github.com/claes/pulseaudio-mqtt v0.0.0-20240519184920-92ac3486a185 // indirect
+	github.com/claes/pulseaudio-mqtt v0.0.0-20240604202429-a10ef7d67f78 // indirect
 	github.com/claes/samsung-mqtt v0.0.0-20240602172721-04fb4a7190d1 // indirect
 	github.com/fhs/gompd/v2 v2.3.0 // indirect
 	github.com/jfreymuth/pulse v0.1.1 // indirect
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07 // indirect
-	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
 )
