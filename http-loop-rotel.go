@@ -194,7 +194,7 @@ func (l *rotelHttpLoop) rotelBalanceRenderer(w io.Writer, currentBalance string)
 	// L15 -- 000 -- R15
 	balance, err := balanceToInt(currentBalance)
 	if err != nil {
-		slog.Error("Could not parse balance as int", "error", err)
+		slog.Error("Could not parse balance as int", "error", err, "value", currentBalance)
 		return
 	}
 	fmt.Fprintf(w, "<input type='range' id='rotel-balance' name='rotel-balance' value='%d' min='-15' max='15' hx-post='/rotel/balance' hx-trigger='change' hx-swap-oob='true' />", balance)
@@ -257,7 +257,7 @@ func (l *rotelHttpLoop) rotelTrebleRenderer(w io.Writer, currentTreble string) {
 	// -10 -- 000 -- +10
 	treble, err := bassOrTrebleToInt(currentTreble)
 	if err != nil {
-		slog.Error("Could not parse treble as int", "error", err)
+		slog.Error("Could not parse treble as int", "error", err, "value", currentTreble)
 		return
 	}
 	fmt.Fprintf(w, "<input type='range' id='rotel-treble' name='rotel-treble' value='%d' min='-10' max='10' hx-post='/rotel/treble' hx-trigger='change' hx-swap-oob='true' />", treble)
@@ -320,7 +320,7 @@ func (l *rotelHttpLoop) rotelBassRenderer(w io.Writer, currentBass string) {
 	// -10 -- 000 -- +10
 	bass, err := bassOrTrebleToInt(currentBass)
 	if err != nil {
-		slog.Error("Could not parse bass as int", "error", err)
+		slog.Error("Could not parse bass as int", "error", err, "value", currentBass)
 		return
 	}
 	fmt.Fprintf(w, "<input type='range' id='rotel-bass' name='rotel-bass' value='%d' min='-10' max='10' hx-post='/rotel/bass' hx-trigger='change' hx-swap-oob='true' />", bass)
