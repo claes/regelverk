@@ -7,8 +7,13 @@ import (
 )
 
 func initBridges(mqttClient mqtt.Client, bridgeConfig BridgeConfig) {
-	initCECBridge(CreateCECBridge(mqttClient))
-	initRotelBridge(CreateRotelBridge(bridgeConfig.rotelSerialPort, mqttClient))
+
+	rotelBridge, err := CreateRotelBridge(bridgeConfig.rotelSerialPort, mqttClient)
+	if err != nil {
+		slog.Error("Could not create rotel bridge", "error", err)
+	} else {
+		initRotelBridge(rotelBridge)
+	}
 
 	pulseBridge, err := CreatePulseaudioBridge(bridgeConfig.pulseserver, mqttClient)
 	if err != nil {
@@ -16,6 +21,8 @@ func initBridges(mqttClient mqtt.Client, bridgeConfig BridgeConfig) {
 	} else {
 		initPulseaudioBridge(pulseBridge)
 	}
+
+	initCECBridge(CreateCECBridge(mqttClient))
 	initSamsungBridge(CreateSamsungBridge(bridgeConfig.samsungTvAddress, mqttClient))
 	initMPDBridge(CreateMPDBridge(bridgeConfig.mpdServer, bridgeConfig.mpdPassword, mqttClient))
 }
