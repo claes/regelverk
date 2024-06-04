@@ -8,7 +8,7 @@ require (
 	github.com/claes/cec-mqtt v0.0.0-20240602093512-ff031debf127
 	github.com/claes/mpd-mqtt v0.0.0-20240519194016-85c618d0324c
 	github.com/claes/pulseaudio-mqtt v0.0.0-20240604210111-6a97bd94d59f
-	github.com/claes/rotel-mqtt v0.0.0-20240604210031-63e13ff81ed9
+	github.com/claes/rotel-mqtt v0.0.0-20240604213051-85b3d13bd17e
 	github.com/claes/samsung-mqtt v0.0.0-20240602172721-04fb4a7190d1
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/gorilla/websocket v1.5.1
