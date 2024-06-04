@@ -12,6 +12,8 @@ github.com/claes/rotel-mqtt v0.0.0-20240604210031-63e13ff81ed9 h1:82YrLX038vVK+r
 github.com/claes/rotel-mqtt v0.0.0-20240604210031-63e13ff81ed9/go.mod h1:DXNpasrX+83LQrnnPGJmTIOexwA9XkeyU22atNDevD4=
 github.com/claes/rotel-mqtt v0.0.0-20240604213051-85b3d13bd17e h1:9L4uShbl/kRuUXtgjM7ZGARg4ARCMHTY13Ji8SjjYA8=
 github.com/claes/rotel-mqtt v0.0.0-20240604213051-85b3d13bd17e/go.mod h1:DXNpasrX+83LQrnnPGJmTIOexwA9XkeyU22atNDevD4=
+github.com/claes/rotel-mqtt v0.0.0-20240604215418-525ceab591f6 h1:QFhhhHj99y9oiWCYTeeIC+40kxWqyBgdZCb+mSg1424=
+github.com/claes/rotel-mqtt v0.0.0-20240604215418-525ceab591f6/go.mod h1:DXNpasrX+83LQrnnPGJmTIOexwA9XkeyU22atNDevD4=
 github.com/claes/samsung-mqtt v0.0.0-20240602172721-04fb4a7190d1 h1:SYp9Gfz7GZrIZkJ+/YsHt7VAT9avy+PUFEQMmlJW37M=
 github.com/claes/samsung-mqtt v0.0.0-20240602172721-04fb4a7190d1/go.mod h1:0rHVPioCmrVMl9tOe2jVXGr6a8myw4jw0ijXlZjwKbQ=
 github.com/eclipse/paho.mqtt.golang v1.4.3 h1:2kwcUGn8seMUfWndX0hGbvH8r7crgcJguQNCyp70xik=
