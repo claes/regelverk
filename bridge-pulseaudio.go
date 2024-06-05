@@ -19,5 +19,5 @@ func CreatePulseaudioBridge(pulseserver string, mqttClient mqtt.Client) (*pulsem
 
 func initPulseaudioBridge(bridge *pulsemqtt.PulseaudioMQTTBridge) {
 	go bridge.MainLoop()
-	slog.Info("Pulseaudio bridge started ")
+	slog.Info("Pulseaudio bridge started")
 }

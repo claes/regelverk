@@ -20,4 +20,6 @@ func CreateRotelBridge(serialPort string, mqttClient mqtt.Client) (*rotelmqtt.Ro
 
 func initRotelBridge(bridge *rotelmqtt.RotelMQTTBridge) {
 	go bridge.SerialLoop()
+	slog.Info("Rotel bridge started")
+
 }
