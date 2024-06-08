@@ -30,36 +30,41 @@
         </div>
         <div>
             <label for="rotel-source">Source</label>
-            <div id="rotel-source"></div>
+            <input type="select" id="rotel-source" />
         </div>
         <div>
             <label for="rotel-tone">Tone</label>
-            <div id="rotel-tone"></div>
+            <input type="checkbox" id="rotel-tone" />
         </div>
         <div>
             <label for="rotel-mute">Mute</label>
-            <div id="rotel-mute"></div>
+            <input type="checkbox" id="rotel-mute" />
         </div>
         <div>
             <label for="rotel-volume">Volume</label>
-            <div id="rotel-volume"></div>
+            <input type="range" id="rotel-volume" />
         </div>
         <div>
             <label for="rotel-balance">Balance</label>
-            <div id="rotel-balance"></div>
+            <input type="range" id="rotel-balance" />
         </div>
         <div>
             <label for="rotel-bass">Bass</label>
-            <div id="rotel-bass"></div>
+            <input type="range" id="rotel-bass" />
         </div>
         <div>
             <label for="rotel-treble">Treble</label>
-            <div id="rotel-treble"></div>
+            <input type="range" id="rotel-treble" />
         </div>
         <div>
             <label for="rotel-power">Power</label>
-            <div id="rotel-power"></div>
+            <input type="checkbox" id="rotel-power" />
         </div>
+        <div>
+            <label for="pulseaudio-sink">Pulseaudio Sink</label>
+            <div id="pulseaudio-sink"></div>
+        </div>
+
     </div>
     <div hx-get="/rotel/state/init" hx-target="#ws-output" hx-swap="innerHTML" hx-trigger="load"></div>
     <div id="ws-output">
