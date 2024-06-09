@@ -164,15 +164,18 @@ func (l *webLoop) pulseaudioProfileHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (l *webLoop) pulseaudioProfileRenderer(w io.Writer, currentProfile string) {
-	fmt.Fprintf(w, "<select id='pulseaudio-profile' name='pulseaudio-profile' hx-post='/pulseaudio/profile' hx-trigger='change' hx-swap-oob='true'>")
-	for _, profile := range l.pulseAudioState.Cards[0].Profiles {
-		selected := ""
-		if profile.Name == currentProfile {
-			selected = "selected"
+	if len(l.pulseAudioState.Cards) > 0 {
+		fmt.Fprintf(w, "<select id='pulseaudio-profile' name='pulseaudio-profile' hx-post='/pulseaudio/profile' hx-trigger='change' hx-swap-oob='true'>")
+
+		for _, profile := range l.pulseAudioState.Cards[0].Profiles {
+			selected := ""
+			if profile.Name == currentProfile {
+				selected = "selected"
+			}
+			fmt.Fprintf(w, "<option value='%s' %s >%s</option>", profile.Name, selected, profile.Name)
 		}
-		fmt.Fprintf(w, "<option value='%s' %s >%s</option>", profile.Name, selected, profile.Name)
+		fmt.Fprintf(w, "</select>")
 	}
-	fmt.Fprintf(w, "</select>")
 }
 
 func (l *webLoop) rotelToneHandler(w http.ResponseWriter, r *http.Request) {
@@ -452,7 +455,9 @@ func (l *webLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 
 		l.pulseaudioSinkRenderer(socketWriter, l.pulseAudioState.DefaultSink.Id)
 
-		l.pulseaudioProfileRenderer(socketWriter, l.pulseAudioState.ActiveProfilePerCard[0])
+		if len(l.pulseAudioState.ActiveProfilePerCard > 0) {
+			l.pulseaudioProfileRenderer(socketWriter, l.pulseAudioState.ActiveProfilePerCard[0])
+		}
 
 		socketWriter.Close()
 
