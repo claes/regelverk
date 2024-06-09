@@ -46,6 +46,7 @@ func (l *webLoop) Init(m *mqttMessageHandler) {
 	http.HandleFunc("/rotel/power", l.rotelPowerHandler)
 
 	http.HandleFunc("/pulseaudio/sink", l.pulseaudioSinkHandler)
+	http.HandleFunc("/pulseaudio/profile", l.pulseaudioProfileHandler)
 
 	http.HandleFunc("/styles.css", func(w http.ResponseWriter, r *http.Request) {
 		data, _ := content.ReadFile("templates/styles.css")
@@ -140,7 +141,7 @@ func (l *webLoop) rotelSourceRenderer(w io.Writer, currentSource string) {
 
 func (l *webLoop) pulseaudioSinkHandler(w http.ResponseWriter, r *http.Request) {
 	selectedSink := r.FormValue("pulseaudio-sink")
-	l.mqttMessageHandler.client.Publish("pulseaudio/cardprofile/0/set", 2, false, selectedSink)
+	l.mqttMessageHandler.client.Publish("pulseaudio/sink/default/set", 2, false, selectedSink)
 	l.pulseaudioSinkRenderer(w, selectedSink)
 }
 
@@ -152,6 +153,24 @@ func (l *webLoop) pulseaudioSinkRenderer(w io.Writer, currentSink string) {
 			selected = "selected"
 		}
 		fmt.Fprintf(w, "<option value='%s' %s >%s</option>", sink.Id, selected, sink.Name)
+	}
+	fmt.Fprintf(w, "</select>")
+}
+
+func (l *webLoop) pulseaudioProfileHandler(w http.ResponseWriter, r *http.Request) {
+	selectedProfile := r.FormValue("pulseaudio-profile")
+	l.mqttMessageHandler.client.Publish("pulseaudio/cardprofile/0/set", 2, false, selectedProfile)
+	l.pulseaudioProfileRenderer(w, selectedProfile)
+}
+
+func (l *webLoop) pulseaudioProfileRenderer(w io.Writer, currentProfile string) {
+	fmt.Fprintf(w, "<select id='pulseaudio-profile' name='pulseaudio-profile' hx-post='/pulseaudio/profile' hx-trigger='change' hx-swap-oob='true'>")
+	for _, profile := range l.pulseAudioState.Cards[0].Profiles {
+		selected := ""
+		if profile.Name == currentProfile {
+			selected = "selected"
+		}
+		fmt.Fprintf(w, "<option value='%s' %s >%s</option>", profile.Name, selected, profile.Name)
 	}
 	fmt.Fprintf(w, "</select>")
 }
@@ -432,6 +451,8 @@ func (l *webLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 		l.rotelPowerRenderer(socketWriter, l.rotelState.State)
 
 		l.pulseaudioSinkRenderer(socketWriter, l.pulseAudioState.DefaultSink.Id)
+
+		l.pulseaudioProfileRenderer(socketWriter, l.pulseAudioState.ActiveProfilePerCard[0])
 
 		socketWriter.Close()
 
