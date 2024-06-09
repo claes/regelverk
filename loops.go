@@ -5,7 +5,7 @@ var loops = []controlLoop{
 	&mpdLoop{},
 	&tvAudioLoop{},
 	&cecLoop{},
-	&rotelHttpLoop{},
+	&webLoop{},
 }
 
 func initLoops(msgHandler *mqttMessageHandler) {

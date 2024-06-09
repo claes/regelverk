@@ -226,7 +226,6 @@ func main() {
 		if err != nil {
 			slog.Error("Error reading mpd password",
 				"mpdPasswordFile", mpdPasswordFile, "error", err)
-			os.Exit(1)
 		}
 
 		slog.Info("MPD password", "password", mpdPassword)
