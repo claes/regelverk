@@ -62,11 +62,11 @@
         </div>
         <div>
             <label for="pulseaudio-sink">Pulseaudio Sink</label>
-            <div id="pulseaudio-sink"></div>
+            <input type="select" id="pulseaudio-sink" />
         </div>
 
     </div>
-    <div hx-get="/rotel/state/init" hx-target="#ws-output" hx-swap="innerHTML" hx-trigger="load"></div>
+    <div hx-get="/web/state/init" hx-target="#ws-output" hx-swap="innerHTML" hx-trigger="load"></div>
     <div id="ws-output">
     </div>
 </body>
