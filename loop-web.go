@@ -386,7 +386,7 @@ var upgrader = websocket.Upgrader{}
 
 func (l *webLoop) rotelStateInitWs(w http.ResponseWriter, req *http.Request) {
 	var responseTemplate = `
-	<div id="ws-output" hx-ext="ws" ws-connect="/rotel/state/ws">	
+	<div id="ws-output" hx-ext="ws" ws-connect="/web/state/ws">	
 		<div id="rotel-state"></div>
 	</div>
 	`
