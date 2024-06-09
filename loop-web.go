@@ -455,7 +455,7 @@ func (l *webLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 
 		l.pulseaudioSinkRenderer(socketWriter, l.pulseAudioState.DefaultSink.Id)
 
-		if len(l.pulseAudioState.ActiveProfilePerCard > 0) {
+		if len(l.pulseAudioState.ActiveProfilePerCard) > 0 {
 			l.pulseaudioProfileRenderer(socketWriter, l.pulseAudioState.ActiveProfilePerCard[0])
 		}
 
