@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -11,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	pulsemqtt "github.com/claes/pulseaudio-mqtt/lib"
+	rotelmqtt "github.com/claes/rotel-mqtt/lib"
 	"github.com/gorilla/websocket"
 )
 
@@ -18,12 +21,13 @@ import (
 var content embed.FS
 
 var rotelStateUpdated = make(chan struct{})
+var pulseaudioStateUpdated = make(chan struct{})
 
 type rotelHttpLoop struct {
 	statusLoop
 	mqttMessageHandler *mqttMessageHandler
-	rotelPreviousState map[string]interface{}
-	rotelState         map[string]interface{}
+	rotelState         rotelmqtt.RotelState
+	pulseAudioState    pulsemqtt.PulseAudioState
 }
 
 func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
@@ -39,6 +43,7 @@ func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
 	http.HandleFunc("/rotel/bass", l.rotelBassHandler)
 	http.HandleFunc("/rotel/treble", l.rotelTrebleHandler)
 	http.HandleFunc("/rotel/power", l.rotelPowerHandler)
+	http.HandleFunc("/pulseaudio/sink", l.pulseaudioSinkHandler)
 	http.HandleFunc("/styles.css", func(w http.ResponseWriter, r *http.Request) {
 		data, _ := content.ReadFile("templates/styles.css")
 		w.Header().Add("Content-Type", "text/css")
@@ -51,15 +56,33 @@ func (l *rotelHttpLoop) Init(m *mqttMessageHandler) {
 func (l *rotelHttpLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 	case "rotel/state":
-		l.rotelPreviousState = l.rotelState
-		l.rotelState = parseJSONPayload(ev)
-		rotelStateUpdated <- struct{}{}
+		err := json.Unmarshal(ev.Payload.([]byte), &l.rotelState)
+		if err != nil {
+			slog.Error("Could not unmarshal rotel state", "rotelstate", ev.Payload)
+		} else {
+			rotelStateUpdated <- struct{}{}
+		}
+	case "pulseaudio/state":
+		err := json.Unmarshal(ev.Payload.([]byte), &l.pulseAudioState)
+		if err != nil {
+			slog.Error("Could not unmarshal pulseaudio state", "pulseaudiostate", ev.Payload)
+		} else {
+			pulseaudioStateUpdated <- struct{}{}
+		}
+
 	case "regelverk/ticker/1s":
 		_, _, second := time.Now().Clock()
 		if second%10 == 0 {
 			returnList := []MQTTPublish{
 				{
 					Topic:    "rotel/command/initialize",
+					Payload:  "true",
+					Qos:      2,
+					Retained: false,
+					Wait:     0 * time.Second,
+				},
+				{
+					Topic:    "pulseaudio/initialize",
 					Payload:  "true",
 					Qos:      2,
 					Retained: false,
@@ -108,6 +131,24 @@ func (l *rotelHttpLoop) rotelSourceRenderer(w io.Writer, currentSource string) {
 			selected = "selected"
 		}
 		fmt.Fprintf(w, "<option value='%s' %s >%s</option>", source, selected, source)
+	}
+	fmt.Fprintf(w, "</select>")
+}
+
+func (l *rotelHttpLoop) pulseaudioSinkHandler(w http.ResponseWriter, r *http.Request) {
+	selectedSink := r.FormValue("pulseaudio-sink")
+	l.mqttMessageHandler.client.Publish("pulseaudio/cardprofile/0/set", 2, false, selectedSink)
+	l.pulseaudioSinkRenderer(w, selectedSink)
+}
+
+func (l *rotelHttpLoop) pulseaudioSinkRenderer(w io.Writer, currentSink string) {
+	fmt.Fprintf(w, "<select id='pulseaudio-sink' name='pulseaudio-sink' hx-post='/pulseaudio/sink' hx-trigger='change' hx-swap-oob='true'>")
+	for _, sink := range l.pulseAudioState.Sinks {
+		selected := ""
+		if sink.Id == currentSink {
+			selected = "selected"
+		}
+		fmt.Fprintf(w, "<option value='%s' %s >%s</option>", sink.Id, selected, sink.Name)
 	}
 	fmt.Fprintf(w, "</select>")
 }
@@ -369,28 +410,32 @@ func (l *rotelHttpLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 
-		l.rotelDisplayRenderer(socketWriter, l.rotelState["display"].(string))
+		l.rotelDisplayRenderer(socketWriter, l.rotelState.Display)
 
-		l.rotelSourceRenderer(socketWriter, l.rotelState["source"].(string))
+		l.rotelSourceRenderer(socketWriter, l.rotelState.Source)
 
-		l.rotelToneRenderer(socketWriter, l.rotelState["tone"].(string))
+		l.rotelToneRenderer(socketWriter, l.rotelState.Tone)
 
-		l.rotelMuteRenderer(socketWriter, l.rotelState["mute"].(string))
+		l.rotelMuteRenderer(socketWriter, l.rotelState.Mute)
 
-		l.rotelVolumeRenderer(socketWriter, l.rotelState["volume"].(string))
+		l.rotelVolumeRenderer(socketWriter, l.rotelState.Volume)
 
-		l.rotelBalanceRenderer(socketWriter, l.rotelState["balance"].(string))
+		l.rotelBalanceRenderer(socketWriter, l.rotelState.Balance)
 
-		l.rotelBassRenderer(socketWriter, l.rotelState["bass"].(string))
+		l.rotelBassRenderer(socketWriter, l.rotelState.Bass)
 
-		l.rotelTrebleRenderer(socketWriter, l.rotelState["treble"].(string))
+		l.rotelTrebleRenderer(socketWriter, l.rotelState.Treble)
 
-		l.rotelPowerRenderer(socketWriter, l.rotelState["state"].(string))
+		l.rotelPowerRenderer(socketWriter, l.rotelState.State)
+
+		l.pulseaudioSinkRenderer(socketWriter, l.pulseAudioState.DefaultSink.Id)
 
 		socketWriter.Close()
 
 		select {
 		case <-rotelStateUpdated:
+			continue
+		case <-pulseaudioStateUpdated:
 			continue
 		}
 	}
