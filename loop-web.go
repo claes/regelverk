@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	pulsemqtt "github.com/claes/pulseaudio-mqtt/lib"
 	rotelmqtt "github.com/claes/rotel-mqtt/lib"
@@ -55,6 +54,7 @@ func (l *webLoop) Init(m *mqttMessageHandler) {
 	})
 
 	l.mqttMessageHandler.client.Publish("rotel/command/initialize", 2, false, "true")
+	l.mqttMessageHandler.client.Publish("pulseaudio/initialize", 2, false, "true")
 }
 
 func (l *webLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
@@ -74,27 +74,27 @@ func (l *webLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 			pulseaudioStateUpdated <- struct{}{}
 		}
 
-	case "regelverk/ticker/1s":
-		_, _, second := time.Now().Clock()
-		if second%10 == 0 {
-			returnList := []MQTTPublish{
-				{
-					Topic:    "rotel/command/initialize",
-					Payload:  "true",
-					Qos:      2,
-					Retained: false,
-					Wait:     0 * time.Second,
-				},
-				{
-					Topic:    "pulseaudio/initialize",
-					Payload:  "true",
-					Qos:      2,
-					Retained: false,
-					Wait:     0 * time.Second,
-				},
-			}
-			return returnList
-		}
+		// case "regelverk/ticker/1s":
+		// 	_, _, second := time.Now().Clock()
+		// 	if second%10 == 0 {
+		// 		returnList := []MQTTPublish{
+		// 			{
+		// 				Topic:    "rotel/command/initialize",
+		// 				Payload:  "true",
+		// 				Qos:      2,
+		// 				Retained: false,
+		// 				Wait:     0 * time.Second,
+		// 			},
+		// 			{
+		// 				Topic:    "pulseaudio/initialize",
+		// 				Payload:  "true",
+		// 				Qos:      2,
+		// 				Retained: false,
+		// 				Wait:     0 * time.Second,
+		// 			},
+		// 		}
+		// 		return returnList
+		// 	}
 	}
 	return nil
 }
