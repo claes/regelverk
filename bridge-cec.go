@@ -11,9 +11,8 @@ import (
 )
 
 func CreateCECBridge(mqttClient mqtt.Client) *cecmqtt.CecMQTTBridge {
-	bridge := cecmqtt.NewCecMQTTBridge(cecmqtt.
-		CreateCECConnection("/dev/ttyACM0", "Regelverk"),
-		mqttClient)
+	cecConnection := cecmqtt.CreateCECConnection("/dev/ttyACM0", "Regelverk")
+	bridge := cecmqtt.NewCecMQTTBridge(cecConnection, mqttClient)
 	return bridge
 }
 
@@ -138,6 +137,10 @@ func cecBridgeMainLoop(bridge *cecmqtt.CecMQTTBridge) {
 		bridge.CECConnection.Transmit("10:8F") //"Recording 1" asks TV for power status
 		//bridge.CECConnection.Transmit("1F:85") //"Recording 1" asks TV for active source
 		time.Sleep(10 * time.Second)
+
+		ping := bridge.CECConnection.Ping()
+		slog.Info("Ping CEC", "result", ping)
+		time.Sleep(1 * time.Second)
 	}
 }
 
