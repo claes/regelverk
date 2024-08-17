@@ -22,7 +22,8 @@ func initBridges(mqttClient mqtt.Client, bridgeConfig BridgeConfig) {
 		initPulseaudioBridge(pulseBridge)
 	}
 
-	initCECBridge(CreateCECBridge(mqttClient))
+	//initCECBridge(CreateCECBridge(mqttClient))
+	initCECBridgeNew(mqttClient)
 	initSamsungBridge(CreateSamsungBridge(bridgeConfig.samsungTvAddress, mqttClient))
 	initMPDBridge(CreateMPDBridge(bridgeConfig.mpdServer, bridgeConfig.mpdPassword, mqttClient))
 }
