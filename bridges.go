@@ -6,16 +6,16 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-func initBridges(mqttClient mqtt.Client, bridgeConfig BridgeConfig) {
+func initBridges(mqttClient mqtt.Client, config Config) {
 
-	rotelBridge, err := CreateRotelBridge(bridgeConfig.rotelSerialPort, mqttClient)
+	rotelBridge, err := CreateRotelBridge(config.rotelSerialPort, mqttClient)
 	if err != nil {
 		slog.Error("Could not create rotel bridge", "error", err)
 	} else {
 		initRotelBridge(rotelBridge)
 	}
 
-	pulseBridge, err := CreatePulseaudioBridge(bridgeConfig.pulseserver, mqttClient)
+	pulseBridge, err := CreatePulseaudioBridge(config.pulseserver, mqttClient)
 	if err != nil {
 		slog.Error("Could not create pulseaudio bridge", "error", err)
 	} else {
@@ -23,6 +23,6 @@ func initBridges(mqttClient mqtt.Client, bridgeConfig BridgeConfig) {
 	}
 
 	initCECBridge(mqttClient)
-	initSamsungBridge(CreateSamsungBridge(bridgeConfig.samsungTvAddress, mqttClient))
-	initMPDBridge(CreateMPDBridge(bridgeConfig.mpdServer, bridgeConfig.mpdPassword, mqttClient))
+	initSamsungBridge(CreateSamsungBridge(config.samsungTvAddress, mqttClient))
+	initMPDBridge(CreateMPDBridge(config.mpdServer, config.mpdPassword, mqttClient))
 }

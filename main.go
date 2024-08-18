@@ -21,7 +21,8 @@ var dryRun *bool
 
 // Mostly reused from https://github.com/stapelberg/regelwerk
 
-type BridgeConfig struct {
+type Config struct {
+	webAddress       string
 	rotelSerialPort  string
 	samsungTvAddress string
 	mpdServer        string
@@ -106,7 +107,9 @@ func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 	}
 }
 
-func regelverk(broker string, bridgeConfig BridgeConfig) error {
+func regelverk(broker string, config Config) error {
+
+	slog.Info("Initializing Regelverk")
 
 	// Enable file names in logs:
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -151,11 +154,24 @@ func regelverk(broker string, bridgeConfig BridgeConfig) error {
 	}
 
 	// Initialize MQTT bridges running in-process
-	initBridges(client, bridgeConfig)
+	initBridges(client, config)
 
 	initLoops(mqttMessageHandler)
 
 	slog.Info("MQTT subscription established")
+
+	// Init web after handlers are established
+	go func() {
+		slog.Info("Initializing HTTP server", "address", config.webAddress)
+
+		err := http.ListenAndServe(config.webAddress, nil)
+
+		if err != nil {
+			slog.Error("Error initializing HTTP server",
+				"listenAddr", config.webAddress, "error", err)
+			os.Exit(1)
+		}
+	}()
 
 	for tick := range time.Tick(1 * time.Second) {
 		ev := MQTTEvent{
@@ -220,42 +236,36 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	go func() {
+	mpdPassword, err := fileToString(*mpdPasswordFile)
+	if err != nil {
+		slog.Error("Error reading mpd password",
+			"mpdPasswordFile", mpdPasswordFile, "error", err)
+	}
+	slog.Info("MPD password", "password", mpdPassword)
 
-		mpdPassword, err := fileToString(*mpdPasswordFile)
-		if err != nil {
-			slog.Error("Error reading mpd password",
-				"mpdPasswordFile", mpdPasswordFile, "error", err)
-		}
-
-		slog.Info("MPD password", "password", mpdPassword)
-		err = regelverk(*mqttBroker,
-			BridgeConfig{
-				rotelSerialPort:  *rotelSerialPort,
-				samsungTvAddress: *samsungTVAddress,
-				mpdServer:        *mpdServer,
-				mpdPassword:      mpdPassword,
-				pulseserver:      *pulseServer},
-		)
-		if err != nil {
-			slog.Error("Error initializing MQTT", "error", err)
-			os.Exit(1)
-		} else {
-			slog.Info("Initialized MQTT server", "mqttBroker", mqttBroker)
-		}
-	}()
+	config := Config{
+		webAddress:       *listenAddr,
+		rotelSerialPort:  *rotelSerialPort,
+		samsungTvAddress: *samsungTVAddress,
+		mpdServer:        *mpdServer,
+		mpdPassword:      mpdPassword,
+		pulseserver:      *pulseServer}
 
 	go func() {
-		err := http.ListenAndServe(*listenAddr, nil)
+
+		slog.Info("Initializing Regelverk", "config", config)
+
+		err = regelverk(*mqttBroker, config)
 		if err != nil {
-			slog.Error("Error initializing HTTP server",
-				"listenAddr", listenAddr, "error", err)
+			slog.Error("Error initializing regelverk", "error", err)
 			os.Exit(1)
 		} else {
-			slog.Info("Initialized HTTP server", "listenAddr", listenAddr)
+			slog.Info("Initialized regelverk", "mqttBroker", mqttBroker)
 		}
+
 	}()
 
+	slog.Info("Started")
 	<-c
 	slog.Info("Shut down")
 	os.Exit(0)

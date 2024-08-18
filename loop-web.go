@@ -30,6 +30,7 @@ type webLoop struct {
 }
 
 func (l *webLoop) Init(m *mqttMessageHandler) {
+	slog.Info("Setting up HTTP handlers")
 	l.mqttMessageHandler = m
 	http.HandleFunc("/", l.mainHandler)
 	http.HandleFunc("/web/state/init", l.rotelStateInitWs)
@@ -52,6 +53,7 @@ func (l *webLoop) Init(m *mqttMessageHandler) {
 		w.Header().Add("Content-Type", "text/css")
 		w.Write(data)
 	})
+	slog.Info("Finished setting up HTTP handlers")
 
 	l.mqttMessageHandler.client.Publish("rotel/command/initialize", 2, false, "true")
 	l.mqttMessageHandler.client.Publish("pulseaudio/initialize", 2, false, "true")
