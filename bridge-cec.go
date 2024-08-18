@@ -163,7 +163,7 @@ outer:
 			time.Sleep(10 * time.Second)
 
 			ping := bridge.CECConnection.Ping()
-			slog.Info("Ping CEC", "result", ping, "count", i)
+			slog.Debug("Ping CEC", "result", ping, "count", i)
 			if ping == 0 {
 				slog.Error("CEC ping not succcessful, resetting connection")
 				cancel()

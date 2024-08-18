@@ -154,8 +154,10 @@ func regelverk(broker string, config Config) error {
 	}
 
 	// Initialize MQTT bridges running in-process
+	slog.Info("Initializing bridges")
 	initBridges(client, config)
 
+	slog.Info("Initializing loops")
 	initLoops(mqttMessageHandler)
 
 	slog.Info("MQTT subscription established")
