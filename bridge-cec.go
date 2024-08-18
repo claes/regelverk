@@ -130,10 +130,13 @@ func translatePerformKeypress(keyPress *cec.KeyPress, keyboard uinput.Keyboard) 
 			keyboard.KeyPress(keycode)
 		}
 	}
-
 }
 
 func initCECBridge(mqttClient mqtt.Client) {
+	go cecBridgeMainLoop(mqttClient)
+}
+
+func cecBridgeMainLoop(mqttClient mqtt.Client) {
 
 	keyboard, err := uinput.CreateKeyboard("/dev/uinput", []byte("regelverk"))
 	if err != nil {
@@ -156,6 +159,10 @@ outer:
 		go bridge.PublishMessagesNew(ctx, true)
 		go bridge.PublishSourceActivationsNew(ctx)
 		go bridgeKeyPresses(ctx, bridge, keyboard)
+
+		if i == 0 {
+			slog.Error("CEC bridge started")
+		}
 
 		for {
 			bridge.CECConnection.Transmit("10:8F") //"Recording 1" asks TV for power status
