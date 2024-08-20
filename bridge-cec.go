@@ -147,21 +147,21 @@ func cecBridgeMainLoop(mqttClient mqtt.Client) {
 
 	i := 0
 
-outer:
 	for {
+		time.Sleep(4 * time.Second)
 		slog.Info("Creating new CEC connection", "count", i)
 		cecConnection := cecmqtt.CreateCECConnection("/dev/ttyACM0", "Regelverk")
 		bridge := cecmqtt.NewCecMQTTBridge(cecConnection, mqttClient)
 
 		ctx, cancel := context.WithCancel(context.Background())
 
-		go bridge.PublishCommandsNew(ctx)
-		go bridge.PublishMessagesNew(ctx, true)
-		go bridge.PublishSourceActivationsNew(ctx)
+		go bridge.PublishCommands(ctx)
+		go bridge.PublishMessages(ctx, true)
+		go bridge.PublishSourceActivations(ctx)
 		go bridgeKeyPresses(ctx, bridge, keyboard)
 
 		if i == 0 {
-			slog.Error("CEC bridge started")
+			slog.Info("CEC bridge started")
 		}
 
 		for {
@@ -176,9 +176,10 @@ outer:
 				cancel()
 				slog.Error("Destroying CEC connection")
 				cecConnection.Destroy()
-				time.Sleep(10 * time.Second)
+				//cecConnection.Close() in case destroy does not work
+				slog.Error("Will attempt to recreate connection")
 				i++
-				continue outer
+				break
 			}
 		}
 	}

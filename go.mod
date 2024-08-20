@@ -4,8 +4,8 @@ go 1.21
 
 require (
 	github.com/bendahl/uinput v1.7.0
-	github.com/claes/cec v0.0.0-20240813190404-a76b42f9c38e
-	github.com/claes/cec-mqtt v0.0.0-20240816154457-9f6aeb41615a
+	github.com/claes/cec v0.0.0-20240820185959-6db0712de894
+	github.com/claes/cec-mqtt v0.0.0-20240820191219-e468d692aaef
 	github.com/claes/mpd-mqtt v0.0.0-20240519194016-85c618d0324c
 	github.com/claes/pulseaudio-mqtt v0.0.0-20240608150920-ae9478b7bdd9
 	github.com/claes/rotel-mqtt v0.0.0-20240606125206-2d4a5438e037
