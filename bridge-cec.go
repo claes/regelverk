@@ -172,11 +172,11 @@ func cecBridgeMainLoop(mqttClient mqtt.Client) {
 			ping := bridge.CECConnection.Ping()
 			slog.Debug("Ping CEC", "result", ping, "count", i)
 			if ping == 0 {
-				slog.Error("CEC ping not succcessful, resetting connection")
+				slog.Error("CEC ping not succcessful, resetting connection", "result", ping, "count", i)
 				cancel()
 				slog.Error("Destroying CEC connection")
-				cecConnection.Destroy()
-				//cecConnection.Close() in case destroy does not work
+				//cecConnection.Destroy()
+				cecConnection.Close() //in case destroy does not work
 				slog.Error("Will attempt to recreate connection")
 				i++
 				break
