@@ -1,14 +1,13 @@
 package main
 
 import (
+	"log/slog"
 	"strconv"
-	"time"
+	"strings"
 )
 
 type cecLoop struct {
 	statusLoop
-	tvLastActive time.Time
-	tvOn         bool
 }
 
 func (l *cecLoop) Init(m *mqttMessageHandler) {}
@@ -16,19 +15,18 @@ func (l *cecLoop) Init(m *mqttMessageHandler) {}
 func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 
-	case "zigbee2mqtt/tv":
-		m := parseJSONPayload(ev)
-		power := m["power"].(float64)
-		if power > 5.0 {
-			//			l.tvLastActive = time.Now()
-			l.tvOn = true
+	// case "cec/command":
+	case "cec/message/hex/rx":
+		fallthrough
+	case "cec/message/hex/tx":
+		command := strings.ToUpper(string(ev.Payload.([]byte)))
+		slog.Debug("CEC command", "command", command)
+		switch command {
+		case "01:90:00":
+			fallthrough
+		case "01:90:00:00:00":
+			slog.Debug("TV power")
 			return []MQTTPublish{
-				// {
-				// 	Topic:    "zigbee2mqtt/ikea_uttag/set",
-				// 	Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
-				// 	Qos:      1,
-				// 	Retained: false,
-				// },
 				{
 					Topic:    "regelverk/state/tvpower",
 					Payload:  strconv.FormatBool(true),
@@ -36,8 +34,10 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					Retained: true,
 				},
 			}
-		} else {
-			//			l.tvOn = false
+		case "01:90:01":
+			fallthrough
+		case "01:90:01:00:00":
+			slog.Debug("TV standby")
 			return []MQTTPublish{
 				{
 					Topic:    "regelverk/state/tvpower",
@@ -46,25 +46,64 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					Retained: true,
 				},
 			}
-
+		case "0F:82:00:00:00:00":
+			fallthrough
+		case "0F:82:00:00":
+			slog.Debug("TV active source")
+			return []MQTTPublish{
+				{
+					Topic:    "regelverk/state/tvsource",
+					Payload:  "tv",
+					Qos:      2,
+					Retained: true,
+				},
+			}
+		case "1F:82:40:00:00:00":
+			fallthrough
+		case "1F:82:40:00":
+			slog.Debug("Mediaflix active source")
+			return []MQTTPublish{
+				{
+					Topic:    "regelverk/state/tvsource",
+					Payload:  "mediaflix",
+					Qos:      2,
+					Retained: true,
+				},
+			}
+		case "8F:82:30:00:00:00":
+			fallthrough
+		case "8F:82:30:00":
+			slog.Debug("Chromecast active source")
+			return []MQTTPublish{
+				{
+					Topic:    "regelverk/state/tvsource",
+					Payload:  "chromecast",
+					Qos:      2,
+					Retained: true,
+				},
+			}
+		case "4F:82:20:00:00:00":
+			fallthrough
+		case "4F:82:20:00":
+			slog.Debug("Bluray active source")
+			return []MQTTPublish{
+				{
+					Topic:    "regelverk/state/tvsource",
+					Payload:  "bluray",
+					Qos:      2,
+					Retained: true,
+				},
+			}
+		case "0F:36":
+			slog.Debug("TV requests standby")
+			return nil
+		default:
+			slog.Debug("CEC command not recognized", "command", command)
+			return nil
 		}
-	// case "regelverk/ticker/1s":
-	// 	//fmt.Printf("Tick %v %v\n", l.tvOn, l.tvLastActive)
-	// 	if !l.tvOn && l.tvLastActive.Add(1*time.Minute).Before(time.Now()) {
-	// 		return []MQTTPublish{
-	// 			{
-	// 				Topic:    "zigbee2mqtt/ikea_uttag/set",
-	// 				Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
-	// 				Qos:      1,
-	// 				Retained: false,
-	// 			},
-	// 		}
-	// 	}
-
 	default:
 		return nil
 	}
-	return nil
 }
 
 func (l *cecLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {

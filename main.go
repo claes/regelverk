@@ -3,11 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +20,15 @@ var debug *bool
 var dryRun *bool
 
 // Mostly reused from https://github.com/stapelberg/regelwerk
+
+type Config struct {
+	webAddress       string
+	rotelSerialPort  string
+	samsungTvAddress string
+	mpdServer        string
+	mpdPassword      string
+	pulseserver      string
+}
 
 type MQTTEvent struct {
 	Timestamp time.Time
@@ -96,7 +107,9 @@ func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 	}
 }
 
-func regelverk(broker string) error {
+func regelverk(broker string, config Config) error {
+
+	slog.Info("Initializing Regelverk")
 
 	// Enable file names in logs:
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -124,7 +137,7 @@ func regelverk(broker string) error {
 				1, /* minimal QoS level zero: at most once, best-effort delivery */
 				mqttMessageHandler.handle)
 			if token.Wait() && token.Error() != nil {
-				slog.Error("Fatal error", "error", token.Error())
+				slog.Error("Error creating MQTT client", "error", token.Error())
 				os.Exit(1)
 			}
 			slog.Info("Subscribed to topic", "topic", topic)
@@ -141,11 +154,26 @@ func regelverk(broker string) error {
 	}
 
 	// Initialize MQTT bridges running in-process
-	initBridges(client)
+	slog.Info("Initializing bridges")
+	initBridges(client, config)
 
+	slog.Info("Initializing loops")
 	initLoops(mqttMessageHandler)
 
 	slog.Info("MQTT subscription established")
+
+	// Init web after handlers are established
+	go func() {
+		slog.Info("Initializing HTTP server", "address", config.webAddress)
+
+		err := http.ListenAndServe(config.webAddress, nil)
+
+		if err != nil {
+			slog.Error("Error initializing HTTP server",
+				"listenAddr", config.webAddress, "error", err)
+			os.Exit(1)
+		}
+	}()
 
 	for tick := range time.Tick(1 * time.Second) {
 		ev := MQTTEvent{
@@ -159,6 +187,21 @@ func regelverk(broker string) error {
 	select {} // loop forever
 }
 
+func fileToString(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(data)), nil
+}
+
 func printHelp() {
 	fmt.Println("Usage: regelverk [OPTIONS]")
 	fmt.Println("Options:")
@@ -169,6 +212,11 @@ func main() {
 
 	mqttBroker := flag.String("broker", "tcp://localhost:1883", "MQTT broker URL")
 	listenAddr := flag.String("listenAddr", ":8080", "HTTP listen address")
+	rotelSerialPort := flag.String("rotelSerialPort", "", "Rotel serial port")
+	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
+	pulseServer := flag.String("pulseServer", "", "Pulse server")
+	mpdServer := flag.String("mpdServer", "", "MPD server")
+	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password")
 	help := flag.Bool("help", false, "Print help")
 	debug = flag.Bool("debug", false, "Debug logging")
 	dryRun = flag.Bool("dry_run", false, "Dry run (do not publish)")
@@ -179,25 +227,47 @@ func main() {
 		os.Exit(0)
 	}
 
+	if *debug {
+		var programLevel = new(slog.LevelVar)
+		programLevel.Set(slog.LevelDebug)
+		handler := slog.NewTextHandler(os.Stderr,
+			&slog.HandlerOptions{Level: programLevel})
+		slog.SetDefault(slog.New(handler))
+	}
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-	slog.Info("Started!")
+
+	mpdPassword, err := fileToString(*mpdPasswordFile)
+	if err != nil {
+		slog.Error("Error reading mpd password",
+			"mpdPasswordFile", mpdPasswordFile, "error", err)
+	}
+	slog.Info("MPD password", "password", mpdPassword)
+
+	config := Config{
+		webAddress:       *listenAddr,
+		rotelSerialPort:  *rotelSerialPort,
+		samsungTvAddress: *samsungTVAddress,
+		mpdServer:        *mpdServer,
+		mpdPassword:      mpdPassword,
+		pulseserver:      *pulseServer}
 
 	go func() {
-		if err := regelverk(*mqttBroker); err != nil {
-			slog.Error("Fatal error", "error", err)
-			os.Exit(1)
-		}
-	}()
 
-	go func() {
-		err := http.ListenAndServe(*listenAddr, nil)
+		slog.Info("Initializing Regelverk", "config", config)
+
+		err = regelverk(*mqttBroker, config)
 		if err != nil {
-			slog.Error("Fatal error", "error", err)
+			slog.Error("Error initializing regelverk", "error", err)
 			os.Exit(1)
+		} else {
+			slog.Info("Initialized regelverk", "mqttBroker", mqttBroker)
 		}
+
 	}()
 
+	slog.Info("Started")
 	<-c
 	slog.Info("Shut down")
 	os.Exit(0)

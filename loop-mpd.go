@@ -12,8 +12,6 @@ type mpdLoop struct {
 func (l *mpdLoop) Init(m *mqttMessageHandler) {}
 
 func (l *mpdLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	//fmt.Printf("Mpdloop topic %v, payload %v \n", ev.Topic, ev.Payload)
-
 	switch ev.Topic {
 	case "mpd/status":
 		m := parseJSONPayload(ev)

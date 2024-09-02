@@ -1,10 +1,11 @@
 package main
 
 var loops = []controlLoop{
-	&tvLoop{},
+	//&tvLoop{},
 	&mpdLoop{},
 	&tvAudioLoop{},
-	&rotelHttpLoop{},
+	&cecLoop{},
+	&webLoop{},
 }
 
 func initLoops(msgHandler *mqttMessageHandler) {

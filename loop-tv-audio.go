@@ -1,13 +1,14 @@
 package main
 
 import (
-	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 )
 
 type tvAudioLoop struct {
 	statusLoop
+	tvSource               string
 	tvPowerLastStateChange time.Time
 	tvPowerLastState       bool
 	rotelState             map[string]interface{}
@@ -18,6 +19,7 @@ func (l *tvAudioLoop) Init(m *mqttMessageHandler) {}
 func (l *tvAudioLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	loopRules := []func(MQTTEvent) []MQTTPublish{
 		l.updateRotelState,
+		//		l.updateTvSourceState,
 		l.turnOnAmpWhenTVOn,
 		l.turnOffAmpWhenTVOff,
 	}
@@ -34,6 +36,40 @@ func (l *tvAudioLoop) updateRotelState(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 	case "rotel/state":
 		l.rotelState = parseJSONPayload(ev)
+	}
+	return nil
+}
+
+func (l *tvAudioLoop) updateTvSourceState(ev MQTTEvent) []MQTTPublish {
+	switch ev.Topic {
+	case "regelverk/state/tvsource":
+		l.tvSource = string(ev.Payload.([]byte))
+		switch l.tvSource {
+		case "tv":
+			fallthrough
+		case "chromecast":
+			fallthrough
+		case "bluray":
+			return []MQTTPublish{
+				{
+					Topic:    "pulseaudio/cardprofile/0/set",
+					Payload:  "output:hdmi-stereo",
+					Qos:      2,
+					Retained: false,
+					Wait:     0,
+				},
+			}
+		case "mediaflix":
+			return []MQTTPublish{
+				{
+					Topic:    "pulseaudio/cardprofile/0/set",
+					Payload:  "output:iec958-stereo+input:analog-stereo",
+					Qos:      2,
+					Retained: false,
+					Wait:     0,
+				},
+			}
+		}
 	}
 	return nil
 }
@@ -64,14 +100,16 @@ func (l *tvAudioLoop) turnOffAmpWhenTVOff(ev MQTTEvent) []MQTTPublish {
 func (l *tvAudioLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 	case "regelverk/state/tvpower":
-		fmt.Println("regelverk/state/tvpower")
+		slog.Debug("regelverk/state/tvpower")
 		tvPower, err := strconv.ParseBool(string(ev.Payload.([]byte)))
 		if err != nil {
-			fmt.Println("Error:", err)
+			slog.Error("regelverk/state/tvpower error", "error", err)
 			return nil
 		}
 		tvPowerStateChange := l.updateTvPower(tvPower)
-		fmt.Printf("regelverk/state/tvpower %t state change: %t \n", tvPower, tvPowerStateChange)
+		slog.Debug("regelverk/state/tvpower",
+			"value", tvPower,
+			"stateChange", tvPowerStateChange)
 		if tvPowerStateChange {
 			if tvPower {
 				returnList := []MQTTPublish{
@@ -91,7 +129,7 @@ func (l *tvAudioLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 					},
 					{
 						Topic:    "rotel/command/send",
-						Payload:  "volume_30!",
+						Payload:  "volume_38!",
 						Qos:      2,
 						Retained: false,
 						Wait:     2 * time.Second,
@@ -136,10 +174,11 @@ func (l *tvAudioLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 			}
 		}
 	case "regelverk/state/mpdplay":
-		fmt.Println("regelverk/state/mpdplay")
+		slog.Debug("regelverk/state/mpdplay")
+
 		mpdPlay, err := strconv.ParseBool(string(ev.Payload.([]byte)))
 		if err != nil {
-			fmt.Println("Error:", err)
+			slog.Error("regelverk/state/mpdplay error", "error", err)
 			return nil
 		}
 		if mpdPlay {
@@ -202,19 +241,21 @@ func (l *tvAudioLoop) updateTvPower(tvPower bool) bool {
 
 // cec
 // kodi active source
-// tx 1f:82:40:00
+// tx 1f:82:40:00 "recording broadcast 4.0.0.0 active"
 
 //chromecast active source
 // tx 4f:84:30:00:04
-// tx 4f:82:30:00
+// tx 4f:82:30:00 "playback broadcast 3.0.0.0 active"
 
 // https://www.cec-o-matic.com/
 
 // tv active source
-// 0f:82:00:00
+// 0f:82:00:00 "tv broadcast 0.0.0.0 active"
 // 0f:80:40:00:00:00
 // tx 4f:82:00:00
 // tx 0f:80:30:00:00:00
+
+// Blue ray "0f:86:20:00" "playback broadcast 2.0.0.0 active"
 
 // https://github.com/chbmuc/cec
 // https://github.com/tobiash/hdmi-cec-mqtt
