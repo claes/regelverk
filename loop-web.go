@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	pulsemqtt "github.com/claes/pulseaudio-mqtt/lib"
 	rotelmqtt "github.com/claes/rotel-mqtt/lib"
@@ -19,8 +20,8 @@ import (
 //go:embed templates/rotel.html templates/styles.css
 var content embed.FS
 
-var rotelStateUpdated = make(chan struct{})
-var pulseaudioStateUpdated = make(chan struct{})
+var rotelStateUpdated = make(chan struct{}, 20)
+var pulseaudioStateUpdated = make(chan struct{}, 20)
 
 type webLoop struct {
 	statusLoop
@@ -60,20 +61,48 @@ func (l *webLoop) Init(m *mqttMessageHandler) {
 }
 
 func (l *webLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
+	//
+	// TODO: Initialization problme here. Before rotelStateWs is first initiated, nothing reads
+	// rotelStateUpdated and it may grow indefinitely. Meaning memory problem and  that it takes long time for it to empty
+	// Solution?? as below + with bounded channel size
+
+	// select {
+	// case rotelStateUpdated <- struct{}{}:
+	// 	// Send succeeded within the allowed time
+	// case <-time.After(1 * time.Second):
+	// 	// Send operation timed out after 1 second
+	// 	fmt.Println("Send operation timed out")
+	// }
+
+	//
 	switch ev.Topic {
 	case "rotel/state":
 		err := json.Unmarshal(ev.Payload.([]byte), &l.rotelState)
 		if err != nil {
 			slog.Error("Could not unmarshal rotel state", "rotelstate", ev.Payload)
 		} else {
-			rotelStateUpdated <- struct{}{}
+			//rotelStateUpdated <- struct{}{}
+
+			select {
+			case rotelStateUpdated <- struct{}{}:
+				// Send succeeded within the allowed time
+			case <-time.After(1 * time.Second):
+				// Send operation timed out after 1 second
+			}
 		}
 	case "pulseaudio/state":
 		err := json.Unmarshal(ev.Payload.([]byte), &l.pulseAudioState)
 		if err != nil {
 			slog.Error("Could not unmarshal pulseaudio state", "pulseaudiostate", ev.Payload)
 		} else {
-			pulseaudioStateUpdated <- struct{}{}
+			//pulseaudioStateUpdated <- struct{}{}
+
+			select {
+			case pulseaudioStateUpdated <- struct{}{}:
+				// Send succeeded within the allowed time
+			case <-time.After(1 * time.Second):
+				// Send operation timed out after 1 second
+			}
 		}
 
 		// case "regelverk/ticker/1s":

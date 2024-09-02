@@ -52,7 +52,7 @@ func bridgeKeyPresses(ctx context.Context, bridge *cecmqtt.CecMQTTBridge, keyboa
 }
 
 func translatePerformKeypress(keyPress *cec.KeyPress, keyboard uinput.Keyboard) {
-	slog.Info("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
+	slog.Debug("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
 	if keyPress.Duration == 0 ||
 		(keyPress.Duration == 500 && keyPress.KeyCode == 145) { //strange workaround
 		keycode := -1
