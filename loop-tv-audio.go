@@ -8,10 +8,12 @@ import (
 
 type tvAudioLoop struct {
 	statusLoop
-	tvSource               string
-	tvPowerLastStateChange time.Time
-	tvPowerLastState       bool
-	rotelState             map[string]interface{}
+	tvSource                string
+	tvPowerLastStateChange  time.Time
+	tvPowerLastState        bool
+	rotelState              map[string]interface{}
+	livingRoomPresent       bool
+	livingRoomAbsentSeconds int
 }
 
 func (l *tvAudioLoop) Init(m *mqttMessageHandler) {}
@@ -28,6 +30,16 @@ func (l *tvAudioLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		if result != nil {
 			return result
 		}
+	}
+	return nil
+}
+
+func (l *tvAudioLoop) updatePresenceState(ev MQTTEvent) []MQTTPublish {
+	switch ev.Topic {
+	case "regelverk/presence/livingroom":
+		m := parseJSONPayload(ev)
+		l.livingRoomPresent = m["present"].(bool)
+		l.livingRoomAbsentSeconds = m["absentSeconds"].(int)
 	}
 	return nil
 }
@@ -79,8 +91,10 @@ func (l *tvAudioLoop) turnOffAmpWhenTVOff(ev MQTTEvent) []MQTTPublish {
 	case "regelverk/ticker/1s":
 		if !l.tvPowerLastState && l.rotelState["state"] == "on" {
 			hour, minute, _ := time.Now().Clock()
-			// if after midnight
-			if hour >= 0 && hour <= 6 && minute%20 == 0 {
+
+			// if after midnight or absent for more than one hour
+			if (!l.livingRoomPresent && l.livingRoomAbsentSeconds > 60*60) ||
+				(hour >= 0 && hour <= 6 && minute%20 == 0) {
 				returnList := []MQTTPublish{
 					{
 						Topic:    "rotel/command/send",

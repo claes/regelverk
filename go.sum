@@ -8,6 +8,8 @@ github.com/claes/mpd-mqtt v0.0.0-20240519194016-85c618d0324c h1:2dKdSrGmF2aXsvKo
 github.com/claes/mpd-mqtt v0.0.0-20240519194016-85c618d0324c/go.mod h1:Hyl2NzM/XtcVRNPC5mSYs/h97hvMX2M7kG0oBVe472c=
 github.com/claes/pulseaudio-mqtt v0.0.0-20240608150920-ae9478b7bdd9 h1:OKBAZzqsz1ogTq5H+F8q1aswxdbcHTND75EYAKESSS0=
 github.com/claes/pulseaudio-mqtt v0.0.0-20240608150920-ae9478b7bdd9/go.mod h1:NbLAajteKoKa/m1YqSaJj/X6RCMUADqW2SovdFemRJA=
+github.com/claes/pulseaudio-mqtt v0.0.0-20241112194122-d131580ec6d8 h1:2Z8sjhpzaUk9zbTilvoYkF6jxthgbR5b1aGkyz2aP5M=
+github.com/claes/pulseaudio-mqtt v0.0.0-20241112194122-d131580ec6d8/go.mod h1:NbLAajteKoKa/m1YqSaJj/X6RCMUADqW2SovdFemRJA=
 github.com/claes/rotel-mqtt v0.0.0-20240606125206-2d4a5438e037 h1:TMWVG4OXsU9Cb66qSk3OZD5Wj2vfgvCAAFxbKAT+lDY=
 github.com/claes/rotel-mqtt v0.0.0-20240606125206-2d4a5438e037/go.mod h1:DXNpasrX+83LQrnnPGJmTIOexwA9XkeyU22atNDevD4=
 github.com/claes/samsung-mqtt v0.0.0-20240602172721-04fb4a7190d1 h1:SYp9Gfz7GZrIZkJ+/YsHt7VAT9avy+PUFEQMmlJW37M=
