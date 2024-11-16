@@ -16,7 +16,9 @@ import (
 // Mostly reused from https://github.com/stapelberg/regelwerk
 
 type Config struct {
-	Broker           string
+	MQTTBroker       string
+	MQTTUserName     string
+	MQTTPasswordFile string
 	WebAddress       string
 	RotelSerialPort  string
 	SamsungTvAddress string
@@ -102,10 +104,20 @@ func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 	}
 }
 
-func createMqttMessageHandler(broker string, loops []ControlLoop, dryRun, debug *bool) (*mqttMessageHandler, error) {
+func createMqttMessageHandler(config Config, loops []ControlLoop, dryRun, debug *bool) (*mqttMessageHandler, error) {
 	host, err := os.Hostname()
 	if err != nil {
 		return nil, err
+	}
+
+	mqttPassword := ""
+	if len(config.MQTTPasswordFile) > 0 {
+		mqttPassword, err := fileToString(config.MQTTPasswordFile)
+		if err != nil {
+			slog.Error("Error reading MQTT password",
+				"mqttPasswordFile", config.MQTTPasswordFile, "error", err)
+		}
+		slog.Debug("MQTT password", "password", mqttPassword)
 	}
 
 	mqttMessageHandler := &mqttMessageHandler{
@@ -114,7 +126,9 @@ func createMqttMessageHandler(broker string, loops []ControlLoop, dryRun, debug 
 	}
 
 	opts := mqtt.NewClientOptions().
-		AddBroker(broker).
+		AddBroker(config.MQTTBroker).
+		SetUsername(config.MQTTUserName).
+		SetPassword(mqttPassword).
 		SetClientID("regelverk-" + host).
 		SetOnConnectHandler(func(client mqtt.Client) {
 			// TODO: add MQTTTopics() []string to controlLoop interface and
@@ -135,12 +149,14 @@ func createMqttMessageHandler(broker string, loops []ControlLoop, dryRun, debug 
 
 	client := mqtt.NewClient(opts)
 	mqttMessageHandler.client = client
+	slog.Info("Connecting to MQTT broker", "broker", config.MQTTBroker)
+
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		// This can indeed fail, e.g. if the broker DNS is not resolvable.
 		return nil, fmt.Errorf("MQTT connection failed: %v", token.Error())
-	} else if *debug {
-		slog.Info("Connected to MQTT broker", "broker", broker)
 	}
+	slog.Info("Connected to MQTT broker", "broker", config.MQTTBroker)
+
 	return mqttMessageHandler, nil
 }
 
@@ -160,7 +176,7 @@ func createMqttMessageHandler(broker string, loops []ControlLoop, dryRun, debug 
 
 func Regelverk(config Config, loops []ControlLoop, bridgeWrappers []BridgeWrapper, dryRun, debug *bool) error {
 
-	mqttMessageHandler, err := createMqttMessageHandler(config.Broker, loops, dryRun, debug)
+	mqttMessageHandler, err := createMqttMessageHandler(config, loops, dryRun, debug)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package main
+package regelverk
 
 import (
 	"flag"
@@ -7,21 +7,14 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-
-	internal "github.com/claes/regelverk/internal"
 )
 
-func printHelp() {
-	fmt.Println("Usage: regelverk [OPTIONS]")
-	fmt.Println("Options:")
-	flag.PrintDefaults()
-}
-
-func main() {
-
+func ParseConfig() (Config, *bool, *bool) {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	mqttBroker := flag.String("broker", "tcp://localhost:1883", "MQTT broker URL")
+	mqttBroker := flag.String("mqttBroker", "tcp://localhost:1883", "MQTT broker URL")
+	mqttUserName := flag.String("mqttUserName", "", "MQTT username")
+	MQTTPasswordFile := flag.String("mqttPasswordFile", "", "MQTT password file")
 	listenAddr := flag.String("listenAddr", ":8080", "HTTP listen address")
 	rotelSerialPort := flag.String("rotelSerialPort", "", "Rotel serial port")
 	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
@@ -46,43 +39,37 @@ func main() {
 		slog.SetDefault(slog.New(handler))
 	}
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-
-	config := internal.Config{
-		Broker:           *mqttBroker,
+	config := Config{
+		MQTTBroker:       *mqttBroker,
+		MQTTUserName:     *mqttUserName,
+		MQTTPasswordFile: *MQTTPasswordFile,
 		WebAddress:       *listenAddr,
 		RotelSerialPort:  *rotelSerialPort,
 		SamsungTvAddress: *samsungTVAddress,
 		MpdServer:        *mpdServer,
 		MpdPasswordFile:  *mpdPasswordFile,
 		Pulseserver:      *pulseServer}
+	return config, debug, dryRun
+}
 
-	loops := []internal.ControlLoop{
-		//&tvLoop{},
-		&internal.MpdLoop{},
-		&internal.PresenceLoop{},
-		&internal.KitchenLoop{},
-		&internal.CecLoop{},
-		&internal.WebLoop{},
-	}
+func printHelp() {
+	fmt.Println("Usage: regelverk [OPTIONS]")
+	fmt.Println("Options:")
+	flag.PrintDefaults()
+}
 
-	bridgeWrappers := []internal.BridgeWrapper{
-		&internal.CecBridgeWrapper{},
-		&internal.MpdBridgeWrapper{},
-		&internal.PulseaudioBridgeWrapper{},
-		&internal.RotelBridgeWrapper{},
-		&internal.SamsungBridgeWrapper{},
-	}
+func StartRegelverk(config Config, loops []ControlLoop, bridgeWrappers []BridgeWrapper, dryRun *bool, debug *bool) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
 
 	go func() {
 		slog.Info("Initializing Regelverk", "config", config)
-		err := internal.Regelverk(config, loops, bridgeWrappers, dryRun, debug)
+		err := Regelverk(config, loops, bridgeWrappers, dryRun, debug)
 		if err != nil {
 			slog.Error("Error initializing regelverk", "error", err)
 			os.Exit(1)
 		} else {
-			slog.Info("Initialized regelverk", "mqttBroker", mqttBroker)
+			slog.Info("Initialized regelverk")
 		}
 	}()
 

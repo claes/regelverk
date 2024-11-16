@@ -19,7 +19,7 @@ func (l *MpdBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Confi
 		slog.Error("Error reading mpd password",
 			"mpdPasswordFile", config.MpdPasswordFile, "error", err)
 	}
-	slog.Info("MPD password", "password", mpdPassword)
+	//slog.Debug("MPD password", "password", mpdPassword)
 
 	mpdClient, mpdWatcher, err := mpdmqtt.CreateMPDClient(config.MpdServer, mpdPassword)
 	if err != nil {
