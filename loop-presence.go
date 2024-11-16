@@ -12,7 +12,7 @@ type presenceLoop struct {
 	livingroomPresence     bool
 }
 
-func (l *presenceLoop) Init(m *mqttMessageHandler) {}
+func (l *presenceLoop) Init(m *mqttMessageHandler, config Config) {}
 
 func (l *presenceLoop) processPresence(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {

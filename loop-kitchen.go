@@ -11,7 +11,7 @@ type kitchenLoop struct {
 	livingRoomAbsentSeconds int
 }
 
-func (l *kitchenLoop) Init(m *mqttMessageHandler) {}
+func (l *kitchenLoop) Init(m *mqttMessageHandler, config Config) {}
 
 func (l *kitchenLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	loopRules := []func(MQTTEvent) []MQTTPublish{

@@ -11,6 +11,20 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+type cecBridgeWrapper struct {
+	mqttClient mqtt.Client
+}
+
+func (l *cecBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
+	l.mqttClient = mqttClient
+	return nil
+}
+
+func (l *cecBridgeWrapper) Run() error {
+	go cecBridgeMainLoop(l.mqttClient)
+	return nil
+}
+
 // func bridgeMessages(bridge *cecmqtt.CecMQTTBridge) {
 // 	pattern := `^(>>|<<)\s([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)`
 // 	regex, err := regexp.Compile(pattern)
@@ -132,9 +146,9 @@ func translatePerformKeypress(keyPress *cec.KeyPress, keyboard uinput.Keyboard) 
 	}
 }
 
-func initCECBridge(mqttClient mqtt.Client) {
-	go cecBridgeMainLoop(mqttClient)
-}
+// func initCECBridge(mqttClient mqtt.Client) {
+// 	go cecBridgeMainLoop(mqttClient)
+// }
 
 func cecBridgeMainLoop(mqttClient mqtt.Client) {
 

@@ -11,7 +11,7 @@ type tvLoop struct {
 	tvOn         bool
 }
 
-func (l *tvLoop) Init(m *mqttMessageHandler) {}
+func (l *tvLoop) Init(m *mqttMessageHandler, config Config) {}
 
 func (l *tvLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {

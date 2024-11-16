@@ -10,7 +10,7 @@ type cecLoop struct {
 	statusLoop
 }
 
-func (l *cecLoop) Init(m *mqttMessageHandler) {}
+func (l *cecLoop) Init(m *mqttMessageHandler, config Config) {}
 
 func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {

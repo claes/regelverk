@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -16,17 +15,18 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+// Mostly reused from https://github.com/stapelberg/regelwerk
+
 var debug *bool
 var dryRun *bool
 
-// Mostly reused from https://github.com/stapelberg/regelwerk
-
 type Config struct {
+	broker           string
 	webAddress       string
 	rotelSerialPort  string
 	samsungTvAddress string
 	mpdServer        string
-	mpdPassword      string
+	mpdPasswordFile  string
 	pulseserver      string
 }
 
@@ -47,7 +47,7 @@ type MQTTPublish struct {
 type controlLoop interface {
 	sync.Locker
 
-	Init(*mqttMessageHandler)
+	Init(*mqttMessageHandler, Config)
 
 	ProcessEvent(MQTTEvent) []MQTTPublish
 }
@@ -107,16 +107,10 @@ func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 	}
 }
 
-func regelverk(broker string, config Config) error {
-
-	slog.Info("Initializing Regelverk")
-
-	// Enable file names in logs:
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
+func createMqttMessageHandler(broker string, loops []controlLoop) (*mqttMessageHandler, error) {
 	host, err := os.Hostname()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	mqttMessageHandler := &mqttMessageHandler{
@@ -148,32 +142,44 @@ func regelverk(broker string, config Config) error {
 	mqttMessageHandler.client = client
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		// This can indeed fail, e.g. if the broker DNS is not resolvable.
-		return fmt.Errorf("MQTT connection failed: %v", token.Error())
+		return nil, fmt.Errorf("MQTT connection failed: %v", token.Error())
 	} else if *debug {
 		slog.Info("Connected to MQTT broker", "broker", broker)
 	}
+	return mqttMessageHandler, nil
+}
 
-	// Initialize MQTT bridges running in-process
+// func createWebServer(config Config) {
+// 	go func() {
+// 		slog.Info("Initializing HTTP server", "address", config.webAddress)
+
+// 		err := http.ListenAndServe(config.webAddress, nil)
+
+// 		if err != nil {
+// 			slog.Error("Error initializing HTTP server",
+// 				"listenAddr", config.webAddress, "error", err)
+// 			os.Exit(1)
+// 		}
+// 	}()
+// }
+
+func regelverk(config Config, loops []controlLoop, bridgeWrappers []BridgeWrapper) error {
+
+	mqttMessageHandler, err := createMqttMessageHandler(config.broker, loops)
+	if err != nil {
+		return err
+	}
+
 	slog.Info("Initializing bridges")
-	initBridges(client, config)
+	initBridges(mqttMessageHandler.client, config, bridgeWrappers)
 
 	slog.Info("Initializing loops")
-	initLoops(mqttMessageHandler)
-
-	slog.Info("MQTT subscription established")
+	for _, l := range loops {
+		l.Init(mqttMessageHandler, config)
+	}
 
 	// Init web after handlers are established
-	go func() {
-		slog.Info("Initializing HTTP server", "address", config.webAddress)
-
-		err := http.ListenAndServe(config.webAddress, nil)
-
-		if err != nil {
-			slog.Error("Error initializing HTTP server",
-				"listenAddr", config.webAddress, "error", err)
-			os.Exit(1)
-		}
-	}()
+	// createWebServer(config)
 
 	for tick := range time.Tick(1 * time.Second) {
 		ev := MQTTEvent{
@@ -184,6 +190,7 @@ func regelverk(broker string, config Config) error {
 		mqttMessageHandler.handleEvent(ev)
 	}
 
+	slog.Info("Started regelverk")
 	select {} // loop forever
 }
 
@@ -209,6 +216,8 @@ func printHelp() {
 }
 
 func main() {
+
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	mqttBroker := flag.String("broker", "tcp://localhost:1883", "MQTT broker URL")
 	listenAddr := flag.String("listenAddr", ":8080", "HTTP listen address")
@@ -238,38 +247,45 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	mpdPassword, err := fileToString(*mpdPasswordFile)
-	if err != nil {
-		slog.Error("Error reading mpd password",
-			"mpdPasswordFile", mpdPasswordFile, "error", err)
-	}
-	slog.Info("MPD password", "password", mpdPassword)
-
 	config := Config{
+		broker:           *mqttBroker,
 		webAddress:       *listenAddr,
 		rotelSerialPort:  *rotelSerialPort,
 		samsungTvAddress: *samsungTVAddress,
 		mpdServer:        *mpdServer,
-		mpdPassword:      mpdPassword,
+		mpdPasswordFile:  *mpdPasswordFile,
 		pulseserver:      *pulseServer}
 
+	loops := []controlLoop{
+		//&tvLoop{},
+		&mpdLoop{},
+		&presenceLoop{},
+		&kitchenLoop{},
+		&cecLoop{},
+		&webLoop{},
+	}
+
+	bridgeWrappers := []BridgeWrapper{
+		&cecBridgeWrapper{},
+		&mpdBridgeWrapper{},
+		&pulseaudioBridgeWrapper{},
+		&rotelBridgeWrapper{},
+		&samsungBridgeWrapper{},
+	}
+
 	go func() {
-
 		slog.Info("Initializing Regelverk", "config", config)
-
-		err = regelverk(*mqttBroker, config)
+		err := regelverk(config, loops, bridgeWrappers)
 		if err != nil {
 			slog.Error("Error initializing regelverk", "error", err)
 			os.Exit(1)
 		} else {
 			slog.Info("Initialized regelverk", "mqttBroker", mqttBroker)
 		}
-
 	}()
 
-	slog.Info("Started")
+	slog.Info("Starting regelverk")
 	<-c
-	slog.Info("Shut down")
+	slog.Info("Shut down regelverk")
 	os.Exit(0)
-
 }

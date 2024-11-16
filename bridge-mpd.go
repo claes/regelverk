@@ -7,21 +7,65 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-func CreateMPDBridge(mpdserver, mpdpassword string, mqttClient mqtt.Client) *mpdmqtt.MpdMQTTBridge {
-	mpdClient, mpdWatcher, err := mpdmqtt.CreateMPDClient(mpdserver, mpdpassword)
+type mpdBridgeWrapper struct {
+	bridge      *mpdmqtt.MpdMQTTBridge
+	config      Config
+	mpdPassword string
+}
+
+func (l *mpdBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
+	mpdPassword, err := fileToString(config.mpdPasswordFile)
 	if err != nil {
-		slog.Error("Could not create MPD client", "error", err, "mpdserver", mpdserver, "mpdpassword", mpdpassword)
+		slog.Error("Error reading mpd password",
+			"mpdPasswordFile", config.mpdPasswordFile, "error", err)
+	}
+	slog.Info("MPD password", "password", mpdPassword)
+
+	mpdClient, mpdWatcher, err := mpdmqtt.CreateMPDClient(config.mpdServer, mpdPassword)
+	if err != nil {
+		slog.Error("Could not create MPD client", "error", err, "mpdserver", config.mpdServer, "mpdpassword", mpdPassword)
 	}
 
-	bridge := mpdmqtt.NewMpdMQTTBridge(mpdClient, mpdWatcher, mqttClient)
+	l.mpdPassword = mpdPassword
+	l.bridge = mpdmqtt.NewMpdMQTTBridge(mpdClient, mpdWatcher, mqttClient)
 
+	return nil
+}
+
+func (l *mpdBridgeWrapper) Run() error {
 	go func() {
-		bridge.DetectReconnectMPDClient(mpdserver, mpdpassword)
+		l.bridge.DetectReconnectMPDClient(l.config.mpdServer, l.mpdPassword)
 	}()
 
-	return bridge
+	go l.bridge.MainLoop()
+	return nil
 }
 
-func initMPDBridge(bridge *mpdmqtt.MpdMQTTBridge) {
-	go bridge.MainLoop()
-}
+//-----------------------------------------
+
+// func CreateMPDBridge(config Config, mqttClient mqtt.Client) *mpdmqtt.MpdMQTTBridge {
+
+// 	mpdPassword, err := fileToString(config.mpdPasswordFile)
+// 	if err != nil {
+// 		slog.Error("Error reading mpd password",
+// 			"mpdPasswordFile", config.mpdPasswordFile, "error", err)
+// 	}
+// 	slog.Info("MPD password", "password", mpdPassword)
+
+// 	mpdClient, mpdWatcher, err := mpdmqtt.CreateMPDClient(config.mpdServer, mpdPassword)
+// 	if err != nil {
+// 		slog.Error("Could not create MPD client", "error", err, "mpdserver", config.mpdServer, "mpdpassword", mpdPassword)
+// 	}
+
+// 	bridge := mpdmqtt.NewMpdMQTTBridge(mpdClient, mpdWatcher, mqttClient)
+
+// 	go func() {
+// 		bridge.DetectReconnectMPDClient(config.mpdServer, mpdPassword)
+// 	}()
+
+// 	return bridge
+// }
+
+// func initMPDBridge(bridge *mpdmqtt.MpdMQTTBridge) {
+// 	go bridge.MainLoop()
+// }

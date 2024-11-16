@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -29,7 +30,7 @@ type webLoop struct {
 	pulseAudioState    pulsemqtt.PulseAudioState
 }
 
-func (l *webLoop) Init(m *mqttMessageHandler) {
+func (l *webLoop) Init(m *mqttMessageHandler, config Config) {
 	slog.Info("Setting up HTTP handlers")
 	l.mqttMessageHandler = m
 	http.HandleFunc("/", l.mainHandler)
@@ -57,6 +58,19 @@ func (l *webLoop) Init(m *mqttMessageHandler) {
 
 	l.mqttMessageHandler.client.Publish("rotel/command/initialize", 2, false, "true")
 	l.mqttMessageHandler.client.Publish("pulseaudio/initialize", 2, false, "true")
+
+	go func() {
+		slog.Info("Initializing HTTP server", "address", config.webAddress)
+
+		err := http.ListenAndServe(config.webAddress, nil)
+
+		if err != nil {
+			slog.Error("Error initializing HTTP server",
+				"listenAddr", config.webAddress, "error", err)
+			os.Exit(1)
+		}
+	}()
+
 }
 
 func (l *webLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {

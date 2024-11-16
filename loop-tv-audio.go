@@ -16,7 +16,7 @@ type tvAudioLoop struct {
 	livingRoomAbsentSeconds int
 }
 
-func (l *tvAudioLoop) Init(m *mqttMessageHandler) {}
+func (l *tvAudioLoop) Init(m *mqttMessageHandler, config Config) {}
 
 func (l *tvAudioLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	loopRules := []func(MQTTEvent) []MQTTPublish{
