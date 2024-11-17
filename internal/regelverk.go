@@ -174,7 +174,7 @@ func createMqttMessageHandler(config Config, loops []ControlLoop, dryRun, debug 
 // 	}()
 // }
 
-func Regelverk(config Config, loops []ControlLoop, bridgeWrappers []BridgeWrapper, dryRun, debug *bool) error {
+func Regelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, dryRun, debug *bool) error {
 
 	mqttMessageHandler, err := createMqttMessageHandler(config, loops, dryRun, debug)
 	if err != nil {

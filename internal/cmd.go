@@ -58,7 +58,7 @@ func printHelp() {
 	flag.PrintDefaults()
 }
 
-func StartRegelverk(config Config, loops []ControlLoop, bridgeWrappers []BridgeWrapper, dryRun *bool, debug *bool) {
+func StartRegelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, dryRun *bool, debug *bool) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 

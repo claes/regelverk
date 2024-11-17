@@ -11,9 +11,9 @@ type BridgeWrapper interface {
 	Run() error
 }
 
-func initBridges(mqttClient mqtt.Client, config Config, bridgeWrappers []BridgeWrapper) {
+func initBridges(mqttClient mqtt.Client, config Config, bridgeWrappers *[]BridgeWrapper) {
 
-	for _, bridgeWrapper := range bridgeWrappers {
+	for _, bridgeWrapper := range *bridgeWrappers {
 		err := bridgeWrapper.InitializeBridge(mqttClient, config)
 		if err != nil {
 			slog.Error("Could not initialize bridge", "error", err, "bridgeWrapper", bridgeWrapper)

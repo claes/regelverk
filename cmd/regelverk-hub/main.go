@@ -25,5 +25,5 @@ func main() {
 		&internal.SamsungBridgeWrapper{},
 	}
 
-	internal.StartRegelverk(config, loops, bridgeWrappers, dryRun, debug)
+	internal.StartRegelverk(config, loops, &bridgeWrappers, dryRun, debug)
 }
