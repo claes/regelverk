@@ -19,15 +19,15 @@ type RotelBridgeWrapper struct {
 // 	}
 
 func (l RotelBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
-	slog.Info("Initializing rotel bridge", "config", config, "mqttClient", mqttClient)
+	slog.Info("Preparing rotel bridge", "config", config, "mqttClient", mqttClient)
 	port, err := rotelmqtt.CreateSerialPort(config.RotelSerialPort)
 	if err != nil {
 		slog.Error("Could not serial port connection for rotel bridge", "error", err)
 		return err
 	}
-
+	slog.Info("Creating rotel bridge", "port", port, "mqttClient", mqttClient)
 	l.bridge = rotelmqtt.NewRotelMQTTBridge(port, mqttClient)
-	slog.Info("Initialized rotel bridge", "bridge", l, "mqttClient", mqttClient)
+	slog.Info("Initialized rotel bridge", "bridge", l.bridge, "mqttClient", mqttClient)
 	return nil
 }
 
