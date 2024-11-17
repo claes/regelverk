@@ -8,7 +8,7 @@ import (
 )
 
 type RotelBridgeWrapper struct {
-	bridge *rotelmqtt.RotelMQTTBridge
+	bridge rotelmqtt.RotelMQTTBridge
 }
 
 // 	rotelBridge, err := CreateRotelBridge(config.rotelSerialPort, mqttClient)
@@ -26,7 +26,7 @@ func (l RotelBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Conf
 		return err
 	}
 	slog.Info("Creating rotel bridge", "port", port, "mqttClient", mqttClient)
-	l.bridge = rotelmqtt.NewRotelMQTTBridge(port, mqttClient)
+	l.bridge = *rotelmqtt.NewRotelMQTTBridge(port, mqttClient)
 	slog.Info("Initialized rotel bridge", "bridge", l.bridge, "mqttClient", mqttClient)
 	return nil
 }
