@@ -14,17 +14,17 @@ type BridgeWrapper interface {
 func initBridges(mqttClient mqtt.Client, config Config, bridgeWrappers *[]BridgeWrapper) {
 
 	for _, bridgeWrapper := range *bridgeWrappers {
-		slog.Info("Initializing bridge", "bridgeWrapper", bridgeWrapper)
+		slog.Debug("Initializing bridge", "bridgeWrapper", bridgeWrapper)
 		err := bridgeWrapper.InitializeBridge(mqttClient, config)
 		if err != nil {
 			slog.Error("Could not initialize bridge", "error", err, "bridgeWrapper", bridgeWrapper)
 		} else {
-			slog.Info("Starting bridge", "bridgeWrapper", bridgeWrapper)
+			slog.Debug("Starting bridge", "bridgeWrapper", bridgeWrapper)
 			err = bridgeWrapper.Run()
 			if err != nil {
 				slog.Error("Error when starting bridge", "error", err, "bridgeWrapper", bridgeWrapper)
 			} else {
-				slog.Info("Started bridge", "bridgeWrapper", bridgeWrapper)
+				slog.Debug("Started bridge", "bridgeWrapper", bridgeWrapper)
 			}
 		}
 	}
