@@ -19,7 +19,7 @@ func initBridges(mqttClient mqtt.Client, config Config, bridgeWrappers *[]Bridge
 		if err != nil {
 			slog.Error("Could not initialize bridge", "error", err, "bridgeWrapper", bridgeWrapper)
 		} else {
-			slog.Error("Starting bridge", "bridgeWrapper", bridgeWrapper)
+			slog.Info("Starting bridge", "bridgeWrapper", bridgeWrapper)
 			err = bridgeWrapper.Run()
 			if err != nil {
 				slog.Error("Error when starting bridge", "error", err, "bridgeWrapper", bridgeWrapper)

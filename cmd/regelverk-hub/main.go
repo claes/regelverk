@@ -17,13 +17,16 @@ func main() {
 		&internal.WebLoop{},
 	}
 
-	bridgeWrappers := []internal.BridgeWrapper{
-		&internal.CecBridgeWrapper{},
-		&internal.MpdBridgeWrapper{},
-		&internal.PulseaudioBridgeWrapper{},
+	bridgeWrappers := &[]internal.BridgeWrapper{
 		&internal.RotelBridgeWrapper{},
-		&internal.SamsungBridgeWrapper{},
 	}
+	// bridgeWrappers := &[]internal.BridgeWrapper{
+	// 	&internal.CecBridgeWrapper{},
+	// 	&internal.MpdBridgeWrapper{},
+	// 	&internal.PulseaudioBridgeWrapper{},
+	// 	&internal.RotelBridgeWrapper{},
+	// 	&internal.SamsungBridgeWrapper{},
+	// }
 
-	internal.StartRegelverk(config, loops, &bridgeWrappers, dryRun, debug)
+	internal.StartRegelverk(config, loops, bridgeWrappers, dryRun, debug)
 }
