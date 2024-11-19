@@ -19,6 +19,7 @@ type Config struct {
 	MQTTBroker       string
 	MQTTUserName     string
 	MQTTPasswordFile string
+	MQTTTopicPrefix  string
 	WebAddress       string
 	RotelSerialPort  string
 	SamsungTvAddress string
@@ -197,6 +198,16 @@ func Regelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapp
 			Timestamp: tick,
 			Topic:     "regelverk/ticker/1s",
 			Payload:   nil,
+		}
+		mqttMessageHandler.handleEvent(ev)
+	}
+
+	for tick := range time.Tick(1 * time.Minute) {
+		timeOfDay := ComputeTimeOfDay(time.Now(), 59, 18)
+		ev := MQTTEvent{
+			Timestamp: tick,
+			Topic:     "regelverk/ticker/1min",
+			Payload:   timeOfDay,
 		}
 		mqttMessageHandler.handleEvent(ev)
 	}

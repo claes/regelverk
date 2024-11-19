@@ -27,7 +27,7 @@ func (l *MpdBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Confi
 	}
 
 	l.mpdPassword = mpdPassword
-	l.bridge = mpdmqtt.NewMpdMQTTBridge(mpdClient, mpdWatcher, mqttClient)
+	l.bridge = mpdmqtt.NewMpdMQTTBridge(mpdClient, mpdWatcher, mqttClient, config.MQTTTopicPrefix)
 
 	return nil
 }
@@ -40,32 +40,3 @@ func (l *MpdBridgeWrapper) Run() error {
 	go l.bridge.MainLoop()
 	return nil
 }
-
-//-----------------------------------------
-
-// func CreateMPDBridge(config Config, mqttClient mqtt.Client) *mpdmqtt.MpdMQTTBridge {
-
-// 	mpdPassword, err := fileToString(config.mpdPasswordFile)
-// 	if err != nil {
-// 		slog.Error("Error reading mpd password",
-// 			"mpdPasswordFile", config.mpdPasswordFile, "error", err)
-// 	}
-// 	slog.Info("MPD password", "password", mpdPassword)
-
-// 	mpdClient, mpdWatcher, err := mpdmqtt.CreateMPDClient(config.mpdServer, mpdPassword)
-// 	if err != nil {
-// 		slog.Error("Could not create MPD client", "error", err, "mpdserver", config.mpdServer, "mpdpassword", mpdPassword)
-// 	}
-
-// 	bridge := mpdmqtt.NewMpdMQTTBridge(mpdClient, mpdWatcher, mqttClient)
-
-// 	go func() {
-// 		bridge.DetectReconnectMPDClient(config.mpdServer, mpdPassword)
-// 	}()
-
-// 	return bridge
-// }
-
-// func initMPDBridge(bridge *mpdmqtt.MpdMQTTBridge) {
-// 	go bridge.MainLoop()
-// }

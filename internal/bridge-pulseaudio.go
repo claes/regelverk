@@ -17,7 +17,7 @@ func (l *PulseaudioBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, confi
 		slog.Error("Could not create pulse client", "error", err)
 		return err
 	}
-	l.bridge = pulsemqtt.NewPulseaudioMQTTBridge(pulseclient, mqttClient)
+	l.bridge = pulsemqtt.NewPulseaudioMQTTBridge(pulseclient, mqttClient, config.MQTTTopicPrefix)
 	return nil
 }
 
@@ -26,20 +26,3 @@ func (l *PulseaudioBridgeWrapper) Run() error {
 	slog.Info("Pulseaudio bridge started")
 	return nil
 }
-
-// -----------------------------
-
-// func CreatePulseaudioBridge(pulseserver string, mqttClient mqtt.Client) (*pulsemqtt.PulseaudioMQTTBridge, error) {
-// 	pulseclient, err := pulsemqtt.CreatePulseClient(pulseserver)
-// 	if err != nil {
-// 		slog.Error("Could not create pulse client", "error", err)
-// 		return nil, err
-// 	}
-// 	bridge := pulsemqtt.NewPulseaudioMQTTBridge(pulseclient, mqttClient)
-// 	return bridge, nil
-// }
-
-// func initPulseaudioBridge(bridge *pulsemqtt.PulseaudioMQTTBridge) {
-// 	go bridge.MainLoop()
-// 	slog.Info("Pulseaudio bridge started")
-// }

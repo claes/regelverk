@@ -13,6 +13,7 @@ func main() {
 		&internal.MpdLoop{},
 		&internal.PresenceLoop{},
 		&internal.KitchenLoop{},
+		&internal.LivingroomLoop{},
 		&internal.CecLoop{},
 		&internal.WebLoop{},
 	}

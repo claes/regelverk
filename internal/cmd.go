@@ -13,8 +13,9 @@ func ParseConfig() (Config, *bool, *bool) {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	mqttBroker := flag.String("mqttBroker", "tcp://localhost:1883", "MQTT broker URL")
+	mqttTopicPrefix := flag.String("mqttTopicPrefix", "", "MQTT topic prefix")
 	mqttUserName := flag.String("mqttUserName", "", "MQTT username")
-	MQTTPasswordFile := flag.String("mqttPasswordFile", "", "MQTT password file")
+	mqttPasswordFile := flag.String("mqttPasswordFile", "", "MQTT password file")
 	httpListenAddress := flag.String("httpListenAddress", ":8080", "HTTP listen address")
 	rotelSerialPort := flag.String("rotelSerialPort", "", "Rotel serial port")
 	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
@@ -41,8 +42,9 @@ func ParseConfig() (Config, *bool, *bool) {
 
 	config := Config{
 		MQTTBroker:       *mqttBroker,
+		MQTTTopicPrefix:  *mqttTopicPrefix,
 		MQTTUserName:     *mqttUserName,
-		MQTTPasswordFile: *MQTTPasswordFile,
+		MQTTPasswordFile: *mqttPasswordFile,
 		WebAddress:       *httpListenAddress,
 		RotelSerialPort:  *rotelSerialPort,
 		SamsungTvAddress: *samsungTVAddress,

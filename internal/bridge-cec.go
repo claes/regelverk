@@ -12,16 +12,18 @@ import (
 )
 
 type CecBridgeWrapper struct {
-	mqttClient mqtt.Client
+	mqttClient  mqtt.Client
+	topicPrefix string
 }
 
 func (l *CecBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
 	l.mqttClient = mqttClient
+	l.topicPrefix = config.MQTTTopicPrefix
 	return nil
 }
 
 func (l *CecBridgeWrapper) Run() error {
-	go cecBridgeMainLoop(l.mqttClient)
+	go cecBridgeMainLoop(l.mqttClient, l.topicPrefix)
 	return nil
 }
 
@@ -150,7 +152,7 @@ func translatePerformKeypress(keyPress *cec.KeyPress, keyboard uinput.Keyboard) 
 // 	go cecBridgeMainLoop(mqttClient)
 // }
 
-func cecBridgeMainLoop(mqttClient mqtt.Client) {
+func cecBridgeMainLoop(mqttClient mqtt.Client, topicPrefix string) {
 
 	keyboard, err := uinput.CreateKeyboard("/dev/uinput", []byte("regelverk"))
 	if err != nil {
@@ -165,7 +167,7 @@ func cecBridgeMainLoop(mqttClient mqtt.Client) {
 		time.Sleep(4 * time.Second)
 		slog.Info("Creating new CEC connection", "count", i)
 		cecConnection := cecmqtt.CreateCECConnection("/dev/ttyACM0", "Regelverk")
-		bridge := cecmqtt.NewCecMQTTBridge(cecConnection, mqttClient)
+		bridge := cecmqtt.NewCecMQTTBridge(cecConnection, mqttClient, topicPrefix)
 
 		ctx, cancel := context.WithCancel(context.Background())
 
