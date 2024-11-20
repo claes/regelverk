@@ -196,24 +196,27 @@ func Regelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapp
 	// Init web after handlers are established
 	// createWebServer(config)
 
-	for tick := range time.Tick(1 * time.Second) {
-		ev := MQTTEvent{
-			Timestamp: tick,
-			Topic:     "regelverk/ticker/1s",
-			Payload:   nil,
+	go func() {
+		for tick := range time.Tick(1 * time.Second) {
+			ev := MQTTEvent{
+				Timestamp: tick,
+				Topic:     "regelverk/ticker/1s",
+				Payload:   nil,
+			}
+			mqttMessageHandler.handleEvent(ev)
 		}
-		mqttMessageHandler.handleEvent(ev)
-	}
-
-	for tick := range time.Tick(1 * time.Minute) {
-		timeOfDay := ComputeTimeOfDay(time.Now(), 59, 18)
-		ev := MQTTEvent{
-			Timestamp: tick,
-			Topic:     "regelverk/ticker/1min",
-			Payload:   timeOfDay,
+	}()
+	go func() {
+		for tick := range time.Tick(1 * time.Minute) {
+			timeOfDay := ComputeTimeOfDay(time.Now(), 59, 18)
+			ev := MQTTEvent{
+				Timestamp: tick,
+				Topic:     "regelverk/ticker/timeofday",
+				Payload:   timeOfDay,
+			}
+			mqttMessageHandler.handleEvent(ev)
 		}
-		mqttMessageHandler.handleEvent(ev)
-	}
+	}()
 
 	slog.Info("Started regelverk")
 	select {} // loop forever

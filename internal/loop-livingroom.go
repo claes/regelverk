@@ -9,7 +9,7 @@ func (l *LivingroomLoop) Init(m *mqttMessageHandler, config Config) {}
 
 func (l *LivingroomLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
-	case "regelverk/ticker/1min":
+	case "regelverk/ticker/timeofday":
 		var timeOfDay = ev.Payload.(TimeOfDay)
 		if timeOfDay == Nighttime {
 			return []MQTTPublish{
