@@ -11,15 +11,17 @@ require (
 	github.com/claes/mpd-mqtt v0.0.0-20241117141847-a418f94bee60
 	github.com/claes/pulseaudio-mqtt v0.0.0-20241117140819-d43e31611f50
 	github.com/claes/rotel-mqtt v0.0.0-20240606131203-59f7974c7ca3
+	github.com/claes/routeros-mqtt v0.0.0-20241120202123-a86f39417801
 	github.com/claes/samsung-mqtt v0.0.0-20241117142225-c52df5c2aa93
 	github.com/eclipse/paho.mqtt.golang v1.5.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/sj14/astral v0.2.2
 )
 
 require (
 	github.com/fhs/gompd/v2 v2.3.0 // indirect
+	github.com/go-routeros/routeros/v3 v3.0.0 // indirect
 	github.com/jfreymuth/pulse v0.1.1 // indirect
-	github.com/sj14/astral v0.2.2 // indirect
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07 // indirect
 	golang.org/x/net v0.31.0 // indirect
 	golang.org/x/sync v0.9.0 // indirect

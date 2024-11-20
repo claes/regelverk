@@ -24,6 +24,7 @@ func main() {
 		&internal.PulseaudioBridgeWrapper{},
 		&internal.RotelBridgeWrapper{},
 		&internal.SamsungBridgeWrapper{},
+		&internal.RouterOSBridgeWrapper{},
 	}
 
 	internal.StartRegelverk(config, loops, bridgeWrappers, dryRun, debug)

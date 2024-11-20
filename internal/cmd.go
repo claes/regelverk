@@ -21,7 +21,10 @@ func ParseConfig() (Config, *bool, *bool) {
 	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
 	pulseServer := flag.String("pulseServer", "", "Pulse server")
 	mpdServer := flag.String("mpdServer", "", "MPD server")
-	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password")
+	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password file")
+	routerAddress := flag.String("routerAddress", "", "Mikrotik router address:port")
+	routerUsername := flag.String("routerUsername", "", "Mikrotik router username")
+	routerPasswordFile := flag.String("routerPasswordFile", "", "Mikrotik router password file")
 	help := flag.Bool("help", false, "Print help")
 	debug := flag.Bool("debug", false, "Debug logging")
 	dryRun := flag.Bool("dry_run", false, "Dry run (do not publish)")
@@ -41,16 +44,19 @@ func ParseConfig() (Config, *bool, *bool) {
 	}
 
 	config := Config{
-		MQTTBroker:       *mqttBroker,
-		MQTTTopicPrefix:  *mqttTopicPrefix,
-		MQTTUserName:     *mqttUserName,
-		MQTTPasswordFile: *mqttPasswordFile,
-		WebAddress:       *httpListenAddress,
-		RotelSerialPort:  *rotelSerialPort,
-		SamsungTvAddress: *samsungTVAddress,
-		MpdServer:        *mpdServer,
-		MpdPasswordFile:  *mpdPasswordFile,
-		Pulseserver:      *pulseServer}
+		MQTTBroker:         *mqttBroker,
+		MQTTTopicPrefix:    *mqttTopicPrefix,
+		MQTTUserName:       *mqttUserName,
+		MQTTPasswordFile:   *mqttPasswordFile,
+		WebAddress:         *httpListenAddress,
+		RotelSerialPort:    *rotelSerialPort,
+		SamsungTvAddress:   *samsungTVAddress,
+		MpdServer:          *mpdServer,
+		MpdPasswordFile:    *mpdPasswordFile,
+		RouterAddress:      *routerAddress,
+		RouterUsername:     *routerUsername,
+		RouterPasswordFile: *routerPasswordFile,
+		Pulseserver:        *pulseServer}
 	return config, debug, dryRun
 }
 

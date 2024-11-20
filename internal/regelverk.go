@@ -16,16 +16,19 @@ import (
 // Mostly reused from https://github.com/stapelberg/regelwerk
 
 type Config struct {
-	MQTTBroker       string
-	MQTTUserName     string
-	MQTTPasswordFile string
-	MQTTTopicPrefix  string
-	WebAddress       string
-	RotelSerialPort  string
-	SamsungTvAddress string
-	MpdServer        string
-	MpdPasswordFile  string
-	Pulseserver      string
+	MQTTBroker         string
+	MQTTUserName       string
+	MQTTPasswordFile   string
+	MQTTTopicPrefix    string
+	WebAddress         string
+	RotelSerialPort    string
+	SamsungTvAddress   string
+	MpdServer          string
+	MpdPasswordFile    string
+	Pulseserver        string
+	RouterAddress      string
+	RouterUsername     string
+	RouterPasswordFile string
 }
 
 type MQTTEvent struct {

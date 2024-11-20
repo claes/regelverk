@@ -48,7 +48,7 @@
 
         buildInputs = [pkgs.libcec pkgs.libcec_platform];
 
-        vendorHash = "sha256-evGpuPRBlmM2oFdkCD3sYl0yFWlEltSP2XwTT4B9Phw=";
+        vendorHash = "sha256-8kwDilnG9GcpeIzPhnuS2UfNSnpJdaRFmgrJ6PMJyEg=";
       };
     });
 
