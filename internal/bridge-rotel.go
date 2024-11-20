@@ -19,7 +19,7 @@ func (l *RotelBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Con
 		return err
 	}
 	slog.Debug("Creating rotel bridge", "port", port, "mqttClient", mqttClient)
-	l.bridge = rotelmqtt.NewRotelMQTTBridge(port, mqttClient)
+	l.bridge = rotelmqtt.NewRotelMQTTBridge(port, mqttClient, config.MQTTTopicPrefix)
 	slog.Debug("Initialized rotel bridge", "bridge", l.bridge, "mqttClient", mqttClient)
 	return nil
 }
