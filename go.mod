@@ -22,6 +22,7 @@ require (
 	github.com/fhs/gompd/v2 v2.3.0 // indirect
 	github.com/go-routeros/routeros/v3 v3.0.0 // indirect
 	github.com/jfreymuth/pulse v0.1.1 // indirect
+	github.com/qmuntal/stateless v1.7.1 // indirect
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07 // indirect
 	golang.org/x/net v0.31.0 // indirect
 	golang.org/x/sync v0.9.0 // indirect
