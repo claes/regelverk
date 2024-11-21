@@ -122,15 +122,33 @@ func (s *FoxStateMap) requireNotRecently(key string, duration time.Duration) boo
 }
 
 func (s *FoxStateMap) LogState() {
+	now := time.Now()
 	for key, state := range s.foxStateMap {
+
+		secondsSinceLastUpdate := int64(-1)
+		if !state.lastUpdate.IsZero() {
+			secondsSinceLastUpdate = int64(now.Sub(state.lastUpdate).Seconds())
+		}
+
+		secondsSinceLastSetTrue := int64(-1)
+		if !state.lastSetTrue.IsZero() {
+			secondsSinceLastSetTrue = int64(now.Sub(state.lastSetTrue).Seconds())
+		}
+
+		secondsSinceLastSetFalse := int64(-1)
+		if !state.lastSetFalse.IsZero() {
+			secondsSinceLastSetFalse = int64(now.Sub(state.lastSetFalse).Seconds())
+		}
 		slog.Info("FoxStateMap entry",
 			"key", key,
 			"value", state.value,
 			"isDefined", state.isDefined,
 			"lastUpdate", state.lastUpdate,
+			"secondsSinceLastUpdate", secondsSinceLastUpdate,
 			"lastSetTrue", state.lastSetTrue,
+			"secondsSinceLastSetTrue", secondsSinceLastSetTrue,
 			"lastSetFalse", state.lastSetFalse,
-		)
+			"secondsSinceLastSetFalse", secondsSinceLastSetFalse)
 	}
 }
 
@@ -190,7 +208,7 @@ func (l *PresenceLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 }
 
 func (l *LivingroomLampFsmMQTTBridge) guardTurnOnLamp(_ context.Context, _ ...any) bool {
-	check := l.state.require("phonePresent") && l.state.requireRecently("livingroomPresence", 1*time.Minute)
+	check := l.state.require("phonePresent") && l.state.requireRecently("livingroomPresence", 10*time.Minute)
 	slog.Info("guardTurnOnLamp", "check", check)
 	return check
 }
@@ -202,7 +220,7 @@ func (l *LivingroomLampFsmMQTTBridge) turnOnLamp(_ context.Context, _ ...any) er
 }
 
 func (l *LivingroomLampFsmMQTTBridge) guardTurnOffLamp(_ context.Context, _ ...any) bool {
-	check := !l.phonePresent || l.state.requireNotRecently("livingroomPresence", 1*time.Minute)
+	check := !l.phonePresent || l.state.requireNotRecently("livingroomPresence", 10*time.Minute)
 	slog.Info("guardTurnOffLamp", "check", check)
 	return check
 }
@@ -242,66 +260,3 @@ func (l *LivingroomLampFsmMQTTBridge) detectLivingroomPresence(ev MQTTEvent) {
 		l.state.setState("livingroomPresence", present)
 	}
 }
-
-// func (l *PresenceLoop) processPresence(ev MQTTEvent) []MQTTPublish {
-// 	switch ev.Topic {
-
-// 	case "routeros/wificlients":
-// 		var wifiClients []routerosmqtt.WifiClient
-
-// 		err := json.Unmarshal(ev.Payload.([]byte), &wifiClients)
-// 		if err != nil {
-// 			slog.Debug("Could not parse payload", "topic", "routeros/wificlients")
-// 		}
-// 		found := false
-// 		for _, wifiClient := range wifiClients {
-// 			if wifiClient.MacAddress == "AA:73:49:2B:D8:45" {
-// 				found = true
-// 				l.phoneWifiLastPresence = time.Now()
-// 				break
-// 			}
-// 		}
-// 		l.phoneWifiPresence = found
-
-// 		return []MQTTPublish{
-// 			{
-// 				Topic: "regelverk/presence/phone",
-// 				Payload: fmt.Sprintf("{\"present\": \"%t\"}",
-// 					l.phoneWifiPresence),
-// 				Qos:      2,
-// 				Retained: true,
-// 			},
-// 		}
-
-// 	case "zigbee2mqtt/livingroom-presence":
-// 		m := parseJSONPayload(ev)
-// 		present := m["occupancy"].(bool)
-
-// 		absentSeconds := 0
-// 		presentSeconds := 0
-// 		if present {
-// 			l.livingroomLastPresence = time.Now()
-// 			presentSeconds = int(time.Now().Sub(l.livingroomLastAbsence).Seconds())
-// 		} else {
-// 			l.livingroomLastAbsence = time.Now()
-// 			absentSeconds = int(time.Now().Sub(l.livingroomLastPresence).Seconds())
-// 		}
-
-// 		return []MQTTPublish{
-// 			{
-// 				Topic: "regelverk/presence/livingroom",
-// 				Payload: fmt.Sprintf("{\"present\": \"%t\", \"absentSeconds\": \"%d\", \"presentSeconds\": \"%d\"}",
-// 					present, absentSeconds, presentSeconds),
-// 				Qos:      2,
-// 				Retained: true,
-// 			},
-// 		}
-
-// 	default:
-// 		return nil
-// 	}
-// }
-
-// func (l *PresenceLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-// 	return l.processPresence(ev)
-// }
