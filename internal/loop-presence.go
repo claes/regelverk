@@ -32,6 +32,7 @@ type PresenceLoop struct {
 	phoneWifiLastPresence   time.Time
 	phoneWifiPresence       bool
 	livingroomLampFSMBridge LivingroomLampFsmMQTTBridge
+	isInitialized           bool
 }
 
 type StateMachineMQTTBridge struct {
@@ -58,6 +59,7 @@ func livingroomLampMQTTPublish(on bool) MQTTPublish {
 }
 
 func (l *PresenceLoop) Init(m *mqttMessageHandler, config Config) {
+	slog.Info("Initializing FSM")
 
 	baseBridge := StateMachineMQTTBridge{eventsToPublish: []MQTTPublish{}}
 	l.livingroomLampFSMBridge = LivingroomLampFsmMQTTBridge{StateMachineMQTTBridge: baseBridge}
@@ -74,18 +76,26 @@ func (l *PresenceLoop) Init(m *mqttMessageHandler, config Config) {
 		Permit("mqttEvent", eventLampOn, l.livingroomLampFSMBridge.guardTurnOnLamp)
 
 	l.livingroomLampFSMBridge.stateMachine = livingroomLampFSM
+	l.isInitialized = true
+	slog.Info("FSM initialized")
 }
 
 func (l *PresenceLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	slog.Info("Process event", "event", ev)
-	l.livingroomLampFSMBridge.detectPhonePresent(ev)
-	slog.Info("Fire event", "event", ev)
-	l.livingroomLampFSMBridge.stateMachine.Fire("mqttEvent", ev)
+	if l.isInitialized {
+		slog.Info("Process event", "event", ev)
+		l.livingroomLampFSMBridge.detectPhonePresent(ev)
+		slog.Info("Fire event", "event", ev)
+		l.livingroomLampFSMBridge.stateMachine.Fire("mqttEvent", ev)
 
-	eventsToPublish := l.livingroomLampFSMBridge.eventsToPublish
-	slog.Info("Event fired", "event", ev, "eventsToPublish", eventsToPublish)
-	l.livingroomLampFSMBridge.eventsToPublish = []MQTTPublish{}
-	return eventsToPublish
+		eventsToPublish := l.livingroomLampFSMBridge.eventsToPublish
+		slog.Info("Event fired", "event", ev, "eventsToPublish", eventsToPublish)
+		l.livingroomLampFSMBridge.eventsToPublish = []MQTTPublish{}
+		return eventsToPublish
+
+	} else {
+		slog.Info("Cannot process event is not initialized", "event", ev)
+		return []MQTTPublish{}
+	}
 }
 
 func (l *LivingroomLampFsmMQTTBridge) guardTurnOnLamp(_ context.Context, _ ...any) bool {
