@@ -179,7 +179,7 @@ func (l *PresenceLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		l.livingroomLampFSMBridge.stateMachine.Fire("mqttEvent", ev)
 
 		eventsToPublish := l.livingroomLampFSMBridge.eventsToPublish
-		slog.Info("Event fired")
+		slog.Info("Event fired", "state", l.livingroomLampFSMBridge.stateMachine.MustState())
 		l.livingroomLampFSMBridge.eventsToPublish = []MQTTPublish{}
 		return eventsToPublish
 
@@ -190,8 +190,9 @@ func (l *PresenceLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 }
 
 func (l *LivingroomLampFsmMQTTBridge) guardTurnOnLamp(_ context.Context, _ ...any) bool {
-	slog.Info("guardTurnOnLamp", "phonePresent", l.phonePresent)
-	return l.state.require("phonePresent") && l.state.requireRecently("livingroomPresence", 1*time.Minute)
+	check := l.state.require("phonePresent") && l.state.requireRecently("livingroomPresence", 1*time.Minute)
+	slog.Info("guardTurnOnLamp", "check", check)
+	return check
 }
 
 func (l *LivingroomLampFsmMQTTBridge) turnOnLamp(_ context.Context, _ ...any) error {
@@ -201,8 +202,9 @@ func (l *LivingroomLampFsmMQTTBridge) turnOnLamp(_ context.Context, _ ...any) er
 }
 
 func (l *LivingroomLampFsmMQTTBridge) guardTurnOffLamp(_ context.Context, _ ...any) bool {
-	slog.Info("guardTurnOffLamp", "phonePresent", l.phonePresent)
-	return !l.phonePresent && l.state.requireNotRecently("livingroomPresence", 1*time.Minute)
+	check := !l.phonePresent || l.state.requireNotRecently("livingroomPresence", 1*time.Minute)
+	slog.Info("guardTurnOffLamp", "check", check)
+	return check
 }
 
 func (l *LivingroomLampFsmMQTTBridge) turnOffLamp(_ context.Context, _ ...any) error {
