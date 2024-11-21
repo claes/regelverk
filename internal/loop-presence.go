@@ -43,6 +43,95 @@ type StateMachineMQTTBridge struct {
 type LivingroomLampFsmMQTTBridge struct {
 	StateMachineMQTTBridge
 	phonePresent bool
+	state        FoxStateMap
+}
+
+type FoxState struct {
+	value        bool
+	isDefined    bool
+	lastUpdate   time.Time
+	lastSetTrue  time.Time
+	lastSetFalse time.Time
+}
+
+func (f FoxState) Age() time.Duration {
+	return time.Since(f.lastUpdate)
+}
+
+type FoxStateMap struct {
+	foxStateMap map[string]FoxState
+}
+
+func NewFoxStateMap() FoxStateMap {
+	return FoxStateMap{
+		foxStateMap: make(map[string]FoxState),
+	}
+}
+func (s *FoxStateMap) setState(key string, value bool) {
+	existingState, exists := s.foxStateMap[key]
+
+	if !exists || existingState.value != value {
+		newState := FoxState{
+			value:        value,
+			isDefined:    true,
+			lastUpdate:   time.Now(),
+			lastSetTrue:  existingState.lastSetTrue,
+			lastSetFalse: existingState.lastSetFalse,
+		}
+		now := time.Now()
+		if value {
+			newState.lastSetTrue = now
+		} else {
+			newState.lastSetFalse = now
+		}
+		s.foxStateMap[key] = newState
+	}
+}
+
+func (s *FoxStateMap) getState(key string) FoxState {
+	state, exists := s.foxStateMap[key]
+	state.isDefined = exists
+	return state
+}
+
+func (s *FoxStateMap) require(key string) bool {
+	state, exists := s.foxStateMap[key]
+	if !exists {
+		return false
+	} else {
+		return state.value
+	}
+}
+
+func (s *FoxStateMap) requireRecently(key string, duration time.Duration) bool {
+	state, exists := s.foxStateMap[key]
+	if !exists {
+		return false
+	} else {
+		return state.value || time.Since(state.lastSetTrue) < duration
+	}
+}
+
+func (s *FoxStateMap) requireNotRecently(key string, duration time.Duration) bool {
+	state, exists := s.foxStateMap[key]
+	if !exists {
+		return false
+	} else {
+		return !state.value && time.Since(state.lastSetTrue) > duration
+	}
+}
+
+func (s *FoxStateMap) LogState() {
+	for key, state := range s.foxStateMap {
+		slog.Info("FoxStateMap entry",
+			"key", key,
+			"value", state.value,
+			"isDefined", state.isDefined,
+			"lastUpdate", state.lastUpdate,
+			"lastSetTrue", state.lastSetTrue,
+			"lastSetFalse", state.lastSetFalse,
+		)
+	}
 }
 
 func livingroomLampMQTTPublish(on bool) MQTTPublish {
@@ -62,7 +151,7 @@ func (l *PresenceLoop) Init(m *mqttMessageHandler, config Config) {
 	slog.Info("Initializing FSM")
 
 	baseBridge := StateMachineMQTTBridge{eventsToPublish: []MQTTPublish{}}
-	l.livingroomLampFSMBridge = LivingroomLampFsmMQTTBridge{StateMachineMQTTBridge: baseBridge}
+	l.livingroomLampFSMBridge = LivingroomLampFsmMQTTBridge{StateMachineMQTTBridge: baseBridge, state: NewFoxStateMap()}
 	livingroomLampFSM := stateless.NewStateMachine(eventLampOn)
 	//livingroomLampFSM.OnUnhandledTrigger(func(_ context.Context, state stateless.State, _ stateless.Trigger, _ []string) {})
 	livingroomLampFSM.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
@@ -82,13 +171,15 @@ func (l *PresenceLoop) Init(m *mqttMessageHandler, config Config) {
 
 func (l *PresenceLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	if l.isInitialized {
-		slog.Info("Process event", "event", ev)
+		slog.Info("Process event")
 		l.livingroomLampFSMBridge.detectPhonePresent(ev)
-		slog.Info("Fire event", "event", ev)
+		l.livingroomLampFSMBridge.detectLivingroomPresence(ev)
+		l.livingroomLampFSMBridge.state.LogState()
+		slog.Info("Fire event")
 		l.livingroomLampFSMBridge.stateMachine.Fire("mqttEvent", ev)
 
 		eventsToPublish := l.livingroomLampFSMBridge.eventsToPublish
-		slog.Info("Event fired", "event", ev, "eventsToPublish", eventsToPublish)
+		slog.Info("Event fired")
 		l.livingroomLampFSMBridge.eventsToPublish = []MQTTPublish{}
 		return eventsToPublish
 
@@ -100,7 +191,7 @@ func (l *PresenceLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 func (l *LivingroomLampFsmMQTTBridge) guardTurnOnLamp(_ context.Context, _ ...any) bool {
 	slog.Info("guardTurnOnLamp", "phonePresent", l.phonePresent)
-	return l.phonePresent
+	return l.state.require("phonePresent") && l.state.requireRecently("livingroomPresence", 1*time.Minute)
 }
 
 func (l *LivingroomLampFsmMQTTBridge) turnOnLamp(_ context.Context, _ ...any) error {
@@ -111,7 +202,7 @@ func (l *LivingroomLampFsmMQTTBridge) turnOnLamp(_ context.Context, _ ...any) er
 
 func (l *LivingroomLampFsmMQTTBridge) guardTurnOffLamp(_ context.Context, _ ...any) bool {
 	slog.Info("guardTurnOffLamp", "phonePresent", l.phonePresent)
-	return !l.phonePresent
+	return !l.phonePresent && l.state.requireNotRecently("livingroomPresence", 1*time.Minute)
 }
 
 func (l *LivingroomLampFsmMQTTBridge) turnOffLamp(_ context.Context, _ ...any) error {
@@ -137,6 +228,16 @@ func (l *LivingroomLampFsmMQTTBridge) detectPhonePresent(ev MQTTEvent) {
 		}
 		slog.Info("detectPhonePresent", "phonePresent", found)
 		l.phonePresent = found
+		l.state.setState("phonePresent", found)
+	}
+}
+
+func (l *LivingroomLampFsmMQTTBridge) detectLivingroomPresence(ev MQTTEvent) {
+
+	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
+		m := parseJSONPayload(ev)
+		present := m["occupancy"].(bool)
+		l.state.setState("livingroomPresence", present)
 	}
 }
 
