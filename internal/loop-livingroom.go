@@ -1,35 +1,60 @@
 package regelverk
 
+import (
+	"log/slog"
+	"reflect"
+
+	"github.com/qmuntal/stateless"
+)
+
+const (
+	stateLivingroomFloorlampOn  = "LampOn"
+	stateLivingroomFloorlampOff = "LampOff"
+)
+
 type LivingroomLoop struct {
 	statusLoop
-	hasMuted bool
+	stateMachineMQTTBridge StateMachineMQTTBridge
+	isInitialized          bool
 }
 
-func (l *LivingroomLoop) Init(m *mqttMessageHandler, config Config) {}
+func (l *LivingroomLoop) Init(m *mqttMessageHandler, config Config) {
+	slog.Debug("Initializing FSM")
+	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge()
+
+	sm := stateless.NewStateMachine(stateLivingroomFloorlampOff) // can this be reliable determined early on? probably not
+	sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
+
+	sm.Configure(stateLivingroomFloorlampOn).
+		OnEntry(l.stateMachineMQTTBridge.turnOnLivingroomFloorlamp).
+		Permit("mqttEvent", stateLivingroomFloorlampOff, l.stateMachineMQTTBridge.guardTurnOffLivingroomLamp)
+
+	sm.Configure(stateLivingroomFloorlampOff).
+		OnEntry(l.stateMachineMQTTBridge.turnOffLivingroomFloorlamp).
+		Permit("mqttEvent", stateLivingroomFloorlampOn, l.stateMachineMQTTBridge.guardTurnOnLivingroomLamp)
+
+	l.stateMachineMQTTBridge.stateMachine = sm
+	l.isInitialized = true
+	slog.Debug("FSM initialized")
+}
 
 func (l *LivingroomLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	switch ev.Topic {
-	case "regelverk/ticker/timeofday":
-		var timeOfDay = ev.Payload.(TimeOfDay)
-		if timeOfDay == Nighttime {
-			return []MQTTPublish{
-				{
-					Topic:    "zigbee2mqtt/livingroom-floorlamp/set",
-					Payload:  "{\"state\": \"ON\"}",
-					Qos:      2,
-					Retained: true,
-				},
-			}
-		} else {
-			return []MQTTPublish{
-				{
-					Topic:    "zigbee2mqtt/livingroom-floorlamp/set",
-					Payload:  "{\"state\": \"OFF\"}",
-					Qos:      2,
-					Retained: true,
-				},
-			}
-		}
+	if l.isInitialized {
+		slog.Debug("Process event")
+		l.stateMachineMQTTBridge.detectLivingroomFloorlampState(ev)
+		l.stateMachineMQTTBridge.detectPhonePresent(ev)
+		l.stateMachineMQTTBridge.detectLivingroomPresence(ev)
+		l.stateMachineMQTTBridge.detectNighttime(ev)
+		l.stateMachineMQTTBridge.stateValueMap.LogState()
+		slog.Debug("Fire event")
+		l.stateMachineMQTTBridge.stateMachine.Fire("mqttEvent", ev)
+
+		eventsToPublish := l.stateMachineMQTTBridge.eventsToPublish
+		slog.Debug("Event fired", "state", l.stateMachineMQTTBridge.stateMachine.MustState())
+		l.stateMachineMQTTBridge.eventsToPublish = []MQTTPublish{}
+		return eventsToPublish
+	} else {
+		slog.Debug("Cannot process event: is not initialized")
+		return []MQTTPublish{}
 	}
-	return nil
 }
