@@ -3,6 +3,7 @@ package regelverk
 import (
 	"fmt"
 	"log/slog"
+	"sort"
 	"time"
 
 	"github.com/sj14/astral/pkg/astral"
@@ -207,6 +208,8 @@ func (s *StateValueMap) requireNotRecently(key string, duration time.Duration) b
 
 func (s *StateValueMap) LogState() {
 	now := time.Now()
+
+	var params [][]any
 	for key, stateValue := range s.stateValueMap {
 
 		secondsSinceLastUpdate := int64(-1)
@@ -223,8 +226,7 @@ func (s *StateValueMap) LogState() {
 		if !stateValue.lastSetFalse.IsZero() {
 			secondsSinceLastSetFalse = int64(now.Sub(stateValue.lastSetFalse).Seconds())
 		}
-		slog.Info("StateValue entry",
-			"key", key,
+		params = append(params, []any{"key", key,
 			"value", stateValue.value,
 			"isDefined", stateValue.isDefined,
 			"lastUpdate", stateValue.lastUpdate,
@@ -232,6 +234,14 @@ func (s *StateValueMap) LogState() {
 			"lastSetTrue", stateValue.lastSetTrue,
 			"secondsSinceLastSetTrue", secondsSinceLastSetTrue,
 			"lastSetFalse", stateValue.lastSetFalse,
-			"secondsSinceLastSetFalse", secondsSinceLastSetFalse)
+			"secondsSinceLastSetFalse", secondsSinceLastSetFalse})
+	}
+
+	sort.Slice(params, func(i, j int) bool {
+		return params[i][1].(string) < params[j][1].(string)
+	})
+
+	for _, p := range params {
+		slog.Info("StateValue entry", p...)
 	}
 }
