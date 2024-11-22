@@ -21,7 +21,9 @@ func CreateStateMachineMQTTBridge() StateMachineMQTTBridge {
 	return StateMachineMQTTBridge{eventsToPublish: []MQTTPublish{}, stateValueMap: NewStateValueMap()}
 }
 
-func livingroomFloorlampMQTTPublish(on bool) MQTTPublish {
+// Output
+
+func livingroomFloorlampOutput(on bool) MQTTPublish {
 	state := "OFF"
 	if on {
 		state = "ON"
@@ -34,29 +36,39 @@ func livingroomFloorlampMQTTPublish(on bool) MQTTPublish {
 	}
 }
 
+// Guards
+
 func (l *StateMachineMQTTBridge) guardTurnOnLivingroomLamp(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.require("phonePresent") && l.stateValueMap.requireRecently("livingroomPresence", 10*time.Minute)
+	check := l.stateValueMap.require("phonePresent") &&
+		l.stateValueMap.require("nighttime") &&
+		l.stateValueMap.requireRecently("livingroomPresence", 10*time.Minute)
 	slog.Debug("guardTurnOnLamp", "check", check)
 	return check
 }
 
-func (l *StateMachineMQTTBridge) turnOnLivingroomFloorlamp(_ context.Context, _ ...any) error {
-	slog.Debug("turnOnLamp")
-	l.eventsToPublish = append(l.eventsToPublish, []MQTTPublish{livingroomFloorlampMQTTPublish(true)}...)
-	return nil
-}
-
 func (l *StateMachineMQTTBridge) guardTurnOffLivingroomLamp(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireNot("phonePresent") || l.stateValueMap.requireNotRecently("livingroomPresence", 10*time.Minute)
+	check := l.stateValueMap.requireNot("phonePresent") ||
+		l.stateValueMap.requireNot("nighttime") ||
+		l.stateValueMap.requireNotRecently("livingroomPresence", 10*time.Minute)
 	slog.Debug("guardTurnOffLamp", "check", check)
 	return check
 }
 
-func (l *StateMachineMQTTBridge) turnOffLivingroomFloorlamp(_ context.Context, _ ...any) error {
-	slog.Debug("turnOffLamp")
-	l.eventsToPublish = append(l.eventsToPublish, []MQTTPublish{livingroomFloorlampMQTTPublish(false)}...)
+// Actions
+
+func (l *StateMachineMQTTBridge) turnOnLivingroomFloorlamp(_ context.Context, _ ...any) error {
+	slog.Debug("turnOnLamp")
+	l.eventsToPublish = append(l.eventsToPublish, []MQTTPublish{livingroomFloorlampOutput(true)}...)
 	return nil
 }
+
+func (l *StateMachineMQTTBridge) turnOffLivingroomFloorlamp(_ context.Context, _ ...any) error {
+	slog.Debug("turnOffLamp")
+	l.eventsToPublish = append(l.eventsToPublish, []MQTTPublish{livingroomFloorlampOutput(false)}...)
+	return nil
+}
+
+// Detections
 
 func (l *StateMachineMQTTBridge) detectPhonePresent(ev MQTTEvent) {
 	if ev.Topic == "routeros/wificlients" {
@@ -81,8 +93,7 @@ func (l *StateMachineMQTTBridge) detectPhonePresent(ev MQTTEvent) {
 func (l *StateMachineMQTTBridge) detectLivingroomPresence(ev MQTTEvent) {
 	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
 		m := parseJSONPayload(ev)
-		present := m["occupancy"].(bool)
-		l.stateValueMap.setState("livingroomPresence", present)
+		l.stateValueMap.setState("livingroomPresence", m["occupancy"].(bool))
 	}
 }
 
@@ -98,12 +109,8 @@ func (l *StateMachineMQTTBridge) detectLivingroomFloorlampState(ev MQTTEvent) {
 	}
 }
 
-func (l *StateMachineMQTTBridge) detectTimeOfDay(ev MQTTEvent) {
+func (l *StateMachineMQTTBridge) detectNighttime(ev MQTTEvent) {
 	if ev.Topic == "regelverk/ticker/timeofday" {
-		var timeOfDay = ev.Payload.(TimeOfDay)
-		if timeOfDay == Nighttime {
-
-		}
-		//l.stateValueMap.setState("livingroomFloorlamp", on)
+		l.stateValueMap.setState("nighttime", ev.Payload.(TimeOfDay) == Nighttime)
 	}
 }

@@ -44,6 +44,7 @@ func (l *PresenceLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		l.stateMachineMQTTBridge.detectLivingroomFloorlampState(ev)
 		l.stateMachineMQTTBridge.detectPhonePresent(ev)
 		l.stateMachineMQTTBridge.detectLivingroomPresence(ev)
+		l.stateMachineMQTTBridge.detectNighttime(ev)
 		l.stateMachineMQTTBridge.stateValueMap.LogState()
 		slog.Debug("Fire event")
 		l.stateMachineMQTTBridge.stateMachine.Fire("mqttEvent", ev)
