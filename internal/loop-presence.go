@@ -1,20 +1,15 @@
 package regelverk
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"reflect"
-	"time"
 
-	routerosmqtt "github.com/claes/routeros-mqtt/lib"
 	"github.com/qmuntal/stateless"
 )
 
 const (
-	stateLampOn  = "LampOn"
-	stateLampOff = "LampOff"
+	stateLivingroomFloorlampOn  = "LampOn"
+	stateLivingroomFloorlampOff = "LampOff"
 )
 
 type PresenceLoop struct {
@@ -23,130 +18,42 @@ type PresenceLoop struct {
 	isInitialized          bool
 }
 
-type StateMachineMQTTBridge struct {
-	stateMachine    *stateless.StateMachine
-	eventsToPublish []MQTTPublish
-	stateValueMap   StateValueMap
-}
-
-func CreateStateMachineMQTTBridge() StateMachineMQTTBridge {
-	return StateMachineMQTTBridge{eventsToPublish: []MQTTPublish{}, stateValueMap: NewStateValueMap()}
-}
-
-func livingroomLampMQTTPublish(on bool) MQTTPublish {
-	state := "OFF"
-	if on {
-		state = "ON"
-	}
-	return MQTTPublish{
-		Topic:    "zigbee2mqtt/livingroom-floorlamp/set",
-		Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
-		Qos:      2,
-		Retained: true,
-	}
-}
-
 func (l *PresenceLoop) Init(m *mqttMessageHandler, config Config) {
-	slog.Info("Initializing FSM")
+	slog.Debug("Initializing FSM")
 	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge()
 
-	sm := stateless.NewStateMachine(stateLampOff) // can this be reliable determined early on? probably not
-	//livingroomLampFSM.OnUnhandledTrigger(func(_ context.Context, state stateless.State, _ stateless.Trigger, _ []string) {})
+	sm := stateless.NewStateMachine(stateLivingroomFloorlampOff) // can this be reliable determined early on? probably not
 	sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
-	sm.Configure(stateLampOn).
-		OnEntry(l.stateMachineMQTTBridge.turnOnLamp).
-		Permit("mqttEvent", stateLampOff, l.stateMachineMQTTBridge.guardTurnOffLamp)
+	sm.Configure(stateLivingroomFloorlampOn).
+		OnEntry(l.stateMachineMQTTBridge.turnOnLivingroomFloorlamp).
+		Permit("mqttEvent", stateLivingroomFloorlampOff, l.stateMachineMQTTBridge.guardTurnOffLivingroomLamp)
 
-	sm.Configure(stateLampOff).
-		OnEntry(l.stateMachineMQTTBridge.turnOffLamp).
-		Permit("mqttEvent", stateLampOn, l.stateMachineMQTTBridge.guardTurnOnLamp)
+	sm.Configure(stateLivingroomFloorlampOff).
+		OnEntry(l.stateMachineMQTTBridge.turnOffLivingroomFloorlamp).
+		Permit("mqttEvent", stateLivingroomFloorlampOn, l.stateMachineMQTTBridge.guardTurnOnLivingroomLamp)
 
 	l.stateMachineMQTTBridge.stateMachine = sm
 	l.isInitialized = true
-	slog.Info("FSM initialized")
+	slog.Debug("FSM initialized")
 }
 
 func (l *PresenceLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	if l.isInitialized {
-		slog.Info("Process event")
+		slog.Debug("Process event")
 		l.stateMachineMQTTBridge.detectLivingroomFloorlampState(ev)
 		l.stateMachineMQTTBridge.detectPhonePresent(ev)
 		l.stateMachineMQTTBridge.detectLivingroomPresence(ev)
 		l.stateMachineMQTTBridge.stateValueMap.LogState()
-		slog.Info("Fire event")
+		slog.Debug("Fire event")
 		l.stateMachineMQTTBridge.stateMachine.Fire("mqttEvent", ev)
 
 		eventsToPublish := l.stateMachineMQTTBridge.eventsToPublish
-		slog.Info("Event fired", "state", l.stateMachineMQTTBridge.stateMachine.MustState())
+		slog.Debug("Event fired", "state", l.stateMachineMQTTBridge.stateMachine.MustState())
 		l.stateMachineMQTTBridge.eventsToPublish = []MQTTPublish{}
 		return eventsToPublish
 	} else {
-		slog.Info("Cannot process event is not initialized", "event", ev)
+		slog.Debug("Cannot process event: is not initialized")
 		return []MQTTPublish{}
-	}
-}
-
-func (l *StateMachineMQTTBridge) guardTurnOnLamp(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.require("phonePresent") && l.stateValueMap.requireRecently("livingroomPresence", 10*time.Minute)
-	slog.Info("guardTurnOnLamp", "check", check)
-	return check
-}
-
-func (l *StateMachineMQTTBridge) turnOnLamp(_ context.Context, _ ...any) error {
-	slog.Info("turnOnLamp")
-	l.eventsToPublish = append(l.eventsToPublish, []MQTTPublish{livingroomLampMQTTPublish(true)}...)
-	return nil
-}
-
-func (l *StateMachineMQTTBridge) guardTurnOffLamp(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireNot("phonePresent") || l.stateValueMap.requireNotRecently("livingroomPresence", 10*time.Minute)
-	slog.Info("guardTurnOffLamp", "check", check)
-	return check
-}
-
-func (l *StateMachineMQTTBridge) turnOffLamp(_ context.Context, _ ...any) error {
-	slog.Info("turnOffLamp")
-	l.eventsToPublish = append(l.eventsToPublish, []MQTTPublish{livingroomLampMQTTPublish(false)}...)
-	return nil
-}
-
-func (l *StateMachineMQTTBridge) detectPhonePresent(ev MQTTEvent) {
-	if ev.Topic == "routeros/wificlients" {
-		var wifiClients []routerosmqtt.WifiClient
-
-		err := json.Unmarshal(ev.Payload.([]byte), &wifiClients)
-		if err != nil {
-			slog.Debug("Could not parse payload", "topic", "routeros/wificlients")
-		}
-		found := false
-		for _, wifiClient := range wifiClients {
-			if wifiClient.MacAddress == "AA:73:49:2B:D8:45" {
-				found = true
-				break
-			}
-		}
-		slog.Info("detectPhonePresent", "phonePresent", found)
-		l.stateValueMap.setState("phonePresent", found)
-	}
-}
-
-func (l *StateMachineMQTTBridge) detectLivingroomPresence(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
-		m := parseJSONPayload(ev)
-		present := m["occupancy"].(bool)
-		l.stateValueMap.setState("livingroomPresence", present)
-	}
-}
-
-func (l *StateMachineMQTTBridge) detectLivingroomFloorlampState(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/livingroom-floorlamp" {
-		m := parseJSONPayload(ev)
-		state := m["state"].(string)
-		on := false
-		if state == "ON" {
-			on = true
-		}
-		l.stateValueMap.setState("livingroomFloorlamp", on)
 	}
 }

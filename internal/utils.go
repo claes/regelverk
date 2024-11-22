@@ -242,6 +242,6 @@ func (s *StateValueMap) LogState() {
 	})
 
 	for _, p := range params {
-		slog.Info("StateValue entry", p...)
+		slog.Debug("StateValue entry", p...)
 	}
 }
