@@ -2,6 +2,7 @@ package regelverk
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/sj14/astral/pkg/astral"
@@ -118,4 +119,119 @@ func foo() {
 
 	}
 
+}
+
+type StateValue struct {
+	value        bool
+	isDefined    bool
+	lastUpdate   time.Time
+	lastSetTrue  time.Time
+	lastSetFalse time.Time
+}
+
+func (f StateValue) Age() time.Duration {
+	return time.Since(f.lastUpdate)
+}
+
+type StateValueMap struct {
+	stateValueMap map[string]StateValue
+}
+
+func NewStateValueMap() StateValueMap {
+	return StateValueMap{
+		stateValueMap: make(map[string]StateValue),
+	}
+}
+func (s *StateValueMap) setState(key string, value bool) {
+	existingState, exists := s.stateValueMap[key]
+
+	if !exists || existingState.value != value {
+		newState := StateValue{
+			value:        value,
+			isDefined:    true,
+			lastUpdate:   time.Now(),
+			lastSetTrue:  existingState.lastSetTrue,
+			lastSetFalse: existingState.lastSetFalse,
+		}
+		now := time.Now()
+		if value {
+			newState.lastSetTrue = now
+		} else {
+			newState.lastSetFalse = now
+		}
+		s.stateValueMap[key] = newState
+	}
+}
+
+func (s *StateValueMap) getState(key string) StateValue {
+	stateValue, exists := s.stateValueMap[key]
+	stateValue.isDefined = exists
+	return stateValue
+}
+
+func (s *StateValueMap) require(key string) bool {
+	stateValue, exists := s.stateValueMap[key]
+	if !exists {
+		return false
+	} else {
+		return stateValue.value
+	}
+}
+
+func (s *StateValueMap) requireNot(key string) bool {
+	stateValue, exists := s.stateValueMap[key]
+	if !exists {
+		return false
+	} else {
+		return !stateValue.value
+	}
+}
+
+func (s *StateValueMap) requireRecently(key string, duration time.Duration) bool {
+	stateValue, exists := s.stateValueMap[key]
+	if !exists {
+		return false
+	} else {
+		return stateValue.value || time.Since(stateValue.lastSetTrue) < duration
+	}
+}
+
+func (s *StateValueMap) requireNotRecently(key string, duration time.Duration) bool {
+	stateValue, exists := s.stateValueMap[key]
+	if !exists {
+		return false
+	} else {
+		return !stateValue.value && time.Since(stateValue.lastSetTrue) > duration
+	}
+}
+
+func (s *StateValueMap) LogState() {
+	now := time.Now()
+	for key, stateValue := range s.stateValueMap {
+
+		secondsSinceLastUpdate := int64(-1)
+		if !stateValue.lastUpdate.IsZero() {
+			secondsSinceLastUpdate = int64(now.Sub(stateValue.lastUpdate).Seconds())
+		}
+
+		secondsSinceLastSetTrue := int64(-1)
+		if !stateValue.lastSetTrue.IsZero() {
+			secondsSinceLastSetTrue = int64(now.Sub(stateValue.lastSetTrue).Seconds())
+		}
+
+		secondsSinceLastSetFalse := int64(-1)
+		if !stateValue.lastSetFalse.IsZero() {
+			secondsSinceLastSetFalse = int64(now.Sub(stateValue.lastSetFalse).Seconds())
+		}
+		slog.Info("StateValue entry",
+			"key", key,
+			"value", stateValue.value,
+			"isDefined", stateValue.isDefined,
+			"lastUpdate", stateValue.lastUpdate,
+			"secondsSinceLastUpdate", secondsSinceLastUpdate,
+			"lastSetTrue", stateValue.lastSetTrue,
+			"secondsSinceLastSetTrue", secondsSinceLastSetTrue,
+			"lastSetFalse", stateValue.lastSetFalse,
+			"secondsSinceLastSetFalse", secondsSinceLastSetFalse)
+	}
 }
