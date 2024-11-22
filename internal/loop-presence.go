@@ -13,24 +13,12 @@ import (
 )
 
 const (
-	triggerNightime = "Nighttime"
-	triggerDaytime  = "Daytime"
-)
-
-const (
-	eventLampOn       = "LampOn"
-	eventLampOff      = "LampOff"
-	eventPhonePresent = "PhonePresent"
-	eventPhoneAbsent  = "PhoneAbsent"
+	stateLampOn  = "LampOn"
+	stateLampOff = "LampOff"
 )
 
 type PresenceLoop struct {
 	statusLoop
-	livingroomLastAbsence   time.Time
-	livingroomLastPresence  time.Time
-	livingroomPresence      bool
-	phoneWifiLastPresence   time.Time
-	phoneWifiPresence       bool
 	livingroomLampFSMBridge LivingroomLampFsmMQTTBridge
 	isInitialized           bool
 }
@@ -40,10 +28,10 @@ type StateMachineMQTTBridge struct {
 	eventsToPublish []MQTTPublish
 }
 
+// TODO: consider generalizing this somehow
 type LivingroomLampFsmMQTTBridge struct {
 	StateMachineMQTTBridge
-	phonePresent bool
-	state        FoxStateMap
+	state FoxStateMap
 }
 
 type FoxState struct {
@@ -100,6 +88,15 @@ func (s *FoxStateMap) require(key string) bool {
 		return false
 	} else {
 		return state.value
+	}
+}
+
+func (s *FoxStateMap) requireNot(key string) bool {
+	state, exists := s.foxStateMap[key]
+	if !exists {
+		return false
+	} else {
+		return !state.value
 	}
 }
 
@@ -170,17 +167,21 @@ func (l *PresenceLoop) Init(m *mqttMessageHandler, config Config) {
 
 	baseBridge := StateMachineMQTTBridge{eventsToPublish: []MQTTPublish{}}
 	l.livingroomLampFSMBridge = LivingroomLampFsmMQTTBridge{StateMachineMQTTBridge: baseBridge, state: NewFoxStateMap()}
-	livingroomLampFSM := stateless.NewStateMachine(eventLampOn)
+
+	//TODO: determine current state before initializing state machine
+	//Possibly hook up to ProcessEvent !isInitialized
+
+	livingroomLampFSM := stateless.NewStateMachine(stateLampOn)
 	//livingroomLampFSM.OnUnhandledTrigger(func(_ context.Context, state stateless.State, _ stateless.Trigger, _ []string) {})
 	livingroomLampFSM.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
-	livingroomLampFSM.Configure(eventLampOn).
+	livingroomLampFSM.Configure(stateLampOn).
 		OnEntry(l.livingroomLampFSMBridge.turnOnLamp).
-		Permit("mqttEvent", eventLampOff, l.livingroomLampFSMBridge.guardTurnOffLamp)
+		Permit("mqttEvent", stateLampOff, l.livingroomLampFSMBridge.guardTurnOffLamp)
 
-	livingroomLampFSM.Configure(eventLampOff).
+	livingroomLampFSM.Configure(stateLampOff).
 		OnEntry(l.livingroomLampFSMBridge.turnOffLamp).
-		Permit("mqttEvent", eventLampOn, l.livingroomLampFSMBridge.guardTurnOnLamp)
+		Permit("mqttEvent", stateLampOn, l.livingroomLampFSMBridge.guardTurnOnLamp)
 
 	l.livingroomLampFSMBridge.stateMachine = livingroomLampFSM
 	l.isInitialized = true
@@ -190,6 +191,7 @@ func (l *PresenceLoop) Init(m *mqttMessageHandler, config Config) {
 func (l *PresenceLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	if l.isInitialized {
 		slog.Info("Process event")
+		l.livingroomLampFSMBridge.detectLivingroomFloorlampState(ev)
 		l.livingroomLampFSMBridge.detectPhonePresent(ev)
 		l.livingroomLampFSMBridge.detectLivingroomPresence(ev)
 		l.livingroomLampFSMBridge.state.LogState()
@@ -220,7 +222,7 @@ func (l *LivingroomLampFsmMQTTBridge) turnOnLamp(_ context.Context, _ ...any) er
 }
 
 func (l *LivingroomLampFsmMQTTBridge) guardTurnOffLamp(_ context.Context, _ ...any) bool {
-	check := !l.phonePresent || l.state.requireNotRecently("livingroomPresence", 10*time.Minute)
+	check := l.state.requireNot("phonePresent") || l.state.requireNotRecently("livingroomPresence", 10*time.Minute)
 	slog.Info("guardTurnOffLamp", "check", check)
 	return check
 }
@@ -247,16 +249,26 @@ func (l *LivingroomLampFsmMQTTBridge) detectPhonePresent(ev MQTTEvent) {
 			}
 		}
 		slog.Info("detectPhonePresent", "phonePresent", found)
-		l.phonePresent = found
 		l.state.setState("phonePresent", found)
 	}
 }
 
 func (l *LivingroomLampFsmMQTTBridge) detectLivingroomPresence(ev MQTTEvent) {
-
 	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
 		m := parseJSONPayload(ev)
 		present := m["occupancy"].(bool)
 		l.state.setState("livingroomPresence", present)
+	}
+}
+
+func (l *LivingroomLampFsmMQTTBridge) detectLivingroomFloorlampState(ev MQTTEvent) {
+	if ev.Topic == "zigbee2mqtt/livingroom-floorlamp" {
+		m := parseJSONPayload(ev)
+		state := m["state"].(string)
+		on := false
+		if state == "ON" {
+			on = true
+		}
+		l.state.setState("livingroomFloorlamp", on)
 	}
 }
