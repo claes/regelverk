@@ -11,7 +11,7 @@ func main() {
 	loops := []internal.ControlLoop{
 		//&tvLoop{},
 		&internal.MpdLoop{},
-		&internal.PresenceLoop{},
+		&internal.LivingroomLoop{},
 		&internal.KitchenLoop{},
 		&internal.LivingroomLoop{},
 		&internal.CecLoop{},
