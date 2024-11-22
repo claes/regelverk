@@ -50,36 +50,27 @@ func (l *PresenceLoop) Init(m *mqttMessageHandler, config Config) {
 	slog.Info("Initializing FSM")
 	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge()
 
-	s := l.stateMachineMQTTBridge.stateValueMap.getState("livingroomFloorlamp")
-	if s.isDefined {
-		slog.Info("Floorlamp state determined")
-		var sm *stateless.StateMachine
-		if s.value {
-			sm = stateless.NewStateMachine(stateLampOn)
-		} else {
-			sm = stateless.NewStateMachine(stateLampOff)
-		}
-		//livingroomLampFSM.OnUnhandledTrigger(func(_ context.Context, state stateless.State, _ stateless.Trigger, _ []string) {})
-		sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
+	sm := stateless.NewStateMachine(stateLampOff) // can this be reliable determined early on? probably not
+	//livingroomLampFSM.OnUnhandledTrigger(func(_ context.Context, state stateless.State, _ stateless.Trigger, _ []string) {})
+	sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
-		sm.Configure(stateLampOn).
-			OnEntry(l.stateMachineMQTTBridge.turnOnLamp).
-			Permit("mqttEvent", stateLampOff, l.stateMachineMQTTBridge.guardTurnOffLamp)
+	sm.Configure(stateLampOn).
+		OnEntry(l.stateMachineMQTTBridge.turnOnLamp).
+		Permit("mqttEvent", stateLampOff, l.stateMachineMQTTBridge.guardTurnOffLamp)
 
-		sm.Configure(stateLampOff).
-			OnEntry(l.stateMachineMQTTBridge.turnOffLamp).
-			Permit("mqttEvent", stateLampOn, l.stateMachineMQTTBridge.guardTurnOnLamp)
+	sm.Configure(stateLampOff).
+		OnEntry(l.stateMachineMQTTBridge.turnOffLamp).
+		Permit("mqttEvent", stateLampOn, l.stateMachineMQTTBridge.guardTurnOnLamp)
 
-		l.stateMachineMQTTBridge.stateMachine = sm
-		l.isInitialized = true
-		slog.Info("FSM initialized")
-	}
+	l.stateMachineMQTTBridge.stateMachine = sm
+	l.isInitialized = true
+	slog.Info("FSM initialized")
 }
 
 func (l *PresenceLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	l.stateMachineMQTTBridge.detectLivingroomFloorlampState(ev)
 	if l.isInitialized {
 		slog.Info("Process event")
+		l.stateMachineMQTTBridge.detectLivingroomFloorlampState(ev)
 		l.stateMachineMQTTBridge.detectPhonePresent(ev)
 		l.stateMachineMQTTBridge.detectLivingroomPresence(ev)
 		l.stateMachineMQTTBridge.stateValueMap.LogState()
