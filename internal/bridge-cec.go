@@ -59,7 +59,7 @@ func bridgeKeyPresses(ctx context.Context, bridge *cecmqtt.CecMQTTBridge, keyboa
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("Bridge keypresses function is being cancelled")
+			slog.Debug("Bridge keypresses function is being cancelled")
 			return
 		case keyPress := <-bridge.CECConnection.KeyPresses:
 			translatePerformKeypress(keyPress, keyboard)
@@ -68,7 +68,7 @@ func bridgeKeyPresses(ctx context.Context, bridge *cecmqtt.CecMQTTBridge, keyboa
 }
 
 func translatePerformKeypress(keyPress *cec.KeyPress, keyboard uinput.Keyboard) {
-	slog.Info("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
+	slog.Debug("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
 	if keyPress.Duration == 0 ||
 		(keyPress.Duration == 500 && keyPress.KeyCode == 145) { //strange workaround
 		keycode := -1
@@ -142,7 +142,7 @@ func translatePerformKeypress(keyPress *cec.KeyPress, keyboard uinput.Keyboard) 
 		}
 
 		if keycode >= 0 {
-			slog.Info("Send keypress", "keycode", keycode)
+			slog.Debug("Send keypress", "keycode", keycode)
 			keyboard.KeyPress(keycode)
 		}
 	}

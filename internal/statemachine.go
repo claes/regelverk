@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	routerosmqtt "github.com/claes/routeros-mqtt/lib"
@@ -23,16 +24,125 @@ func CreateStateMachineMQTTBridge() StateMachineMQTTBridge {
 
 // Output
 
-func livingroomFloorlampOutput(on bool) MQTTPublish {
+func livingroomFloorlampOutput(on bool) []MQTTPublish {
 	state := "OFF"
 	if on {
 		state = "ON"
 	}
-	return MQTTPublish{
-		Topic:    "zigbee2mqtt/livingroom-floorlamp/set",
-		Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
-		Qos:      2,
-		Retained: true,
+	return []MQTTPublish{
+		{
+			Topic:    "zigbee2mqtt/livingroom-floorlamp/set",
+			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+			Qos:      2,
+			Retained: true,
+		},
+	}
+}
+
+func kitchenAmpPowerOutput(on bool) []MQTTPublish {
+	state := "OFF"
+	if on {
+		state = "ON"
+	}
+	return []MQTTPublish{
+		{
+			Topic:    "zigbee2mqtt/livingroom-floorlamp/set",
+			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+			Qos:      2,
+			Retained: true,
+		},
+	}
+}
+
+func tvPowerOffOutput() []MQTTPublish {
+	return []MQTTPublish{
+		{
+			Topic:    "zigbee2mqtt/ikea_uttag/set",
+			Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+	}
+}
+
+func tvPowerOnOutput() []MQTTPublish {
+	result := []MQTTPublish{
+		{
+			Topic:    "zigbee2mqtt/ikea_uttag/set",
+			Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+		{
+			Topic:    "rotel/command/send",
+			Payload:  "power_on!",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+		{
+			Topic:    "rotel/command/send",
+			Payload:  "volume_38!",
+			Qos:      2,
+			Retained: false,
+			Wait:     2 * time.Second,
+		},
+		{
+			Topic:    "rotel/command/send",
+			Payload:  "opt1!",
+			Qos:      2,
+			Retained: false,
+			Wait:     3 * time.Second,
+		},
+		{
+			Topic:    "pulseaudio/cardprofile/0/set",
+			Payload:  "output:hdmi-stereo",
+			Qos:      2,
+			Retained: false,
+			Wait:     3 * time.Second,
+		},
+	}
+
+	// Need to wait here since a newly started TV is not receptive first 20 or so seconds
+	for i := int64(15); i < 40; i++ {
+		p := MQTTPublish{
+			Topic:    "samsungremote/key/reconnectsend",
+			Payload:  "KEY_VOLDOWN",
+			Qos:      2,
+			Retained: false,
+			Wait:     time.Duration(i) * time.Second / 2,
+		}
+		result = append(result, p)
+	}
+	return result
+
+}
+
+func mpdPlayOutput() []MQTTPublish {
+	return []MQTTPublish{
+		{
+			Topic:    "rotel/command/send",
+			Payload:  "power_on!",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+		{
+			Topic:    "rotel/command/send",
+			Payload:  "opt2!",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+		{
+			Topic:    "pulseaudio/cardprofile/0/set",
+			Payload:  "output:iec958-stereo+input:analog-stereo",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
 	}
 }
 
@@ -54,17 +164,41 @@ func (l *StateMachineMQTTBridge) guardTurnOffLivingroomLamp(_ context.Context, _
 	return check
 }
 
+func (l *StateMachineMQTTBridge) guardStateTvOn(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.require("tvpower")
+	slog.Debug("uardStateTvOn", "check", check)
+	return check
+}
+
+func (l *StateMachineMQTTBridge) guardStateTvOff(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireNot("tvpower")
+	slog.Debug("guardStateTvOff", "check", check)
+	return check
+}
+
 // Actions
 
 func (l *StateMachineMQTTBridge) turnOnLivingroomFloorlamp(_ context.Context, _ ...any) error {
 	slog.Debug("turnOnLamp")
-	l.eventsToPublish = append(l.eventsToPublish, []MQTTPublish{livingroomFloorlampOutput(true)}...)
+	l.eventsToPublish = append(l.eventsToPublish, livingroomFloorlampOutput(true)...)
 	return nil
 }
 
 func (l *StateMachineMQTTBridge) turnOffLivingroomFloorlamp(_ context.Context, _ ...any) error {
 	slog.Debug("turnOffLamp")
-	l.eventsToPublish = append(l.eventsToPublish, []MQTTPublish{livingroomFloorlampOutput(false)}...)
+	l.eventsToPublish = append(l.eventsToPublish, livingroomFloorlampOutput(false)...)
+	return nil
+}
+
+func (l *StateMachineMQTTBridge) turnOnTvAppliances(_ context.Context, _ ...any) error {
+	slog.Debug("turnOnTvAppliances")
+	l.eventsToPublish = append(l.eventsToPublish, tvPowerOnOutput()...)
+	return nil
+}
+
+func (l *StateMachineMQTTBridge) turnOffTvAppliances(_ context.Context, _ ...any) error {
+	slog.Debug("turnOnTvAppliances")
+	l.eventsToPublish = append(l.eventsToPublish, tvPowerOffOutput()...)
 	return nil
 }
 
@@ -76,7 +210,7 @@ func (l *StateMachineMQTTBridge) detectPhonePresent(ev MQTTEvent) {
 
 		err := json.Unmarshal(ev.Payload.([]byte), &wifiClients)
 		if err != nil {
-			slog.Debug("Could not parse payload", "topic", "routeros/wificlients")
+			slog.Debug("Could not parse payload", "topic", "routeros/wificlients", "error", err)
 		}
 		found := false
 		for _, wifiClient := range wifiClients {
@@ -112,5 +246,22 @@ func (l *StateMachineMQTTBridge) detectLivingroomFloorlampState(ev MQTTEvent) {
 func (l *StateMachineMQTTBridge) detectNighttime(ev MQTTEvent) {
 	if ev.Topic == "regelverk/ticker/timeofday" {
 		l.stateValueMap.setState("nighttime", ev.Payload.(TimeOfDay) == Nighttime)
+	}
+}
+
+func (l *StateMachineMQTTBridge) detectTVPower(ev MQTTEvent) {
+	if ev.Topic == "regelverk/state/tvpower" {
+		tvPower, err := strconv.ParseBool(string(ev.Payload.([]byte)))
+		if err != nil {
+			slog.Debug("Could not parse payload", "topic", "regelverk/state/tvpower", "error", err)
+		}
+		l.stateValueMap.setState("tvpower", tvPower)
+	}
+}
+
+func (l *StateMachineMQTTBridge) detectMPDPlay(ev MQTTEvent) {
+	if ev.Topic == "mpd/status" {
+		m := parseJSONPayload(ev)
+		l.stateValueMap.setState("mpdPlay", m["state"].(string) == "play")
 	}
 }

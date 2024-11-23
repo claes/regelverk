@@ -1,107 +1,61 @@
 package regelverk
 
 import (
-	"strconv"
-	"time"
+	"log/slog"
+	"reflect"
+
+	"github.com/qmuntal/stateless"
 )
 
-type tvLoop struct {
+type tvState int
+
+const (
+	stateTvOn tvState = iota
+	stateTvOff
+)
+
+type TVLoop struct {
 	statusLoop
-	tvLastActive time.Time
-	tvOn         bool
+	stateMachineMQTTBridge StateMachineMQTTBridge
+	isInitialized          bool
 }
 
-func (l *tvLoop) Init(m *mqttMessageHandler, config Config) {}
+func (l *TVLoop) Init(m *mqttMessageHandler, config Config) {
+	slog.Debug("Initializing FSM")
+	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge()
 
-func (l *tvLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
-	switch ev.Topic {
+	sm := stateless.NewStateMachine(stateTvOff) // can this be reliable determined early on? probably not
+	sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
-	case "zigbee2mqtt/tv":
-		m := parseJSONPayload(ev)
-		power := m["power"].(float64)
-		if power > 5.0 {
-			//			l.tvLastActive = time.Now()
-			l.tvOn = true
-			return []MQTTPublish{
-				{
-					Topic:    "zigbee2mqtt/ikea_uttag/set",
-					Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
-					Qos:      1,
-					Retained: false,
-				},
-				{
-					Topic:    "regelverk/state/tvpower",
-					Payload:  strconv.FormatBool(true),
-					Qos:      2,
-					Retained: true,
-				},
-			}
-		} else {
-			//			l.tvOn = false
-			return []MQTTPublish{
-				{
-					Topic:    "regelverk/state/tvpower",
-					Payload:  strconv.FormatBool(false),
-					Qos:      2,
-					Retained: true,
-				},
-			}
+	sm.Configure(stateTvOn).
+		OnEntry(l.stateMachineMQTTBridge.turnOffTvAppliances).
+		Permit("mqttEvent", stateTvOff, l.stateMachineMQTTBridge.guardStateTvOff)
 
-		}
-	// case "regelverk/ticker/1s":
-	// 	//fmt.Printf("Tick %v %v\n", l.tvOn, l.tvLastActive)
-	// 	if !l.tvOn && l.tvLastActive.Add(1*time.Minute).Before(time.Now()) {
-	// 		return []MQTTPublish{
-	// 			{
-	// 				Topic:    "zigbee2mqtt/ikea_uttag/set",
-	// 				Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
-	// 				Qos:      1,
-	// 				Retained: false,
-	// 			},
-	// 		}
-	// 	}
+	sm.Configure(stateTvOff).
+		OnEntry(l.stateMachineMQTTBridge.turnOnTvAppliances).
+		Permit("mqttEvent", stateTvOn, l.stateMachineMQTTBridge.guardStateTvOn)
 
-	default:
-		return nil
+	l.stateMachineMQTTBridge.stateMachine = sm
+	l.isInitialized = true
+	slog.Debug("FSM initialized")
+}
+
+func (l *TVLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
+	if l.isInitialized {
+		slog.Debug("Process event")
+		l.stateMachineMQTTBridge.detectTVPower(ev)
+		l.stateMachineMQTTBridge.detectMPDPlay(ev)
+
+		l.stateMachineMQTTBridge.stateValueMap.LogState()
+		slog.Debug("Fire event")
+		l.stateMachineMQTTBridge.stateMachine.Fire("mqttEvent", ev)
+
+		eventsToPublish := l.stateMachineMQTTBridge.eventsToPublish
+		slog.Debug("Event fired", "state", l.stateMachineMQTTBridge.stateMachine.MustState())
+		l.stateMachineMQTTBridge.eventsToPublish = []MQTTPublish{}
+		return eventsToPublish
+	} else {
+		slog.Debug("Cannot process event: is not initialized")
+		return []MQTTPublish{}
 	}
-	return nil
 }
-
-func (l *tvLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	return l.turnOnAmpWhenTVOn(ev)
-}
-
-// func (l *tvLoop) ProcessEventOld(ev MQTTEvent) []MQTTPublish {
-// 	switch ev.Topic {
-// 	case "zigbee2mqtt/tv":
-// 		m := parseJSONPayload(ev)
-// 		power := m["power"].(float64)
-
-// 		if power > 70.0 {
-// 			l.tvTurnedOn = true
-// 		} else if power <= 70.0 {
-// 			l.tvTurnedOn = false
-// 		}
-// 	default:
-// 		return nil // did not influence state
-// 	}
-
-// 	if l.tvTurnedOn {
-// 		return []MQTTPublish{
-// 			{
-// 				Topic:    "zigbee2mqtt/ikea_uttag/set",
-// 				Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
-// 				Retained: false,
-// 			},
-// 		}
-// 	} else if !l.tvTurnedOn {
-// 		return []MQTTPublish{
-// 			{
-// 				Topic:    "zigbee2mqtt/ikea_uttag/set",
-// 				Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
-// 				Retained: false,
-// 			},
-// 		}
-// 	}
-// 	return nil
-// }
