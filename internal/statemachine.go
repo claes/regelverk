@@ -152,7 +152,7 @@ func (l *StateMachineMQTTBridge) guardTurnOnLivingroomLamp(_ context.Context, _ 
 	check := l.stateValueMap.require("phonePresent") &&
 		l.stateValueMap.require("nighttime") &&
 		l.stateValueMap.requireRecently("livingroomPresence", 10*time.Minute)
-	slog.Debug("guardTurnOnLamp", "check", check)
+	slog.Info("guardTurnOnLamp", "check", check)
 	return check
 }
 
@@ -160,44 +160,44 @@ func (l *StateMachineMQTTBridge) guardTurnOffLivingroomLamp(_ context.Context, _
 	check := l.stateValueMap.requireNot("phonePresent") ||
 		l.stateValueMap.requireNot("nighttime") ||
 		l.stateValueMap.requireNotRecently("livingroomPresence", 10*time.Minute)
-	slog.Debug("guardTurnOffLamp", "check", check)
+	slog.Info("guardTurnOffLamp", "check", check)
 	return check
 }
 
 func (l *StateMachineMQTTBridge) guardStateTvOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.require("tvpower")
-	slog.Debug("uardStateTvOn", "check", check)
+	slog.Info("uardStateTvOn", "check", check)
 	return check
 }
 
 func (l *StateMachineMQTTBridge) guardStateTvOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireNot("tvpower")
-	slog.Debug("guardStateTvOff", "check", check)
+	slog.Info("guardStateTvOff", "check", check)
 	return check
 }
 
 // Actions
 
 func (l *StateMachineMQTTBridge) turnOnLivingroomFloorlamp(_ context.Context, _ ...any) error {
-	slog.Debug("turnOnLamp")
+	slog.Info("turnOnLamp")
 	l.eventsToPublish = append(l.eventsToPublish, livingroomFloorlampOutput(true)...)
 	return nil
 }
 
 func (l *StateMachineMQTTBridge) turnOffLivingroomFloorlamp(_ context.Context, _ ...any) error {
-	slog.Debug("turnOffLamp")
+	slog.Info("turnOffLamp")
 	l.eventsToPublish = append(l.eventsToPublish, livingroomFloorlampOutput(false)...)
 	return nil
 }
 
 func (l *StateMachineMQTTBridge) turnOnTvAppliances(_ context.Context, _ ...any) error {
-	slog.Debug("turnOnTvAppliances")
+	slog.Info("turnOnTvAppliances")
 	l.eventsToPublish = append(l.eventsToPublish, tvPowerOnOutput()...)
 	return nil
 }
 
 func (l *StateMachineMQTTBridge) turnOffTvAppliances(_ context.Context, _ ...any) error {
-	slog.Debug("turnOnTvAppliances")
+	slog.Info("turnOnTvAppliances")
 	l.eventsToPublish = append(l.eventsToPublish, tvPowerOffOutput()...)
 	return nil
 }
@@ -210,7 +210,7 @@ func (l *StateMachineMQTTBridge) detectPhonePresent(ev MQTTEvent) {
 
 		err := json.Unmarshal(ev.Payload.([]byte), &wifiClients)
 		if err != nil {
-			slog.Debug("Could not parse payload", "topic", "routeros/wificlients", "error", err)
+			slog.Info("Could not parse payload", "topic", "routeros/wificlients", "error", err)
 		}
 		found := false
 		for _, wifiClient := range wifiClients {
@@ -219,7 +219,7 @@ func (l *StateMachineMQTTBridge) detectPhonePresent(ev MQTTEvent) {
 				break
 			}
 		}
-		slog.Debug("detectPhonePresent", "phonePresent", found)
+		slog.Info("detectPhonePresent", "phonePresent", found)
 		l.stateValueMap.setState("phonePresent", found)
 	}
 }
@@ -253,7 +253,7 @@ func (l *StateMachineMQTTBridge) detectTVPower(ev MQTTEvent) {
 	if ev.Topic == "regelverk/state/tvpower" {
 		tvPower, err := strconv.ParseBool(string(ev.Payload.([]byte)))
 		if err != nil {
-			slog.Debug("Could not parse payload", "topic", "regelverk/state/tvpower", "error", err)
+			slog.Info("Could not parse payload", "topic", "regelverk/state/tvpower", "error", err)
 		}
 		l.stateValueMap.setState("tvpower", tvPower)
 	}

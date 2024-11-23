@@ -28,11 +28,11 @@ func (l *TVLoop) Init(m *mqttMessageHandler, config Config) {
 	sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
 	sm.Configure(stateTvOn).
-		OnEntry(l.stateMachineMQTTBridge.turnOffTvAppliances).
+		OnEntry(l.stateMachineMQTTBridge.turnOnTvAppliances).
 		Permit("mqttEvent", stateTvOff, l.stateMachineMQTTBridge.guardStateTvOff)
 
 	sm.Configure(stateTvOff).
-		OnEntry(l.stateMachineMQTTBridge.turnOnTvAppliances).
+		OnEntry(l.stateMachineMQTTBridge.turnOffTvAppliances).
 		Permit("mqttEvent", stateTvOn, l.stateMachineMQTTBridge.guardStateTvOn)
 
 	l.stateMachineMQTTBridge.stateMachine = sm
@@ -51,7 +51,7 @@ func (l *TVLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		l.stateMachineMQTTBridge.stateMachine.Fire("mqttEvent", ev)
 
 		eventsToPublish := l.stateMachineMQTTBridge.eventsToPublish
-		slog.Debug("Event fired", "state", l.stateMachineMQTTBridge.stateMachine.MustState())
+		slog.Info("Event fired", "state", l.stateMachineMQTTBridge.stateMachine.MustState())
 		l.stateMachineMQTTBridge.eventsToPublish = []MQTTPublish{}
 		return eventsToPublish
 	} else {
