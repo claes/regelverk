@@ -10,10 +10,11 @@ func main() {
 
 	loops := []internal.ControlLoop{
 		//&tvLoop{},
-		&internal.MpdLoop{},
 		&internal.LivingroomLoop{},
 		&internal.KitchenLoop{},
-		&internal.LivingroomLoop{},
+		&internal.TVLoop{},
+		//&internal.TvAudioLoop{},
+		//&internal.MpdLoop{},
 		&internal.CecLoop{},
 		&internal.WebLoop{},
 	}
