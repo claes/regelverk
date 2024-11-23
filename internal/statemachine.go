@@ -13,13 +13,14 @@ import (
 )
 
 type StateMachineMQTTBridge struct {
+	name            string
 	stateMachine    *stateless.StateMachine
 	eventsToPublish []MQTTPublish
 	stateValueMap   StateValueMap
 }
 
-func CreateStateMachineMQTTBridge() StateMachineMQTTBridge {
-	return StateMachineMQTTBridge{eventsToPublish: []MQTTPublish{}, stateValueMap: NewStateValueMap()}
+func CreateStateMachineMQTTBridge(name string) StateMachineMQTTBridge {
+	return StateMachineMQTTBridge{name: name, eventsToPublish: []MQTTPublish{}, stateValueMap: NewStateValueMap()}
 }
 
 // Output

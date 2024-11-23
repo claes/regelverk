@@ -21,8 +21,7 @@ type TVLoop struct {
 }
 
 func (l *TVLoop) Init(m *mqttMessageHandler, config Config) {
-	slog.Debug("Initializing FSM")
-	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge()
+	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge("tv")
 
 	sm := stateless.NewStateMachine(stateTvOff) // can this be reliable determined early on? probably not
 	sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
@@ -48,10 +47,12 @@ func (l *TVLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 		l.stateMachineMQTTBridge.stateValueMap.LogState()
 		slog.Debug("Fire event")
+		beforeState := l.stateMachineMQTTBridge.stateMachine.MustState()
 		l.stateMachineMQTTBridge.stateMachine.Fire("mqttEvent", ev)
 
 		eventsToPublish := l.stateMachineMQTTBridge.eventsToPublish
-		slog.Info("Event fired", "state", l.stateMachineMQTTBridge.stateMachine.MustState())
+		slog.Debug("Event fired", "fsm", l.stateMachineMQTTBridge.name, "beforeState", beforeState,
+			"afterState", l.stateMachineMQTTBridge.stateMachine.MustState())
 		l.stateMachineMQTTBridge.eventsToPublish = []MQTTPublish{}
 		return eventsToPublish
 	} else {

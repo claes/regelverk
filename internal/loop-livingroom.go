@@ -19,8 +19,7 @@ type LivingroomLoop struct {
 }
 
 func (l *LivingroomLoop) Init(m *mqttMessageHandler, config Config) {
-	slog.Debug("Initializing FSM")
-	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge()
+	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge("livingroomLamp")
 
 	sm := stateless.NewStateMachine(stateLivingroomFloorlampOff) // can this be reliable determined early on? probably not
 	sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
@@ -45,12 +44,15 @@ func (l *LivingroomLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		l.stateMachineMQTTBridge.detectPhonePresent(ev)
 		l.stateMachineMQTTBridge.detectLivingroomPresence(ev)
 		l.stateMachineMQTTBridge.detectNighttime(ev)
+
 		l.stateMachineMQTTBridge.stateValueMap.LogState()
 		slog.Debug("Fire event")
+		beforeState := l.stateMachineMQTTBridge.stateMachine.MustState()
 		l.stateMachineMQTTBridge.stateMachine.Fire("mqttEvent", ev)
 
 		eventsToPublish := l.stateMachineMQTTBridge.eventsToPublish
-		slog.Debug("Event fired", "state", l.stateMachineMQTTBridge.stateMachine.MustState())
+		slog.Debug("Event fired", "fsm", l.stateMachineMQTTBridge.name, "beforeState", beforeState,
+			"afterState", l.stateMachineMQTTBridge.stateMachine.MustState())
 		l.stateMachineMQTTBridge.eventsToPublish = []MQTTPublish{}
 		return eventsToPublish
 	} else {
