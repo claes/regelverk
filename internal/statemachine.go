@@ -67,6 +67,18 @@ func tvPowerOffOutput() []MQTTPublish {
 	}
 }
 
+func tvPowerOffLongOutput() []MQTTPublish {
+	return []MQTTPublish{
+		{
+			Topic:    "rotel/command/send",
+			Payload:  "power_off!",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+	}
+}
+
 func tvPowerOnOutput() []MQTTPublish {
 	result := []MQTTPublish{
 		{
@@ -167,12 +179,18 @@ func (l *StateMachineMQTTBridge) guardTurnOffLivingroomLamp(_ context.Context, _
 
 func (l *StateMachineMQTTBridge) guardStateTvOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.require("tvpower")
-	slog.Info("uardStateTvOn", "check", check)
+	slog.Info("guardStateTvOn", "check", check)
 	return check
 }
 
 func (l *StateMachineMQTTBridge) guardStateTvOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireNot("tvpower")
+	slog.Info("guardStateTvOff", "check", check)
+	return check
+}
+
+func (l *StateMachineMQTTBridge) guardStateTvOffLong(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireNotRecently("tvpower", 30*time.Minute)
 	slog.Info("guardStateTvOff", "check", check)
 	return check
 }
@@ -200,6 +218,12 @@ func (l *StateMachineMQTTBridge) turnOnTvAppliances(_ context.Context, _ ...any)
 func (l *StateMachineMQTTBridge) turnOffTvAppliances(_ context.Context, _ ...any) error {
 	slog.Info("turnOnTvAppliances")
 	l.eventsToPublish = append(l.eventsToPublish, tvPowerOffOutput()...)
+	return nil
+}
+
+func (l *StateMachineMQTTBridge) turnOffTvAppliancesLong(_ context.Context, _ ...any) error {
+	slog.Info("turnOnTvAppliances")
+	l.eventsToPublish = append(l.eventsToPublish, tvPowerOffLongOutput()...)
 	return nil
 }
 

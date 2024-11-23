@@ -12,6 +12,7 @@ type tvState int
 const (
 	stateTvOn tvState = iota
 	stateTvOff
+	stateTvOffLong
 )
 
 type TVLoop struct {
@@ -32,6 +33,11 @@ func (l *TVLoop) Init(m *mqttMessageHandler, config Config) {
 
 	sm.Configure(stateTvOff).
 		OnEntry(l.stateMachineMQTTBridge.turnOffTvAppliances).
+		Permit("mqttEvent", stateTvOn, l.stateMachineMQTTBridge.guardStateTvOn).
+		Permit("mqttEvent", stateTvOffLong, l.stateMachineMQTTBridge.guardStateTvOffLong)
+
+	sm.Configure(stateTvOffLong).
+		OnEntry(l.stateMachineMQTTBridge.turnOffTvAppliancesLong).
 		Permit("mqttEvent", stateTvOn, l.stateMachineMQTTBridge.guardStateTvOn)
 
 	l.stateMachineMQTTBridge.stateMachine = sm
