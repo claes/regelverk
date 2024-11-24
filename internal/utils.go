@@ -126,6 +126,7 @@ type StateValue struct {
 	value        bool
 	isDefined    bool
 	lastUpdate   time.Time
+	lastChange   time.Time
 	lastSetTrue  time.Time
 	lastSetFalse time.Time
 }
@@ -146,22 +147,33 @@ func NewStateValueMap() StateValueMap {
 func (s *StateValueMap) setState(key string, value bool) {
 	existingState, exists := s.stateValueMap[key]
 
-	if !exists || existingState.value != value {
-		newState := StateValue{
-			value:        value,
-			isDefined:    true,
-			lastUpdate:   time.Now(),
-			lastSetTrue:  existingState.lastSetTrue,
-			lastSetFalse: existingState.lastSetFalse,
-		}
-		now := time.Now()
-		if value {
-			newState.lastSetTrue = now
+	now := time.Now()
+	var updatedState StateValue
+	if exists {
+		if existingState.value == value {
+			// don't change value
 		} else {
-			newState.lastSetFalse = now
+			existingState.value = value
+			existingState.lastChange = now
 		}
-		s.stateValueMap[key] = newState
+		updatedState = existingState
+	} else {
+		// Not exists
+		updatedState = StateValue{
+			value:      value,
+			isDefined:  true,
+			lastUpdate: now,
+			lastChange: now,
+		}
 	}
+
+	if value {
+		updatedState.lastSetTrue = now
+	} else {
+		updatedState.lastSetFalse = now
+	}
+	s.stateValueMap[key] = updatedState
+
 }
 
 func (s *StateValueMap) getState(key string) StateValue {
@@ -170,7 +182,7 @@ func (s *StateValueMap) getState(key string) StateValue {
 	return stateValue
 }
 
-func (s *StateValueMap) require(key string) bool {
+func (s *StateValueMap) requireTrue(key string) bool {
 	stateValue, exists := s.stateValueMap[key]
 	if !exists {
 		return false
@@ -179,7 +191,7 @@ func (s *StateValueMap) require(key string) bool {
 	}
 }
 
-func (s *StateValueMap) requireNot(key string) bool {
+func (s *StateValueMap) requireFalse(key string) bool {
 	stateValue, exists := s.stateValueMap[key]
 	if !exists {
 		return false
@@ -188,7 +200,7 @@ func (s *StateValueMap) requireNot(key string) bool {
 	}
 }
 
-func (s *StateValueMap) requireRecently(key string, duration time.Duration) bool {
+func (s *StateValueMap) requireTrueRecently(key string, duration time.Duration) bool {
 	stateValue, exists := s.stateValueMap[key]
 	if !exists {
 		return false
@@ -197,7 +209,7 @@ func (s *StateValueMap) requireRecently(key string, duration time.Duration) bool
 	}
 }
 
-func (s *StateValueMap) requireNotRecently(key string, duration time.Duration) bool {
+func (s *StateValueMap) requireTrueNotRecently(key string, duration time.Duration) bool {
 	stateValue, exists := s.stateValueMap[key]
 	if !exists {
 		return false
@@ -226,11 +238,19 @@ func (s *StateValueMap) LogState() {
 		if !stateValue.lastSetFalse.IsZero() {
 			secondsSinceLastSetFalse = int64(now.Sub(stateValue.lastSetFalse).Seconds())
 		}
+
+		secondsSinceLastChange := int64(-1)
+		if !stateValue.lastChange.IsZero() {
+			secondsSinceLastChange = int64(now.Sub(stateValue.lastChange).Seconds())
+		}
+
 		params = append(params, []any{"key", key,
 			"value", stateValue.value,
 			"isDefined", stateValue.isDefined,
 			"lastUpdate", stateValue.lastUpdate,
 			"secondsSinceLastUpdate", secondsSinceLastUpdate,
+			"lastChange", stateValue.lastChange,
+			"secondsSinceLastChange", secondsSinceLastChange,
 			"lastSetTrue", stateValue.lastSetTrue,
 			"secondsSinceLastSetTrue", secondsSinceLastSetTrue,
 			"lastSetFalse", stateValue.lastSetFalse,

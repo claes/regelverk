@@ -26,58 +26,26 @@ func CreateStateMachineMQTTBridge(name string) StateMachineMQTTBridge {
 
 // Output
 
-func setIkeaTretaktPower(topic string, on bool) []MQTTPublish {
+func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 	state := "OFF"
 	if on {
 		state = "ON"
 	}
-	return []MQTTPublish{
-		{
-			Topic:    topic,
-			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
-			Qos:      2,
-			Retained: true,
-		},
+	return MQTTPublish{
+		Topic:    topic,
+		Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+		Qos:      2,
+		Retained: true,
 	}
 }
 
 func livingroomFloorlampOutput(on bool) []MQTTPublish {
-	return setIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/set", on)
+	return []MQTTPublish{setIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/set", on)}
 }
 
 func kitchenAmpPowerOutput(on bool) []MQTTPublish {
-	return setIkeaTretaktPower("zigbee2mqtt/kitchen-amp/set", on)
+	return []MQTTPublish{setIkeaTretaktPower("zigbee2mqtt/kitchen-amp/set", on)}
 }
-
-// func livingroomFloorlampOutput(on bool) []MQTTPublish {
-// 	state := "OFF"
-// 	if on {
-// 		state = "ON"
-// 	}
-// 	return []MQTTPublish{
-// 		{
-// 			Topic:    "zigbee2mqtt/livingroom-floorlamp/set",
-// 			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
-// 			Qos:      2,
-// 			Retained: true,
-// 		},
-// 	}
-// }
-
-// func kitchenAmpPowerOutput(on bool) []MQTTPublish {
-// 	state := "OFF"
-// 	if on {
-// 		state = "ON"
-// 	}
-// 	return []MQTTPublish{
-// 		{
-// 			Topic:    "zigbee2mqtt/kitechen-amp/set",
-// 			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
-// 			Qos:      2,
-// 			Retained: true,
-// 		},
-// 	}
-// }
 
 func tvPowerOffOutput() []MQTTPublish {
 	return []MQTTPublish{
@@ -186,47 +154,47 @@ func mpdPlayOutput() []MQTTPublish {
 // Guards
 
 func (l *StateMachineMQTTBridge) guardTurnOnLivingroomLamp(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.require("phonePresent") &&
-		l.stateValueMap.require("nighttime") &&
-		l.stateValueMap.requireRecently("livingroomPresence", 10*time.Minute)
+	check := l.stateValueMap.requireTrue("phonePresent") &&
+		l.stateValueMap.requireTrue("nighttime") &&
+		l.stateValueMap.requireTrueRecently("livingroomPresence", 10*time.Minute)
 	slog.Info("guardTurnOnLamp", "check", check)
 	return check
 }
 
 func (l *StateMachineMQTTBridge) guardTurnOffLivingroomLamp(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireNot("phonePresent") ||
-		l.stateValueMap.requireNot("nighttime") ||
-		l.stateValueMap.requireNotRecently("livingroomPresence", 10*time.Minute)
+	check := l.stateValueMap.requireFalse("phonePresent") ||
+		l.stateValueMap.requireFalse("nighttime") ||
+		l.stateValueMap.requireTrueNotRecently("livingroomPresence", 10*time.Minute)
 	slog.Info("guardTurnOffLamp", "check", check)
 	return check
 }
 
 func (l *StateMachineMQTTBridge) guardStateTvOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.require("tvpower")
+	check := l.stateValueMap.requireTrue("tvpower")
 	slog.Info("guardStateTvOn", "check", check)
 	return check
 }
 
 func (l *StateMachineMQTTBridge) guardStateTvOff(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireNot("tvpower")
+	check := l.stateValueMap.requireFalse("tvpower")
 	slog.Info("guardStateTvOff", "check", check)
 	return check
 }
 
 func (l *StateMachineMQTTBridge) guardStateTvOffLong(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireNotRecently("tvpower", 30*time.Minute)
+	check := l.stateValueMap.requireTrueNotRecently("tvpower", 30*time.Minute)
 	slog.Info("guardStateTvOff", "check", check)
 	return check
 }
 
 func (l *StateMachineMQTTBridge) guardStateKitchenAmpOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.require("kitchenaudioplaying")
+	check := l.stateValueMap.requireTrue("kitchenaudioplaying")
 	slog.Info("guardStateKitchenAmpOn", "check", check)
 	return check
 }
 
 func (l *StateMachineMQTTBridge) guardStateKitchenAmpOff(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireNotRecently("kitchenaudioplaying", 10*time.Minute)
+	check := l.stateValueMap.requireTrueNotRecently("kitchenaudioplaying", 10*time.Minute)
 	slog.Info("guardStateKitchenAmpOn", "check", check)
 	return check
 }
