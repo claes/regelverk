@@ -43,6 +43,7 @@ func (l *KitchenLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	if l.isInitialized {
 		slog.Debug("Process event")
 		l.stateMachineMQTTBridge.detectKitchenAmpPower(ev)
+		l.stateMachineMQTTBridge.detectKitchenAudioPlaying(ev)
 
 		l.stateMachineMQTTBridge.stateValueMap.LogState()
 		slog.Debug("Fire event")
