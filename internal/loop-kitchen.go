@@ -27,11 +27,11 @@ func (l *KitchenLoop) Init(m *mqttMessageHandler, config Config) {
 	sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
 	sm.Configure(ampStateOn).
-		OnEntry(l.stateMachineMQTTBridge.turnOnTvAppliances).
+		OnEntry(l.stateMachineMQTTBridge.turnOnKitchenAmp).
 		Permit("mqttEvent", ampStateOff, l.stateMachineMQTTBridge.guardStateKitchenAmpOff)
 
 	sm.Configure(ampStateOff).
-		OnEntry(l.stateMachineMQTTBridge.turnOffTvAppliances).
+		OnEntry(l.stateMachineMQTTBridge.turnOffKitchenAmp).
 		Permit("mqttEvent", ampStateOn, l.stateMachineMQTTBridge.guardStateKitchenAmpOn)
 
 	l.stateMachineMQTTBridge.stateMachine = sm
