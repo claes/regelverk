@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	pulseaudiomqtt "github.com/claes/pulseaudio-mqtt/lib"
 	routerosmqtt "github.com/claes/routeros-mqtt/lib"
 	"github.com/qmuntal/stateless"
 )
@@ -195,6 +196,18 @@ func (l *StateMachineMQTTBridge) guardStateTvOffLong(_ context.Context, _ ...any
 	return check
 }
 
+func (l *StateMachineMQTTBridge) guardStateKitchenAmpOn(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.require("kitchenaudioplaying")
+	slog.Info("guardStateKitchenAmpOn", "check", check)
+	return check
+}
+
+func (l *StateMachineMQTTBridge) guardStateKitchenAmpOff(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireNotRecently("kitchenaudioplaying", 10*time.Minute)
+	slog.Info("guardStateKitchenAmpOn", "check", check)
+	return check
+}
+
 // Actions
 
 func (l *StateMachineMQTTBridge) turnOnLivingroomFloorlamp(_ context.Context, _ ...any) error {
@@ -227,6 +240,18 @@ func (l *StateMachineMQTTBridge) turnOffTvAppliancesLong(_ context.Context, _ ..
 	return nil
 }
 
+func (l *StateMachineMQTTBridge) turnOnKitchenAmp(_ context.Context, _ ...any) error {
+	slog.Info("turnOnTvAppliances")
+	l.eventsToPublish = append(l.eventsToPublish, kitchenAmpPowerOutput(true)...)
+	return nil
+}
+
+func (l *StateMachineMQTTBridge) turnOffKitchenAmp(_ context.Context, _ ...any) error {
+	slog.Info("turnOnTvAppliances")
+	l.eventsToPublish = append(l.eventsToPublish, kitchenAmpPowerOutput(false)...)
+	return nil
+}
+
 // Detections
 
 func (l *StateMachineMQTTBridge) detectPhonePresent(ev MQTTEvent) {
@@ -236,6 +261,7 @@ func (l *StateMachineMQTTBridge) detectPhonePresent(ev MQTTEvent) {
 		err := json.Unmarshal(ev.Payload.([]byte), &wifiClients)
 		if err != nil {
 			slog.Info("Could not parse payload", "topic", "routeros/wificlients", "error", err)
+			return
 		}
 		found := false
 		for _, wifiClient := range wifiClients {
@@ -288,5 +314,24 @@ func (l *StateMachineMQTTBridge) detectMPDPlay(ev MQTTEvent) {
 	if ev.Topic == "mpd/status" {
 		m := parseJSONPayload(ev)
 		l.stateValueMap.setState("mpdPlay", m["state"].(string) == "play")
+	}
+}
+
+func (l *StateMachineMQTTBridge) detectKitchenAmpPower(ev MQTTEvent) {
+	if ev.Topic == "zigbee2mqtt/kitchen-amp" {
+		m := parseJSONPayload(ev)
+		l.stateValueMap.setState("kitchenamppower", m["state"].(string) == "ON")
+	}
+}
+
+func (l *StateMachineMQTTBridge) detectKitchenAudioPlaying(ev MQTTEvent) {
+	if ev.Topic == "kitchen/pulseaudio/state" {
+		var pulseaudioState pulseaudiomqtt.PulseAudioState
+		err := json.Unmarshal(ev.Payload.([]byte), &pulseaudioState)
+		if err != nil {
+			slog.Info("Could not parse payload", "topic", "kitchen/pulseaudio/state", "error", err)
+			return
+		}
+		l.stateValueMap.setState("kitchenaudioplaying", pulseaudioState.DefaultSink.State == 0)
 	}
 }
