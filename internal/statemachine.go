@@ -26,14 +26,14 @@ func CreateStateMachineMQTTBridge(name string) StateMachineMQTTBridge {
 
 // Output
 
-func livingroomFloorlampOutput(on bool) []MQTTPublish {
+func setIkeaTretaktPower(topic string, on bool) []MQTTPublish {
 	state := "OFF"
 	if on {
 		state = "ON"
 	}
 	return []MQTTPublish{
 		{
-			Topic:    "zigbee2mqtt/livingroom-floorlamp/set",
+			Topic:    topic,
 			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
 			Qos:      2,
 			Retained: true,
@@ -41,20 +41,43 @@ func livingroomFloorlampOutput(on bool) []MQTTPublish {
 	}
 }
 
-func kitchenAmpPowerOutput(on bool) []MQTTPublish {
-	state := "OFF"
-	if on {
-		state = "ON"
-	}
-	return []MQTTPublish{
-		{
-			Topic:    "zigbee2mqtt/livingroom-floorlamp/set",
-			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
-			Qos:      2,
-			Retained: true,
-		},
-	}
+func livingroomFloorlampOutput(on bool) []MQTTPublish {
+	return setIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/set", on)
 }
+
+func kitchenAmpPowerOutput(on bool) []MQTTPublish {
+	return setIkeaTretaktPower("zigbee2mqtt/kitchen-amp/set", on)
+}
+
+// func livingroomFloorlampOutput(on bool) []MQTTPublish {
+// 	state := "OFF"
+// 	if on {
+// 		state = "ON"
+// 	}
+// 	return []MQTTPublish{
+// 		{
+// 			Topic:    "zigbee2mqtt/livingroom-floorlamp/set",
+// 			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+// 			Qos:      2,
+// 			Retained: true,
+// 		},
+// 	}
+// }
+
+// func kitchenAmpPowerOutput(on bool) []MQTTPublish {
+// 	state := "OFF"
+// 	if on {
+// 		state = "ON"
+// 	}
+// 	return []MQTTPublish{
+// 		{
+// 			Topic:    "zigbee2mqtt/kitechen-amp/set",
+// 			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+// 			Qos:      2,
+// 			Retained: true,
+// 		},
+// 	}
+// }
 
 func tvPowerOffOutput() []MQTTPublish {
 	return []MQTTPublish{
