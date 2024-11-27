@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"sync"
 	"time"
 
 	pulseaudiomqtt "github.com/claes/pulseaudio-mqtt/lib"
@@ -18,10 +19,27 @@ type StateMachineMQTTBridge struct {
 	stateMachine    *stateless.StateMachine
 	eventsToPublish []MQTTPublish
 	stateValueMap   StateValueMap
+	mu              sync.Mutex
 }
 
 func CreateStateMachineMQTTBridge(name string) StateMachineMQTTBridge {
 	return StateMachineMQTTBridge{name: name, eventsToPublish: []MQTTPublish{}, stateValueMap: NewStateValueMap()}
+}
+
+func (s *StateMachineMQTTBridge) getAndResetEventsToPublish() []MQTTPublish {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	events := s.eventsToPublish
+	s.eventsToPublish = []MQTTPublish{}
+	return events
+}
+
+func (s *StateMachineMQTTBridge) addEventsToPublish(events []MQTTPublish) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.eventsToPublish = append(s.eventsToPublish, events...)
 }
 
 // Output
@@ -39,12 +57,45 @@ func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 	}
 }
 
+func bedroomBlindsOutput(open bool) []MQTTPublish {
+	state := "CLOSE"
+	if open {
+		state = "OPEN"
+	}
+	return []MQTTPublish{
+		MQTTPublish{
+			Topic:    "zigbee2mqtt/blinds-bedroom/set",
+			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+			Qos:      2,
+			Retained: true,
+		},
+		MQTTPublish{
+			Topic:    "zigbee2mqtt/blinds-bedroom/get",
+			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+			Qos:      2,
+			Wait:     60 * time.Second,
+			Retained: true,
+		},
+	}
+}
+
 func livingroomFloorlampOutput(on bool) []MQTTPublish {
 	return []MQTTPublish{setIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/set", on)}
 }
 
 func kitchenAmpPowerOutput(on bool) []MQTTPublish {
 	return []MQTTPublish{setIkeaTretaktPower("zigbee2mqtt/kitchen-amp/set", on)}
+}
+
+func bedroomBlindsRefreshOutput() []MQTTPublish {
+	return []MQTTPublish{
+		{
+			Topic:    "zigbee2mqtt/blinds-bedroom/get",
+			Payload:  "{\"state\": \"\"}",
+			Qos:      2,
+			Retained: false,
+		},
+	}
 }
 
 func tvPowerOffOutput() []MQTTPublish {
@@ -199,47 +250,67 @@ func (l *StateMachineMQTTBridge) guardStateKitchenAmpOff(_ context.Context, _ ..
 	return check
 }
 
+func (l *StateMachineMQTTBridge) guardStateBedroomBlindsOpen(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireTrue("phonePresent")
+	slog.Info("guardStateBedroomBlindsOpen", "check", check)
+	return check
+}
+
+func (l *StateMachineMQTTBridge) guardStateBedroomBlindsClosed(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireFalse("phonePresent")
+	slog.Info("guardStateBedroomBlindsClosed", "check", check)
+	return check
+}
+
 // Actions
 
 func (l *StateMachineMQTTBridge) turnOnLivingroomFloorlamp(_ context.Context, _ ...any) error {
-	slog.Info("turnOnLamp")
-	l.eventsToPublish = append(l.eventsToPublish, livingroomFloorlampOutput(true)...)
+	l.addEventsToPublish(livingroomFloorlampOutput(true))
 	return nil
 }
 
 func (l *StateMachineMQTTBridge) turnOffLivingroomFloorlamp(_ context.Context, _ ...any) error {
-	slog.Info("turnOffLamp")
-	l.eventsToPublish = append(l.eventsToPublish, livingroomFloorlampOutput(false)...)
+	l.addEventsToPublish(livingroomFloorlampOutput(false))
 	return nil
 }
 
 func (l *StateMachineMQTTBridge) turnOnTvAppliances(_ context.Context, _ ...any) error {
-	slog.Info("turnOnTvAppliances")
-	l.eventsToPublish = append(l.eventsToPublish, tvPowerOnOutput()...)
+	l.addEventsToPublish(tvPowerOnOutput())
 	return nil
 }
 
 func (l *StateMachineMQTTBridge) turnOffTvAppliances(_ context.Context, _ ...any) error {
-	slog.Info("turnOnTvAppliances")
-	l.eventsToPublish = append(l.eventsToPublish, tvPowerOffOutput()...)
+	l.addEventsToPublish(tvPowerOffOutput())
 	return nil
 }
 
 func (l *StateMachineMQTTBridge) turnOffTvAppliancesLong(_ context.Context, _ ...any) error {
-	slog.Info("turnOnTvAppliances")
-	l.eventsToPublish = append(l.eventsToPublish, tvPowerOffLongOutput()...)
+	l.addEventsToPublish(tvPowerOffLongOutput())
 	return nil
 }
 
 func (l *StateMachineMQTTBridge) turnOnKitchenAmp(_ context.Context, _ ...any) error {
-	slog.Info("turnOnTvAppliances")
-	l.eventsToPublish = append(l.eventsToPublish, kitchenAmpPowerOutput(true)...)
+	l.addEventsToPublish(kitchenAmpPowerOutput(true))
 	return nil
 }
 
 func (l *StateMachineMQTTBridge) turnOffKitchenAmp(_ context.Context, _ ...any) error {
-	slog.Info("turnOnTvAppliances")
-	l.eventsToPublish = append(l.eventsToPublish, kitchenAmpPowerOutput(false)...)
+	l.addEventsToPublish(kitchenAmpPowerOutput(false))
+	return nil
+}
+
+func (l *StateMachineMQTTBridge) openBedroomBlinds(_ context.Context, _ ...any) error {
+	l.addEventsToPublish(bedroomBlindsOutput(true))
+	return nil
+}
+
+func (l *StateMachineMQTTBridge) closeBedroomBlinds(_ context.Context, _ ...any) error {
+	l.addEventsToPublish(bedroomBlindsOutput(false))
+	return nil
+}
+
+func (l *StateMachineMQTTBridge) refreshBedroomBlinds(_ context.Context, _ ...any) error {
+	l.addEventsToPublish(bedroomBlindsRefreshOutput())
 	return nil
 }
 
@@ -324,5 +395,15 @@ func (l *StateMachineMQTTBridge) detectKitchenAudioPlaying(ev MQTTEvent) {
 			return
 		}
 		l.stateValueMap.setState("kitchenaudioplaying", pulseaudioState.DefaultSink.State == 0)
+	}
+}
+
+func (l *StateMachineMQTTBridge) detectBedroomBlindsOpen(ev MQTTEvent) {
+	if ev.Topic == "zigbee2mqtt/blinds-bedroom" {
+		m := parseJSONPayload(ev)
+		pos, exists := m["position"]
+		if exists {
+			l.stateValueMap.setState("bedroomblindsopen", pos.(int) > 50)
+		}
 	}
 }

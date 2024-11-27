@@ -19,6 +19,7 @@ type LivingroomLoop struct {
 }
 
 func (l *LivingroomLoop) Init(m *mqttMessageHandler, config Config) {
+	slog.Debug("Initializing FSM")
 	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge("livingroomLamp")
 
 	sm := stateless.NewStateMachine(stateLivingroomFloorlampOff) // can this be reliable determined early on? probably not
@@ -50,10 +51,9 @@ func (l *LivingroomLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		beforeState := l.stateMachineMQTTBridge.stateMachine.MustState()
 		l.stateMachineMQTTBridge.stateMachine.Fire("mqttEvent", ev)
 
-		eventsToPublish := l.stateMachineMQTTBridge.eventsToPublish
+		eventsToPublish := l.stateMachineMQTTBridge.getAndResetEventsToPublish()
 		slog.Debug("Event fired", "fsm", l.stateMachineMQTTBridge.name, "beforeState", beforeState,
 			"afterState", l.stateMachineMQTTBridge.stateMachine.MustState())
-		l.stateMachineMQTTBridge.eventsToPublish = []MQTTPublish{}
 		return eventsToPublish
 	} else {
 		slog.Debug("Cannot process event: is not initialized")
