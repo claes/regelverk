@@ -66,13 +66,13 @@ func (l *StateMaster) guardStateKitchenAmpOff(_ context.Context, _ ...any) bool 
 }
 
 func (l *StateMaster) guardStateBedroomBlindsOpen(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrue("phonePresent")
+	check := l.stateValueMap.requireFalse("nighttime")
 	slog.Info("guardStateBedroomBlindsOpen", "check", check)
 	return check
 }
 
 func (l *StateMaster) guardStateBedroomBlindsClosed(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireFalse("phonePresent")
+	check := l.stateValueMap.requireTrue("nighttime")
 	slog.Info("guardStateBedroomBlindsClosed", "check", check)
 	return check
 }
@@ -221,13 +221,13 @@ func bedroomBlindsOutput(open bool) []MQTTPublish {
 		state = "OPEN"
 	}
 	return []MQTTPublish{
-		MQTTPublish{
+		{
 			Topic:    "zigbee2mqtt/blinds-bedroom/set",
 			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
 			Qos:      2,
 			Retained: true,
 		},
-		MQTTPublish{
+		{
 			Topic:    "zigbee2mqtt/blinds-bedroom/get",
 			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
 			Qos:      2,
