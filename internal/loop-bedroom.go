@@ -22,6 +22,7 @@ type BedroomLoop struct {
 }
 
 func (l *BedroomLoop) Init(m *mqttMessageHandler, config Config) {
+	slog.Info("Init bedroom blinds")
 	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge("bedroomblinds")
 
 	sm := stateless.NewStateMachine(bedroomBlindsStateOpen)
@@ -75,16 +76,16 @@ func (l *BedroomLoop) Init(m *mqttMessageHandler, config Config) {
 
 func (l *BedroomLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	if l.isInitialized {
-		slog.Debug("Process event")
+		slog.Info("Process event", "name", l.stateMachineMQTTBridge.name)
 		l.stateMachineMQTTBridge.detectBedroomBlindsOpen(ev)
 
 		l.stateMachineMQTTBridge.stateValueMap.LogState()
-		slog.Debug("Fire event")
+		slog.Info("Fire event", "name", l.stateMachineMQTTBridge.name)
 		beforeState := l.stateMachineMQTTBridge.stateMachine.MustState()
 		l.stateMachineMQTTBridge.stateMachine.Fire("mqttEvent", ev)
 
 		eventsToPublish := l.stateMachineMQTTBridge.getAndResetEventsToPublish()
-		slog.Debug("Event fired", "fsm", l.stateMachineMQTTBridge.name, "beforeState", beforeState,
+		slog.Info("Event fired", "fsm", l.stateMachineMQTTBridge.name, "beforeState", beforeState,
 			"afterState", l.stateMachineMQTTBridge.stateMachine.MustState())
 		return eventsToPublish
 	} else {
