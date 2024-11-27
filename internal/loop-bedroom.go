@@ -78,6 +78,7 @@ func (l *BedroomLoop) Init(m *mqttMessageHandler, config Config) {
 func (l *BedroomLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	if l.isInitialized {
 		slog.Debug("Process event", "name", l.stateMachineMQTTBridge.name)
+		l.stateMachineMQTTBridge.detectPhonePresent(ev)
 		l.stateMachineMQTTBridge.detectBedroomBlindsOpen(ev)
 
 		l.stateMachineMQTTBridge.stateValueMap.LogState()
