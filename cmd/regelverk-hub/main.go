@@ -9,11 +9,10 @@ func main() {
 	config, debug, dryRun := internal.ParseConfig()
 
 	loops := []internal.ControlLoop{
-		//&tvLoop{},
 		&internal.LivingroomLoop{},
 		&internal.KitchenLoop{},
 		&internal.TVLoop{},
-		//&internal.TvAudioLoop{},
+		&internal.BedroomLoop{},
 		//&internal.MpdLoop{},
 		&internal.CecLoop{},
 		&internal.WebLoop{},
