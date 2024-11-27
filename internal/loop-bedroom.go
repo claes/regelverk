@@ -31,12 +31,13 @@ func (l *BedroomLoop) Init(m *mqttMessageHandler, config Config) {
 	sm.Configure(bedroomBlindsStateOpen).
 		OnEntry(l.stateMachineMQTTBridge.openBedroomBlinds).
 		Permit("mqttEvent", bedroomBlindsStateClosed, l.stateMachineMQTTBridge.guardStateBedroomBlindsClosed).
+		PermitReentry("timer").
 		OnEntryFrom("timer", l.stateMachineMQTTBridge.refreshBedroomBlinds)
 
 	sm.Configure(bedroomBlindsStateClosed).
 		OnEntry(l.stateMachineMQTTBridge.closeBedroomBlinds).
 		Permit("mqttEvent", bedroomBlindsStateOpen, l.stateMachineMQTTBridge.guardStateBedroomBlindsOpen).
-		Permit("timer", bedroomBlindsStateClosed).
+		PermitReentry("timer").
 		OnEntryFrom("timer", l.stateMachineMQTTBridge.refreshBedroomBlinds)
 
 	go func() {
@@ -76,7 +77,7 @@ func (l *BedroomLoop) Init(m *mqttMessageHandler, config Config) {
 
 func (l *BedroomLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	if l.isInitialized {
-		slog.Info("Process event", "name", l.stateMachineMQTTBridge.name)
+		slog.Debug("Process event", "name", l.stateMachineMQTTBridge.name)
 		l.stateMachineMQTTBridge.detectBedroomBlindsOpen(ev)
 
 		l.stateMachineMQTTBridge.stateValueMap.LogState()
