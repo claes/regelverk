@@ -563,7 +563,7 @@ func (l *StateMachineMQTTBridge) detectBedroomBlindsOpen(ev MQTTEvent) {
 		slog.Info("Blinds bedroom payload %s", m)
 		pos, exists := m["position"]
 		if exists {
-			l.stateValueMap.setState("bedroomblindsopen", pos.(int) > 50)
+			l.stateValueMap.setState("bedroomblindsopen", pos.(float64) > 50)
 		}
 	}
 }
