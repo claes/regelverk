@@ -81,6 +81,7 @@ func (h *mqttMessageHandler) handle(_ mqtt.Client, m mqtt.Message) {
 var count int64 = 0
 
 func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
+
 	for _, l := range h.loops {
 		loop := l // copy
 		go func() {
@@ -196,16 +197,6 @@ func Regelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapp
 	// Init web after handlers are established
 	// createWebServer(config)
 
-	// go func() {
-	// 	for tick := range time.Tick(1 * time.Second) {
-	// 		ev := MQTTEvent{
-	// 			Timestamp: tick,
-	// 			Topic:     "regelverk/ticker/1s",
-	// 			Payload:   nil,
-	// 		}
-	// 		mqttMessageHandler.handleEvent(ev)
-	// 	}
-	// }()
 	go func() {
 		for tick := range time.Tick(1 * time.Minute) {
 			timeOfDay := ComputeTimeOfDay(time.Now(), 59, 18)

@@ -43,7 +43,7 @@ func (l *BedroomLoop) Init(m *mqttMessageHandler, config Config) {
 		OnEntryFrom("timer", l.stateMachineMQTTBridge.refreshBedroomBlinds)
 
 	// TODO - how to detect state from manual actions?
-	// Any use of detectBedroomBlindsOpen ?
+	// Any use of detectBedroomBlindsOpen /  guardStateBedroomBlindsOpen / Closed?
 
 	go func() {
 		for {
@@ -53,9 +53,13 @@ func (l *BedroomLoop) Init(m *mqttMessageHandler, config Config) {
 			} else if now.Hour() == 21 && now.Minute() == 0 {
 				l.stateMachineMQTTBridge.stateMachine.Fire("blindsdown")
 			}
-			if now.Minute()%10 == 0 {
+
+			if now.Hour() == 8 && now.Minute() == 0 {
+				l.stateMachineMQTTBridge.stateMachine.Fire("timer")
+			} else if now.Hour() == 20 && now.Minute() == 0 {
 				l.stateMachineMQTTBridge.stateMachine.Fire("timer")
 			}
+
 			time.Sleep(1 * time.Minute)
 		}
 	}()

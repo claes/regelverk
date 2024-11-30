@@ -12,7 +12,7 @@ type CecLoop struct {
 
 func (l *CecLoop) Init(m *mqttMessageHandler, config Config) {}
 
-func (l *CecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
+func (l *CecLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 
 	// case "cec/command":
@@ -104,8 +104,4 @@ func (l *CecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	default:
 		return nil
 	}
-}
-
-func (l *CecLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	return l.turnOnAmpWhenTVOn(ev)
 }
