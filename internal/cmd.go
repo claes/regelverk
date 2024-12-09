@@ -19,6 +19,7 @@ func ParseConfig() (Config, *bool, *bool) {
 	httpListenAddress := flag.String("httpListenAddress", ":8080", "HTTP listen address")
 	rotelSerialPort := flag.String("rotelSerialPort", "", "Rotel serial port")
 	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
+	snapcastServer := flag.String("snapcastServer", "", "Snapcast server address")
 	pulseServer := flag.String("pulseServer", "", "Pulse server")
 	mpdServer := flag.String("mpdServer", "", "MPD server")
 	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password file")
@@ -51,6 +52,7 @@ func ParseConfig() (Config, *bool, *bool) {
 		WebAddress:         *httpListenAddress,
 		RotelSerialPort:    *rotelSerialPort,
 		SamsungTvAddress:   *samsungTVAddress,
+		SnapcastServer:     *snapcastServer,
 		MpdServer:          *mpdServer,
 		MpdPasswordFile:    *mpdPasswordFile,
 		RouterAddress:      *routerAddress,

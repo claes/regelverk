@@ -173,7 +173,34 @@ func tvPowerOnOutput() []MQTTPublish {
 		result = append(result, p)
 	}
 	return result
+}
 
+// TODO FIX!!
+func snapcastOnOutput() []MQTTPublish {
+	result := []MQTTPublish{
+		{
+			Topic:    "zigbee2mqtt/ikea_uttag/set",
+			Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+	}
+	return result
+}
+
+// TODO FIX!!
+func snapcastOffOutput() []MQTTPublish {
+	result := []MQTTPublish{
+		{
+			Topic:    "zigbee2mqtt/ikea_uttag/set",
+			Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+	}
+	return result
 }
 
 func mpdPlayOutput() []MQTTPublish {
@@ -238,6 +265,18 @@ func (l *StateMachineMQTTBridge) guardStateTvOffLong(_ context.Context, _ ...any
 	return check
 }
 
+func (l *StateMachineMQTTBridge) guardStateSnapcastOn(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireTrue("snapcast")
+	slog.Info("guardStateSnapcastOn", "check", check)
+	return check
+}
+
+func (l *StateMachineMQTTBridge) guardStateSnapcastOff(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireFalse("snapcast")
+	slog.Info("guardStateSnapcastOff", "check", check)
+	return check
+}
+
 func (l *StateMachineMQTTBridge) guardStateKitchenAmpOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("kitchenaudioplaying")
 	slog.Info("guardStateKitchenAmpOn", "check", check)
@@ -271,6 +310,16 @@ func (l *StateMachineMQTTBridge) turnOnLivingroomFloorlamp(_ context.Context, _ 
 
 func (l *StateMachineMQTTBridge) turnOffLivingroomFloorlamp(_ context.Context, _ ...any) error {
 	l.addEventsToPublish(livingroomFloorlampOutput(false))
+	return nil
+}
+
+func (l *StateMachineMQTTBridge) turnOnSnapcast(_ context.Context, _ ...any) error {
+	l.addEventsToPublish(snapcastOnOutput())
+	return nil
+}
+
+func (l *StateMachineMQTTBridge) turnOffSnapcast(_ context.Context, _ ...any) error {
+	l.addEventsToPublish(snapcastOffOutput())
 	return nil
 }
 

@@ -23,6 +23,7 @@ type Config struct {
 	WebAddress         string
 	RotelSerialPort    string
 	SamsungTvAddress   string
+	SnapcastServer     string
 	MpdServer          string
 	MpdPasswordFile    string
 	Pulseserver        string
