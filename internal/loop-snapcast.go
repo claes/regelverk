@@ -153,6 +153,7 @@ func (l *SnapcastLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 		l.parsePulseaudio(ev)
 		l.foo(ev)
+		l.remoteToggle(ev)
 
 		l.stateMachineMQTTBridge.stateValueMap.LogState()
 		slog.Debug("Fire event")
@@ -233,5 +234,17 @@ func (l *SnapcastLoop) foo(ev MQTTEvent) {
 			slog.Info("Could not parse payload", "topic", "foo", "error", err)
 		}
 		l.stateMachineMQTTBridge.stateValueMap.setState("snapcast", snapcast)
+	}
+}
+
+func (l *SnapcastLoop) remoteToggle(ev MQTTEvent) {
+	if ev.Topic == "zigbee2mqtt/media_remote" {
+		m := parseJSONPayload(ev)
+		action := m["action"].(string)
+		if action == "arrow_right_click" {
+			l.stateMachineMQTTBridge.stateValueMap.setState("snapcast", true)
+		} else if action == "arrow_left_click" {
+			l.stateMachineMQTTBridge.stateValueMap.setState("snapcast", false)
+		}
 	}
 }
