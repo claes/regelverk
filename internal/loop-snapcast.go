@@ -51,6 +51,13 @@ func snapcastOnOutputTmp(sinkInputIndex uint32, sinkName string) []MQTTPublish {
 			Wait:     0 * time.Second,
 		},
 		{
+			Topic:    "pulseaudio/cardprofile/0/set",
+			Payload:  "output:iec958-stereo+input:analog-stereo",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+		{
 			Topic:    "rotel/command/send",
 			Payload:  "opt2!",
 			Qos:      2,
@@ -73,6 +80,13 @@ func snapcastOffOutputTmp(sinkInputIndex uint32, sinkName string) []MQTTPublish 
 		{
 			Topic:    "snapcast/client/livingroom/stream/set",
 			Payload:  "default",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+		{
+			Topic:    "pulseaudio/cardprofile/0/set",
+			Payload:  "output:hdmi-stereo",
 			Qos:      2,
 			Retained: false,
 			Wait:     0 * time.Second,
