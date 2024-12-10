@@ -82,21 +82,21 @@ func snapcastOffOutputTmp(sinkInputIndex uint32, sinkName string) []MQTTPublish 
 			Payload:  fmt.Sprintf(`{ "Command": "movesink", "SinkInputIndex": %d, "SinkName": "%s" }`, sinkInputIndex, sinkName),
 			Qos:      2,
 			Retained: false,
-			Wait:     1 * time.Second,
+			Wait:     2 * time.Second,
 		},
 		{
 			Topic:    "snapcast/client/livingroom/stream/set",
 			Payload:  "default",
 			Qos:      2,
 			Retained: false,
-			Wait:     1 * time.Second,
+			Wait:     2 * time.Second,
 		},
 		{
 			Topic:    "rotel/command/send",
 			Payload:  "opt1!",
 			Qos:      2,
 			Retained: false,
-			Wait:     1 * time.Second,
+			Wait:     2 * time.Second,
 		},
 	}
 	return result
