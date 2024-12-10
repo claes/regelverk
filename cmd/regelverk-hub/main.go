@@ -9,12 +9,13 @@ func main() {
 	config, debug, dryRun := internal.ParseConfig()
 
 	loops := []internal.ControlLoop{
-		&internal.LivingroomLoop{},
-		&internal.KitchenLoop{},
-		&internal.TVLoop{},
-		&internal.BedroomLoop{},
 		//&internal.MpdLoop{},
+		&internal.BedroomLoop{},
 		&internal.CecLoop{},
+		&internal.KitchenLoop{},
+		&internal.LivingroomLoop{},
+		&internal.SnapcastLoop{},
+		&internal.TVLoop{},
 		&internal.WebLoop{},
 	}
 
@@ -23,8 +24,9 @@ func main() {
 		&internal.MpdBridgeWrapper{},
 		&internal.PulseaudioBridgeWrapper{},
 		&internal.RotelBridgeWrapper{},
-		&internal.SamsungBridgeWrapper{},
 		&internal.RouterOSBridgeWrapper{},
+		&internal.SamsungBridgeWrapper{},
+		&internal.SnapcastBridgeWrapper{},
 	}
 
 	internal.StartRegelverk(config, loops, bridgeWrappers, dryRun, debug)
