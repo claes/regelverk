@@ -71,32 +71,32 @@ func snapcastOnOutputTmp(sinkInputIndex uint32, sinkName string) []MQTTPublish {
 func snapcastOffOutputTmp(sinkInputIndex uint32, sinkName string) []MQTTPublish {
 	result := []MQTTPublish{
 		{
+			Topic:    "pulseaudio/cardprofile/0/set",
+			Payload:  "output:hdmi-stereo", //TODO: switch this in advance?
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+		{
 			Topic:    "pulseaudio/sinkinput/req",
 			Payload:  fmt.Sprintf(`{ "Command": "movesink", "SinkInputIndex": %d, "SinkName": "%s" }`, sinkInputIndex, sinkName),
 			Qos:      2,
 			Retained: false,
-			Wait:     0 * time.Second,
+			Wait:     1 * time.Second,
 		},
 		{
 			Topic:    "snapcast/client/livingroom/stream/set",
 			Payload:  "default",
 			Qos:      2,
 			Retained: false,
-			Wait:     0 * time.Second,
-		},
-		{
-			Topic:    "pulseaudio/cardprofile/0/set",
-			Payload:  "output:hdmi-stereo",
-			Qos:      2,
-			Retained: false,
-			Wait:     0 * time.Second,
+			Wait:     1 * time.Second,
 		},
 		{
 			Topic:    "rotel/command/send",
 			Payload:  "opt1!",
 			Qos:      2,
 			Retained: false,
-			Wait:     0 * time.Second,
+			Wait:     1 * time.Second,
 		},
 	}
 	return result
