@@ -14,70 +14,22 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
-type StateMaster struct {
+type MasterController struct {
 	stateValueMap StateValueMap
 	controllers   []Controller
 }
 
-// type Controller struct {
-// 	name            string
-// 	stateMachine    *stateless.StateMachine
-// 	eventsToPublish []MQTTPublish
-// 	isInitialized   bool
-// }
+func CreateMasterController() MasterController {
+	return MasterController{stateValueMap: NewStateValueMap()}
+}
 
-// func CreateStateMachineMQTTBridgeNew(name string) Controller {
-// 	return Controller{name: name, eventsToPublish: []MQTTPublish{}}
-// }
-
-// // Alternative to loops for statemachines
-// // - Update common StateMaster
-// // - StateMaster has one StateValueMap one many state machine bridges?
-// // - Initialize non-initialized state machines
-// // - Trigger initialized state machines
-
-// func (l *Controller) getInitialState() *stateless.State {
-// 	return nil
-// }
-
-// func createStateMachine(stateMaster *StateMaster) *stateless.StateMachine {
-// 	// check if there is state corresponding to initial state, if so return a configured state machine
-// 	// else return nil
-// 	return nil
-// }
-
-// func (s *Controller) getAndResetEventsToPublish() []MQTTPublish {
-// 	//Locking?
-// 	events := s.eventsToPublish
-// 	s.eventsToPublish = []MQTTPublish{}
-// 	return events
-// }
-
-// func (s *Controller) addEventsToPublish(events []MQTTPublish) {
-// 	//Locking?
-// 	s.eventsToPublish = append(s.eventsToPublish, events...)
-// }
-
-// func (l *Controller) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-// 	slog.Debug("Process event", "name", l.name)
-
-// 	slog.Info("Fire event", "name", l.name)
-// 	beforeState := l.stateMachine.MustState()
-// 	l.stateMachine.Fire("mqttEvent", ev)
-
-// 	eventsToPublish := l.getAndResetEventsToPublish()
-// 	slog.Info("Event fired", "fsm", l.name, "beforeState", beforeState,
-// 		"afterState", l.stateMachine.MustState())
-// 	return eventsToPublish
-// }
-
-func (l *StateMaster) Init() {
+func (l *MasterController) Init() {
 }
 
 type Controller interface {
 	IsInitialized() bool
 
-	Initialize(sm *StateMaster)
+	Initialize(sm *MasterController)
 
 	ProcessEvent(ev MQTTEvent) []MQTTPublish
 }
@@ -122,7 +74,8 @@ type TVController struct {
 	BaseController
 }
 
-func (c *TVController) Initialize(stateMaster StateMaster) {
+func (c *TVController) Initialize(stateMaster *MasterController) {
+	c.name = "tv-controller"
 	var initialState tvState
 	if stateMaster.stateValueMap.requireTrue("tvpower") {
 		initialState = stateTvOn
@@ -132,7 +85,7 @@ func (c *TVController) Initialize(stateMaster StateMaster) {
 		return
 	}
 
-	sm := stateless.NewStateMachine(initialState) // can this be reliable determined early on? probably not
+	sm := stateless.NewStateMachine(initialState)
 	sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
 	sm.Configure(stateTvOn).
@@ -152,32 +105,45 @@ func (c *TVController) Initialize(stateMaster StateMaster) {
 	c.isInitialized = true
 }
 
+func tvPowerOffOutputNew() []MQTTPublish {
+	return []MQTTPublish{
+		{
+			Topic:    "zigbee2mqtt/ikea_uttag/set",
+			Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+	}
+}
+
+func tvPowerOnOutputNew() []MQTTPublish {
+	return []MQTTPublish{
+		{
+			Topic:    "zigbee2mqtt/ikea_uttag/set",
+			Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+	}
+}
+
 func (c *TVController) turnOnTvAppliances(_ context.Context, _ ...any) error {
-	c.addEventsToPublish(tvPowerOnOutput())
+	c.addEventsToPublish(tvPowerOnOutputNew())
 	return nil
 }
 
 func (c *TVController) turnOffTvAppliances(_ context.Context, _ ...any) error {
-	c.addEventsToPublish(tvPowerOffOutput())
+	c.addEventsToPublish(tvPowerOffOutputNew())
 	return nil
 }
 
 func (c *TVController) turnOffTvAppliancesLong(_ context.Context, _ ...any) error {
-	c.addEventsToPublish(tvPowerOffLongOutput())
 	return nil
 }
 
-// Need:
-// Way to assign controllers to StateMaster
-// Interface for controller
-//  ProcessEvent(ev MQTTEvent) []MQTTPublish
-// Way to initialize controllers
-// Types of controllers?
-// Such as statemachine controller?
-// Loop controller
-// A controller base?
-
-func (stateMaster *StateMaster) ProcessEvent(client mqtt.Client, ev MQTTEvent) {
+func (stateMaster *MasterController) ProcessEvent(client mqtt.Client, ev MQTTEvent) {
 
 	// Update state value map
 	stateMaster.detectPhonePresent(ev)
@@ -217,12 +183,11 @@ func (stateMaster *StateMaster) ProcessEvent(client mqtt.Client, ev MQTTEvent) {
 				}(result)
 			}
 		}()
-
 	}
 }
 
 // Guards
-func (l *StateMaster) guardTurnOnLivingroomLamp(_ context.Context, _ ...any) bool {
+func (l *MasterController) guardTurnOnLivingroomLamp(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("phonePresent") &&
 		l.stateValueMap.requireTrue("nighttime") &&
 		l.stateValueMap.requireTrueRecently("livingroomPresence", 10*time.Minute)
@@ -230,7 +195,7 @@ func (l *StateMaster) guardTurnOnLivingroomLamp(_ context.Context, _ ...any) boo
 	return check
 }
 
-func (l *StateMaster) guardTurnOffLivingroomLamp(_ context.Context, _ ...any) bool {
+func (l *MasterController) guardTurnOffLivingroomLamp(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("phonePresent") ||
 		l.stateValueMap.requireFalse("nighttime") ||
 		l.stateValueMap.requireTrueNotRecently("livingroomPresence", 10*time.Minute)
@@ -238,43 +203,43 @@ func (l *StateMaster) guardTurnOffLivingroomLamp(_ context.Context, _ ...any) bo
 	return check
 }
 
-func (l *StateMaster) guardStateTvOn(_ context.Context, _ ...any) bool {
+func (l *MasterController) guardStateTvOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("tvpower")
 	slog.Info("guardStateTvOn", "check", check)
 	return check
 }
 
-func (l *StateMaster) guardStateTvOff(_ context.Context, _ ...any) bool {
+func (l *MasterController) guardStateTvOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("tvpower")
 	slog.Info("guardStateTvOff", "check", check)
 	return check
 }
 
-func (l *StateMaster) guardStateTvOffLong(_ context.Context, _ ...any) bool {
+func (l *MasterController) guardStateTvOffLong(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrueNotRecently("tvpower", 30*time.Minute)
 	slog.Info("guardStateTvOff", "check", check)
 	return check
 }
 
-func (l *StateMaster) guardStateKitchenAmpOn(_ context.Context, _ ...any) bool {
+func (l *MasterController) guardStateKitchenAmpOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("kitchenaudioplaying")
 	slog.Info("guardStateKitchenAmpOn", "check", check)
 	return check
 }
 
-func (l *StateMaster) guardStateKitchenAmpOff(_ context.Context, _ ...any) bool {
+func (l *MasterController) guardStateKitchenAmpOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrueNotRecently("kitchenaudioplaying", 10*time.Minute)
 	slog.Info("guardStateKitchenAmpOn", "check", check)
 	return check
 }
 
-func (l *StateMaster) guardStateBedroomBlindsOpen(_ context.Context, _ ...any) bool {
+func (l *MasterController) guardStateBedroomBlindsOpen(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("nighttime")
 	slog.Info("guardStateBedroomBlindsOpen", "check", check)
 	return check
 }
 
-func (l *StateMaster) guardStateBedroomBlindsClosed(_ context.Context, _ ...any) bool {
+func (l *MasterController) guardStateBedroomBlindsClosed(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("nighttime")
 	slog.Info("guardStateBedroomBlindsClosed", "check", check)
 	return check
@@ -282,7 +247,7 @@ func (l *StateMaster) guardStateBedroomBlindsClosed(_ context.Context, _ ...any)
 
 // Detections
 
-func (l *StateMaster) detectPhonePresent(ev MQTTEvent) {
+func (l *MasterController) detectPhonePresent(ev MQTTEvent) {
 	if ev.Topic == "routeros/wificlients" {
 		var wifiClients []routerosmqtt.WifiClient
 
@@ -303,14 +268,14 @@ func (l *StateMaster) detectPhonePresent(ev MQTTEvent) {
 	}
 }
 
-func (l *StateMaster) detectLivingroomPresence(ev MQTTEvent) {
+func (l *MasterController) detectLivingroomPresence(ev MQTTEvent) {
 	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
 		m := parseJSONPayload(ev)
 		l.stateValueMap.setState("livingroomPresence", m["occupancy"].(bool))
 	}
 }
 
-func (l *StateMaster) detectLivingroomFloorlampState(ev MQTTEvent) {
+func (l *MasterController) detectLivingroomFloorlampState(ev MQTTEvent) {
 	if ev.Topic == "zigbee2mqtt/livingroom-floorlamp" {
 		m := parseJSONPayload(ev)
 		state := m["state"].(string)
@@ -322,13 +287,13 @@ func (l *StateMaster) detectLivingroomFloorlampState(ev MQTTEvent) {
 	}
 }
 
-func (l *StateMaster) detectNighttime(ev MQTTEvent) {
+func (l *MasterController) detectNighttime(ev MQTTEvent) {
 	if ev.Topic == "regelverk/ticker/timeofday" {
 		l.stateValueMap.setState("nighttime", ev.Payload.(TimeOfDay) == Nighttime)
 	}
 }
 
-func (l *StateMaster) detectTVPower(ev MQTTEvent) {
+func (l *MasterController) detectTVPower(ev MQTTEvent) {
 	if ev.Topic == "regelverk/state/tvpower" {
 		tvPower, err := strconv.ParseBool(string(ev.Payload.([]byte)))
 		if err != nil {
@@ -338,21 +303,21 @@ func (l *StateMaster) detectTVPower(ev MQTTEvent) {
 	}
 }
 
-func (l *StateMaster) detectMPDPlay(ev MQTTEvent) {
+func (l *MasterController) detectMPDPlay(ev MQTTEvent) {
 	if ev.Topic == "mpd/status" {
 		m := parseJSONPayload(ev)
 		l.stateValueMap.setState("mpdPlay", m["state"].(string) == "play")
 	}
 }
 
-func (l *StateMaster) detectKitchenAmpPower(ev MQTTEvent) {
+func (l *MasterController) detectKitchenAmpPower(ev MQTTEvent) {
 	if ev.Topic == "zigbee2mqtt/kitchen-amp" {
 		m := parseJSONPayload(ev)
 		l.stateValueMap.setState("kitchenamppower", m["state"].(string) == "ON")
 	}
 }
 
-func (l *StateMaster) detectKitchenAudioPlaying(ev MQTTEvent) {
+func (l *MasterController) detectKitchenAudioPlaying(ev MQTTEvent) {
 	if ev.Topic == "kitchen/pulseaudio/state" {
 		var pulseaudioState pulseaudiomqtt.PulseAudioState
 		err := json.Unmarshal(ev.Payload.([]byte), &pulseaudioState)
@@ -364,7 +329,7 @@ func (l *StateMaster) detectKitchenAudioPlaying(ev MQTTEvent) {
 	}
 }
 
-func (l *StateMaster) detectBedroomBlindsOpen(ev MQTTEvent) {
+func (l *MasterController) detectBedroomBlindsOpen(ev MQTTEvent) {
 	if ev.Topic == "zigbee2mqtt/blinds-bedroom" {
 		m := parseJSONPayload(ev)
 		pos, exists := m["position"]

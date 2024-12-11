@@ -21,7 +21,7 @@ type TVLoop struct {
 	isInitialized          bool
 }
 
-func (l *TVLoop) Init(m *mqttMessageHandler, config Config) {
+func (l *TVLoop) Init(m *MQTTMessageHandler, config Config) {
 	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge("tv")
 
 	sm := stateless.NewStateMachine(stateTvOff) // can this be reliable determined early on? probably not

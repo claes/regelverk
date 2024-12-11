@@ -18,7 +18,7 @@ type LivingroomLoop struct {
 	isInitialized          bool
 }
 
-func (l *LivingroomLoop) Init(m *mqttMessageHandler, config Config) {
+func (l *LivingroomLoop) Init(m *MQTTMessageHandler, config Config) {
 	slog.Debug("Initializing FSM")
 	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge("livingroomLamp")
 

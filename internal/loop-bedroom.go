@@ -21,7 +21,7 @@ type BedroomLoop struct {
 	isInitialized          bool
 }
 
-func (l *BedroomLoop) Init(m *mqttMessageHandler, config Config) {
+func (l *BedroomLoop) Init(m *MQTTMessageHandler, config Config) {
 	slog.Info("Init bedroom blinds")
 	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge("bedroomblinds")
 

@@ -122,7 +122,7 @@ func (l *SnapcastLoop) turnOffSnapcastTmp(_ context.Context, _ ...any) error {
 	return nil
 }
 
-func (l *SnapcastLoop) Init(m *mqttMessageHandler, config Config) {
+func (l *SnapcastLoop) Init(m *MQTTMessageHandler, config Config) {
 	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge("snapcast")
 	sm := stateless.NewStateMachine(stateSnapcastOff) // can this be reliable determined early on? probably not
 	sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))

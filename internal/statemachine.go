@@ -100,13 +100,13 @@ func bedroomBlindsRefreshOutput() []MQTTPublish {
 
 func tvPowerOffOutput() []MQTTPublish {
 	return []MQTTPublish{
-		{
-			Topic:    "zigbee2mqtt/ikea_uttag/set",
-			Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
-			Qos:      2,
-			Retained: false,
-			Wait:     0 * time.Second,
-		},
+		// {
+		// 	Topic:    "zigbee2mqtt/ikea_uttag/set",
+		// 	Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
+		// 	Qos:      2,
+		// 	Retained: false,
+		// 	Wait:     0 * time.Second,
+		// },
 	}
 }
 
@@ -124,13 +124,13 @@ func tvPowerOffLongOutput() []MQTTPublish {
 
 func tvPowerOnOutput() []MQTTPublish {
 	result := []MQTTPublish{
-		{
-			Topic:    "zigbee2mqtt/ikea_uttag/set",
-			Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
-			Qos:      2,
-			Retained: false,
-			Wait:     0 * time.Second,
-		},
+		// {
+		// 	Topic:    "zigbee2mqtt/ikea_uttag/set",
+		// 	Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
+		// 	Qos:      2,
+		// 	Retained: false,
+		// 	Wait:     0 * time.Second,
+		// },
 		{
 			Topic:    "rotel/command/send",
 			Payload:  "power_on!",

@@ -20,7 +20,7 @@ type KitchenLoop struct {
 	isInitialized          bool
 }
 
-func (l *KitchenLoop) Init(m *mqttMessageHandler, config Config) {
+func (l *KitchenLoop) Init(m *MQTTMessageHandler, config Config) {
 	l.stateMachineMQTTBridge = CreateStateMachineMQTTBridge("kitchenamp")
 
 	sm := stateless.NewStateMachine(ampStateOff)

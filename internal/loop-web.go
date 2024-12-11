@@ -25,12 +25,12 @@ var pulseaudioStateUpdated = make(chan struct{})
 
 type WebLoop struct {
 	statusLoop
-	mqttMessageHandler *mqttMessageHandler
+	mqttMessageHandler *MQTTMessageHandler
 	rotelState         rotelmqtt.RotelState
 	pulseAudioState    pulsemqtt.PulseAudioState
 }
 
-func (l *WebLoop) Init(m *mqttMessageHandler, config Config) {
+func (l *WebLoop) Init(m *MQTTMessageHandler, config Config) {
 	slog.Info("Setting up HTTP handlers")
 	l.mqttMessageHandler = m
 	http.HandleFunc("/", l.mainHandler)
