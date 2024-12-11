@@ -1,4 +1,4 @@
-package main
+package regelverk
 
 import (
 	"log/slog"
@@ -6,13 +6,13 @@ import (
 	"strings"
 )
 
-type cecLoop struct {
+type CecLoop struct {
 	statusLoop
 }
 
-func (l *cecLoop) Init(m *mqttMessageHandler) {}
+func (l *CecLoop) Init(m *mqttMessageHandler, config Config) {}
 
-func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
+func (l *CecLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 
 	// case "cec/command":
@@ -104,8 +104,4 @@ func (l *cecLoop) turnOnAmpWhenTVOn(ev MQTTEvent) []MQTTPublish {
 	default:
 		return nil
 	}
-}
-
-func (l *cecLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	return l.turnOnAmpWhenTVOn(ev)
 }

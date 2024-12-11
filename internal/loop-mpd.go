@@ -1,17 +1,17 @@
-package main
+package regelverk
 
 import (
 	"strconv"
 )
 
-type mpdLoop struct {
+type MpdLoop struct {
 	statusLoop
 	hasMuted bool
 }
 
-func (l *mpdLoop) Init(m *mqttMessageHandler) {}
+func (l *MpdLoop) Init(m *mqttMessageHandler, config Config) {}
 
-func (l *mpdLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
+func (l *MpdLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 	case "mpd/status":
 		m := parseJSONPayload(ev)

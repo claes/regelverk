@@ -1,4 +1,4 @@
-package main
+package regelverk
 
 import (
 	"context"
@@ -10,6 +10,22 @@ import (
 	cecmqtt "github.com/claes/cec-mqtt/lib"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
+
+type CecBridgeWrapper struct {
+	mqttClient  mqtt.Client
+	topicPrefix string
+}
+
+func (l *CecBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
+	l.mqttClient = mqttClient
+	l.topicPrefix = config.MQTTTopicPrefix
+	return nil
+}
+
+func (l *CecBridgeWrapper) Run() error {
+	go cecBridgeMainLoop(l.mqttClient, l.topicPrefix)
+	return nil
+}
 
 // func bridgeMessages(bridge *cecmqtt.CecMQTTBridge) {
 // 	pattern := `^(>>|<<)\s([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)`
@@ -43,7 +59,7 @@ func bridgeKeyPresses(ctx context.Context, bridge *cecmqtt.CecMQTTBridge, keyboa
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("Bridge keypresses function is being cancelled")
+			slog.Debug("Bridge keypresses function is being cancelled")
 			return
 		case keyPress := <-bridge.CECConnection.KeyPresses:
 			translatePerformKeypress(keyPress, keyboard)
@@ -52,7 +68,7 @@ func bridgeKeyPresses(ctx context.Context, bridge *cecmqtt.CecMQTTBridge, keyboa
 }
 
 func translatePerformKeypress(keyPress *cec.KeyPress, keyboard uinput.Keyboard) {
-	slog.Info("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
+	slog.Debug("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
 	if keyPress.Duration == 0 ||
 		(keyPress.Duration == 500 && keyPress.KeyCode == 145) { //strange workaround
 		keycode := -1
@@ -126,17 +142,17 @@ func translatePerformKeypress(keyPress *cec.KeyPress, keyboard uinput.Keyboard) 
 		}
 
 		if keycode >= 0 {
-			slog.Info("Send keypress", "keycode", keycode)
+			slog.Debug("Send keypress", "keycode", keycode)
 			keyboard.KeyPress(keycode)
 		}
 	}
 }
 
-func initCECBridge(mqttClient mqtt.Client) {
-	go cecBridgeMainLoop(mqttClient)
-}
+// func initCECBridge(mqttClient mqtt.Client) {
+// 	go cecBridgeMainLoop(mqttClient)
+// }
 
-func cecBridgeMainLoop(mqttClient mqtt.Client) {
+func cecBridgeMainLoop(mqttClient mqtt.Client, topicPrefix string) {
 
 	keyboard, err := uinput.CreateKeyboard("/dev/uinput", []byte("regelverk"))
 	if err != nil {
@@ -151,7 +167,7 @@ func cecBridgeMainLoop(mqttClient mqtt.Client) {
 		time.Sleep(4 * time.Second)
 		slog.Info("Creating new CEC connection", "count", i)
 		cecConnection := cecmqtt.CreateCECConnection("/dev/ttyACM0", "Regelverk")
-		bridge := cecmqtt.NewCecMQTTBridge(cecConnection, mqttClient)
+		bridge := cecmqtt.NewCecMQTTBridge(cecConnection, mqttClient, topicPrefix)
 
 		ctx, cancel := context.WithCancel(context.Background())
 

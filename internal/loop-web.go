@@ -1,4 +1,4 @@
-package main
+package regelverk
 
 import (
 	"embed"
@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -22,14 +23,14 @@ var content embed.FS
 var rotelStateUpdated = make(chan struct{})
 var pulseaudioStateUpdated = make(chan struct{})
 
-type webLoop struct {
+type WebLoop struct {
 	statusLoop
 	mqttMessageHandler *mqttMessageHandler
 	rotelState         rotelmqtt.RotelState
 	pulseAudioState    pulsemqtt.PulseAudioState
 }
 
-func (l *webLoop) Init(m *mqttMessageHandler) {
+func (l *WebLoop) Init(m *mqttMessageHandler, config Config) {
 	slog.Info("Setting up HTTP handlers")
 	l.mqttMessageHandler = m
 	http.HandleFunc("/", l.mainHandler)
@@ -57,9 +58,22 @@ func (l *webLoop) Init(m *mqttMessageHandler) {
 
 	l.mqttMessageHandler.client.Publish("rotel/command/initialize", 2, false, "true")
 	l.mqttMessageHandler.client.Publish("pulseaudio/initialize", 2, false, "true")
+
+	go func() {
+		slog.Info("Initializing HTTP server", "address", config.WebAddress)
+
+		err := http.ListenAndServe(config.WebAddress, nil)
+
+		if err != nil {
+			slog.Error("Error initializing HTTP server",
+				"listenAddr", config.WebAddress, "error", err)
+			os.Exit(1)
+		}
+	}()
+
 }
 
-func (l *webLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
+func (l *WebLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	switch ev.Topic {
 	case "rotel/state":
 		err := json.Unmarshal(ev.Payload.([]byte), &l.rotelState)
@@ -101,7 +115,7 @@ func (l *webLoop) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	return nil
 }
 
-func (l *webLoop) mainHandler(w http.ResponseWriter, r *http.Request) {
+func (l *WebLoop) mainHandler(w http.ResponseWriter, r *http.Request) {
 
 	data, readErr := content.ReadFile("templates/rotel.html") //TODO rename
 	if readErr != nil {
@@ -122,13 +136,13 @@ func (l *webLoop) mainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (l *webLoop) rotelSourceHandler(w http.ResponseWriter, r *http.Request) {
+func (l *WebLoop) rotelSourceHandler(w http.ResponseWriter, r *http.Request) {
 	selectedSource := r.FormValue("rotel-source")
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, selectedSource+"!")
 	l.rotelSourceRenderer(w, selectedSource)
 }
 
-func (l *webLoop) rotelSourceRenderer(w io.Writer, currentSource string) {
+func (l *WebLoop) rotelSourceRenderer(w io.Writer, currentSource string) {
 	var sources = []string{"opt1", "opt2", "coax1", "coax2"}
 	fmt.Fprintf(w, "<select id='rotel-source' name='rotel-source' hx-post='/rotel/source' hx-trigger='change' hx-swap-oob='true'>")
 	for _, source := range sources {
@@ -141,13 +155,13 @@ func (l *webLoop) rotelSourceRenderer(w io.Writer, currentSource string) {
 	fmt.Fprintf(w, "</select>")
 }
 
-func (l *webLoop) pulseaudioSinkHandler(w http.ResponseWriter, r *http.Request) {
+func (l *WebLoop) pulseaudioSinkHandler(w http.ResponseWriter, r *http.Request) {
 	selectedSink := r.FormValue("pulseaudio-sink")
 	l.mqttMessageHandler.client.Publish("pulseaudio/sink/default/set", 2, false, selectedSink)
 	l.pulseaudioSinkRenderer(w, selectedSink)
 }
 
-func (l *webLoop) pulseaudioSinkRenderer(w io.Writer, currentSink string) {
+func (l *WebLoop) pulseaudioSinkRenderer(w io.Writer, currentSink string) {
 	fmt.Fprintf(w, "<select id='pulseaudio-sink' name='pulseaudio-sink' hx-post='/pulseaudio/sink' hx-trigger='change' hx-swap-oob='true'>")
 	for _, sink := range l.pulseAudioState.Sinks {
 		selected := ""
@@ -159,13 +173,13 @@ func (l *webLoop) pulseaudioSinkRenderer(w io.Writer, currentSink string) {
 	fmt.Fprintf(w, "</select>")
 }
 
-func (l *webLoop) pulseaudioProfileHandler(w http.ResponseWriter, r *http.Request) {
+func (l *WebLoop) pulseaudioProfileHandler(w http.ResponseWriter, r *http.Request) {
 	selectedProfile := r.FormValue("pulseaudio-profile")
 	l.mqttMessageHandler.client.Publish("pulseaudio/cardprofile/0/set", 2, false, selectedProfile)
 	l.pulseaudioProfileRenderer(w, selectedProfile)
 }
 
-func (l *webLoop) pulseaudioProfileRenderer(w io.Writer, currentProfile string) {
+func (l *WebLoop) pulseaudioProfileRenderer(w io.Writer, currentProfile string) {
 	if len(l.pulseAudioState.Cards) > 0 {
 		fmt.Fprintf(w, "<select id='pulseaudio-profile' name='pulseaudio-profile' hx-post='/pulseaudio/profile' hx-trigger='change' hx-swap-oob='true'>")
 
@@ -180,7 +194,7 @@ func (l *webLoop) pulseaudioProfileRenderer(w io.Writer, currentProfile string) 
 	}
 }
 
-func (l *webLoop) rotelToneHandler(w http.ResponseWriter, r *http.Request) {
+func (l *WebLoop) rotelToneHandler(w http.ResponseWriter, r *http.Request) {
 	tone := r.FormValue("rotel-tone")
 	if tone != "on" {
 		tone = "off"
@@ -189,7 +203,7 @@ func (l *webLoop) rotelToneHandler(w http.ResponseWriter, r *http.Request) {
 	l.rotelToneRenderer(w, tone)
 }
 
-func (l *webLoop) rotelToneRenderer(w io.Writer, currentTone string) {
+func (l *WebLoop) rotelToneRenderer(w io.Writer, currentTone string) {
 	checked := ""
 	if currentTone == "on" {
 		checked = "checked"
@@ -197,7 +211,7 @@ func (l *webLoop) rotelToneRenderer(w io.Writer, currentTone string) {
 	fmt.Fprintf(w, "<input type='checkbox' %s id='rotel-tone' name='rotel-tone' value='on' hx-post='/rotel/tone' hx-trigger='change' hx-swap-oob='true' />", checked)
 }
 
-func (l *webLoop) rotelMuteHandler(w http.ResponseWriter, r *http.Request) {
+func (l *WebLoop) rotelMuteHandler(w http.ResponseWriter, r *http.Request) {
 	mute := r.FormValue("rotel-mute")
 	if mute != "on" {
 		mute = "off"
@@ -206,7 +220,7 @@ func (l *webLoop) rotelMuteHandler(w http.ResponseWriter, r *http.Request) {
 	l.rotelMuteRenderer(w, mute)
 }
 
-func (l *webLoop) rotelMuteRenderer(w io.Writer, currentMute string) {
+func (l *WebLoop) rotelMuteRenderer(w io.Writer, currentMute string) {
 	checked := ""
 	if currentMute == "on" {
 		checked = "checked"
@@ -214,7 +228,7 @@ func (l *webLoop) rotelMuteRenderer(w io.Writer, currentMute string) {
 	fmt.Fprintf(w, "<input type='checkbox' %s id='rotel-mute' name='rotel-mute' value='on' hx-post='/rotel/mute' hx-trigger='change' hx-swap-oob='true' />", checked)
 }
 
-func (l *webLoop) rotelPowerHandler(w http.ResponseWriter, r *http.Request) {
+func (l *WebLoop) rotelPowerHandler(w http.ResponseWriter, r *http.Request) {
 	power := r.FormValue("rotel-power")
 	if power != "on" {
 		power = "off"
@@ -224,7 +238,7 @@ func (l *webLoop) rotelPowerHandler(w http.ResponseWriter, r *http.Request) {
 	l.rotelPowerRenderer(w, power)
 }
 
-func (l *webLoop) rotelPowerRenderer(w io.Writer, currentPower string) {
+func (l *WebLoop) rotelPowerRenderer(w io.Writer, currentPower string) {
 	checked := ""
 	if currentPower == "on" {
 		checked = "checked"
@@ -232,18 +246,18 @@ func (l *webLoop) rotelPowerRenderer(w io.Writer, currentPower string) {
 	fmt.Fprintf(w, "<input type='checkbox' %s id='rotel-power' name='rotel-power' value='on' hx-post='/rotel/power' hx-trigger='change' hx-swap-oob='true' />", checked)
 }
 
-func (l *webLoop) rotelVolumeHandler(w http.ResponseWriter, r *http.Request) {
+func (l *WebLoop) rotelVolumeHandler(w http.ResponseWriter, r *http.Request) {
 	volume := r.FormValue("rotel-volume")
 	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "volume_"+volume+"!")
 	//	l.mqttMessageHandler.client.Publish("rotel/command/send", 2, false, "get_display!")
 	l.rotelVolumeRenderer(w, volume)
 }
 
-func (l *webLoop) rotelVolumeRenderer(w io.Writer, currentVolume string) {
+func (l *WebLoop) rotelVolumeRenderer(w io.Writer, currentVolume string) {
 	fmt.Fprintf(w, "<input type='range' id='rotel-volume' name='rotel-volume' value='%s' min='0' max='96' hx-post='/rotel/volume' hx-trigger='change' hx-swap-oob='true' />", currentVolume)
 }
 
-func (l *webLoop) rotelBalanceHandler(w http.ResponseWriter, r *http.Request) {
+func (l *WebLoop) rotelBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	b, err := strconv.Atoi(r.FormValue("rotel-balance"))
 	if err != nil {
 		slog.Error("Could not parse balance", "error", err)
@@ -258,7 +272,7 @@ func (l *webLoop) rotelBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	l.rotelBalanceRenderer(w, balance)
 }
 
-func (l *webLoop) rotelBalanceRenderer(w io.Writer, currentBalance string) {
+func (l *WebLoop) rotelBalanceRenderer(w io.Writer, currentBalance string) {
 	// L15 -- 000 -- R15
 	balance, err := balanceToInt(currentBalance)
 	if err != nil {
@@ -306,7 +320,7 @@ func intToBalance(n int) (string, error) {
 
 // treble
 
-func (l *webLoop) rotelTrebleHandler(w http.ResponseWriter, r *http.Request) {
+func (l *WebLoop) rotelTrebleHandler(w http.ResponseWriter, r *http.Request) {
 	b, err := strconv.Atoi(r.FormValue("rotel-treble"))
 	if err != nil {
 		slog.Error("Could not parse treble", "error", err)
@@ -321,7 +335,7 @@ func (l *webLoop) rotelTrebleHandler(w http.ResponseWriter, r *http.Request) {
 	l.rotelTrebleRenderer(w, treble)
 }
 
-func (l *webLoop) rotelTrebleRenderer(w io.Writer, currentTreble string) {
+func (l *WebLoop) rotelTrebleRenderer(w io.Writer, currentTreble string) {
 	// -10 -- 000 -- +10
 	treble, err := bassOrTrebleToInt(currentTreble)
 	if err != nil {
@@ -369,7 +383,7 @@ func intToBassOrTreble(n int) (string, error) {
 
 // bass
 
-func (l *webLoop) rotelBassHandler(w http.ResponseWriter, r *http.Request) {
+func (l *WebLoop) rotelBassHandler(w http.ResponseWriter, r *http.Request) {
 	b, err := strconv.Atoi(r.FormValue("rotel-bass"))
 	if err != nil {
 		slog.Error("Could not parse bass", "error", err)
@@ -384,7 +398,7 @@ func (l *webLoop) rotelBassHandler(w http.ResponseWriter, r *http.Request) {
 	l.rotelBassRenderer(w, bass)
 }
 
-func (l *webLoop) rotelBassRenderer(w io.Writer, currentBass string) {
+func (l *WebLoop) rotelBassRenderer(w io.Writer, currentBass string) {
 	// -10 -- 000 -- +10
 	bass, err := bassOrTrebleToInt(currentBass)
 	if err != nil {
@@ -394,7 +408,7 @@ func (l *webLoop) rotelBassRenderer(w io.Writer, currentBass string) {
 	fmt.Fprintf(w, "<input type='range' id='rotel-bass' name='rotel-bass' value='%d' min='-10' max='10' hx-post='/rotel/bass' hx-trigger='change' hx-swap-oob='true' />", bass)
 }
 
-func (l *webLoop) rotelDisplayRenderer(w io.Writer, text string) {
+func (l *WebLoop) rotelDisplayRenderer(w io.Writer, text string) {
 
 	pos := 20
 	var t string
@@ -408,7 +422,7 @@ func (l *webLoop) rotelDisplayRenderer(w io.Writer, text string) {
 
 var upgrader = websocket.Upgrader{}
 
-func (l *webLoop) rotelStateInitWs(w http.ResponseWriter, req *http.Request) {
+func (l *WebLoop) rotelStateInitWs(w http.ResponseWriter, req *http.Request) {
 	var responseTemplate = `
 	<div id="ws-output" hx-ext="ws" ws-connect="/web/state/ws">	
 		<div id="rotel-state"></div>
@@ -420,7 +434,7 @@ func (l *webLoop) rotelStateInitWs(w http.ResponseWriter, req *http.Request) {
 	tmpl.Execute(w, nil)
 }
 
-func (l *webLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
+func (l *WebLoop) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 
 	c, err := upgrader.Upgrade(w, req, nil)
 	if err != nil {

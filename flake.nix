@@ -2,7 +2,7 @@
   description = "Regelverk";
 
   # Nixpkgs / NixOS version to use.
-  inputs.nixpkgs.url = "nixpkgs/nixos-23.11";
+  inputs.nixpkgs.url = "nixpkgs/nixos-24.05";
 
   outputs = {
     self,
@@ -48,7 +48,7 @@
 
         buildInputs = [pkgs.libcec pkgs.libcec_platform];
 
-        vendorHash = "sha256-yGilBJevoxZ4Ugh/wtrIAxP6U7e90PMKYU1OfAb0K+E=";
+        vendorHash = "sha256-Ucs+T6gdaVUAh5LjvnckjnlO9ekCC9ZQ8Tbqr1LHiAM=";
       };
     });
 
