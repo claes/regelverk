@@ -15,7 +15,6 @@ func main() {
 		&internal.KitchenLoop{},
 		&internal.LivingroomLoop{},
 		&internal.SnapcastLoop{},
-		&internal.TVLoop{},
 		&internal.WebLoop{},
 	}
 
@@ -29,5 +28,9 @@ func main() {
 		&internal.SnapcastBridgeWrapper{},
 	}
 
-	internal.StartRegelverk(config, loops, bridgeWrappers, dryRun, debug)
+	controllers := &[]internal.Controller{
+		&internal.TVController{},
+	}
+
+	internal.StartRegelverk(config, loops, bridgeWrappers, controllers, dryRun, debug)
 }

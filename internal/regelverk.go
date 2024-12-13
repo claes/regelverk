@@ -113,7 +113,7 @@ func (h *MQTTMessageHandler) handleEvent(ev MQTTEvent) {
 	}
 }
 
-func createMQTTMessageHandler(config Config, loops []ControlLoop, dryRun, debug *bool) (*MQTTMessageHandler, error) {
+func createMQTTMessageHandler(config Config, loops []ControlLoop, masterController MasterController, dryRun, debug *bool) (*MQTTMessageHandler, error) {
 	host, err := os.Hostname()
 	if err != nil {
 		return nil, err
@@ -128,10 +128,6 @@ func createMQTTMessageHandler(config Config, loops []ControlLoop, dryRun, debug 
 		}
 		slog.Debug("MQTT password", "password", mqttPassword)
 	}
-
-	//TODO move to better place
-	masterController := CreateMasterController()
-	masterController.controllers = append(masterController.controllers, &TVController{})
 
 	mqttMessageHandler := &MQTTMessageHandler{
 		dryRun:           *dryRun,
@@ -188,9 +184,13 @@ func createMQTTMessageHandler(config Config, loops []ControlLoop, dryRun, debug 
 // 	}()
 // }
 
-func Regelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, dryRun, debug *bool) error {
+func Regelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller,
+	dryRun, debug *bool) error {
 
-	mqttMessageHandler, err := createMQTTMessageHandler(config, loops, dryRun, debug)
+	masterController := CreateMasterController()
+	masterController.controllers = controllers
+
+	mqttMessageHandler, err := createMQTTMessageHandler(config, loops, masterController, dryRun, debug)
 	if err != nil {
 		return err
 	}

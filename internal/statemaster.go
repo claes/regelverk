@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"reflect"
 	"strconv"
+	"sync"
 	"time"
 
 	pulseaudiomqtt "github.com/claes/pulseaudio-mqtt/lib"
@@ -16,7 +17,8 @@ import (
 
 type MasterController struct {
 	stateValueMap StateValueMap
-	controllers   []Controller
+	controllers   *[]Controller
+	mu            sync.Mutex
 }
 
 func CreateMasterController() MasterController {
@@ -27,18 +29,29 @@ func (l *MasterController) Init() {
 }
 
 type Controller interface {
+	sync.Locker
+
 	IsInitialized() bool
-
-	Initialize(sm *MasterController)
-
+	Initialize(sm *MasterController) []MQTTPublish
 	ProcessEvent(ev MQTTEvent) []MQTTPublish
 }
 
 type BaseController struct {
-	name            string
-	stateMachine    *stateless.StateMachine
-	eventsToPublish []MQTTPublish
-	isInitialized   bool
+	name             string
+	masterController *MasterController
+	stateMachine     *stateless.StateMachine
+	eventsToPublish  []MQTTPublish
+	isInitialized    bool
+	eventHandlers    []func(ev MQTTEvent) []MQTTPublish
+	mu               sync.Mutex
+}
+
+func (c *BaseController) Lock() {
+	c.mu.Lock()
+}
+
+func (c *BaseController) Unlock() {
+	c.mu.Unlock()
 }
 
 func (c *BaseController) IsInitialized() bool {
@@ -47,6 +60,12 @@ func (c *BaseController) IsInitialized() bool {
 
 func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	slog.Debug("Process event", "name", c.name)
+
+	// In case special handling is needed that is not part of base processing
+	// Under normal circumstances, state machine should be able to handle most
+	for _, eventHandler := range c.eventHandlers {
+		c.addEventsToPublish(eventHandler(ev))
+	}
 
 	slog.Info("Fire event", "name", c.name)
 	beforeState := c.stateMachine.MustState()
@@ -74,68 +93,46 @@ type TVController struct {
 	BaseController
 }
 
-func (c *TVController) Initialize(stateMaster *MasterController) {
+func (c *TVController) Initialize(masterController *MasterController) []MQTTPublish {
 	c.name = "tv-controller"
+	c.masterController = masterController
+
 	var initialState tvState
-	if stateMaster.stateValueMap.requireTrue("tvpower") {
+	if masterController.stateValueMap.requireTrue("tvpower") {
 		initialState = stateTvOn
-	} else if stateMaster.stateValueMap.requireFalse("tvpower") {
+	} else if masterController.stateValueMap.requireFalse("tvpower") {
 		initialState = stateTvOff
 	} else {
-		return
+		return nil
 	}
 
-	sm := stateless.NewStateMachine(initialState)
-	sm.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
+	c.stateMachine = stateless.NewStateMachine(initialState)
+	c.stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
-	sm.Configure(stateTvOn).
+	c.stateMachine.Configure(stateTvOn).
 		OnEntry(c.turnOnTvAppliances).
-		Permit("mqttEvent", stateTvOff, stateMaster.guardStateTvOff)
+		Permit("mqttEvent", stateTvOff, masterController.guardStateTvOff)
 
-	sm.Configure(stateTvOff).
+	c.stateMachine.Configure(stateTvOff).
 		OnEntry(c.turnOffTvAppliances).
-		Permit("mqttEvent", stateTvOn, stateMaster.guardStateTvOn).
-		Permit("mqttEvent", stateTvOffLong, stateMaster.guardStateTvOffLong)
+		Permit("mqttEvent", stateTvOn, masterController.guardStateTvOn).
+		Permit("mqttEvent", stateTvOffLong, masterController.guardStateTvOffLong)
 
-	sm.Configure(stateTvOffLong).
+	c.stateMachine.Configure(stateTvOffLong).
 		OnEntry(c.turnOffTvAppliancesLong).
-		Permit("mqttEvent", stateTvOn, stateMaster.guardStateTvOn)
+		Permit("mqttEvent", stateTvOn, masterController.guardStateTvOn)
 
-	c.stateMachine = sm
 	c.isInitialized = true
-}
-
-func tvPowerOffOutputNew() []MQTTPublish {
-	return []MQTTPublish{
-		{
-			Topic:    "zigbee2mqtt/ikea_uttag/set",
-			Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
-			Qos:      2,
-			Retained: false,
-			Wait:     0 * time.Second,
-		},
-	}
-}
-
-func tvPowerOnOutputNew() []MQTTPublish {
-	return []MQTTPublish{
-		{
-			Topic:    "zigbee2mqtt/ikea_uttag/set",
-			Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
-			Qos:      2,
-			Retained: false,
-			Wait:     0 * time.Second,
-		},
-	}
+	return nil
 }
 
 func (c *TVController) turnOnTvAppliances(_ context.Context, _ ...any) error {
-	c.addEventsToPublish(tvPowerOnOutputNew())
+	c.addEventsToPublish(tvPowerOnOutput())
 	return nil
 }
 
 func (c *TVController) turnOffTvAppliances(_ context.Context, _ ...any) error {
-	c.addEventsToPublish(tvPowerOffOutputNew())
+	c.addEventsToPublish(tvPowerOffOutput())
 	return nil
 }
 
@@ -143,37 +140,43 @@ func (c *TVController) turnOffTvAppliancesLong(_ context.Context, _ ...any) erro
 	return nil
 }
 
-func (stateMaster *MasterController) ProcessEvent(client mqtt.Client, ev MQTTEvent) {
+func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQTTEvent) {
 
-	// Update state value map
-	stateMaster.detectPhonePresent(ev)
-	stateMaster.detectLivingroomPresence(ev)
-	stateMaster.detectLivingroomFloorlampState(ev)
-	stateMaster.detectNighttime(ev)
-	stateMaster.detectTVPower(ev)
-	stateMaster.detectMPDPlay(ev)
-	stateMaster.detectKitchenAmpPower(ev)
-	stateMaster.detectKitchenAudioPlaying(ev)
-	stateMaster.detectBedroomBlindsOpen(ev)
+	masterController.mu.Lock()
+	defer masterController.mu.Unlock()
 
-	for _, c := range stateMaster.controllers {
+	masterController.detectPhonePresent(ev)
+	masterController.detectLivingroomPresence(ev)
+	masterController.detectLivingroomFloorlampState(ev)
+	masterController.detectNighttime(ev)
+	masterController.detectTVPower(ev)
+	masterController.detectMPDPlay(ev)
+	masterController.detectKitchenAmpPower(ev)
+	masterController.detectKitchenAudioPlaying(ev)
+	masterController.detectBedroomBlindsOpen(ev)
+
+	for _, c := range *masterController.controllers {
 		controller := c
 		go func() {
 			// For reliability, we call each loop in its own goroutine (yes, one
 			// per message), so that one loop can be stuck while others still
 			// make progress.
 
-			// lock around this?
-			var results []MQTTPublish
+			controller.Lock()
+			defer controller.Unlock()
+
+			var toPublish []MQTTPublish
 			if !controller.IsInitialized() {
-				controller.Initialize(stateMaster)
+				// If initialize requires other processes to update some state to determine
+				// correct init state it can be requested  by events returned here
+				// But the Initialize method must make sure to not request unneccessarily often
+				toPublish = append(toPublish, controller.Initialize(masterController)...)
 			}
 			if controller.IsInitialized() {
-				results = controller.ProcessEvent(ev)
+				toPublish = append(toPublish, controller.ProcessEvent(ev)...)
 			}
-			// end lock around this?
 
-			for _, result := range results {
+			for _, result := range toPublish {
 				count = count + 1
 				go func(toPublish MQTTPublish) {
 					if toPublish.Wait != 0 {

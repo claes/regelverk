@@ -68,13 +68,14 @@ func printHelp() {
 	flag.PrintDefaults()
 }
 
-func StartRegelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, dryRun *bool, debug *bool) {
+func StartRegelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller,
+	dryRun *bool, debug *bool) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
 	go func() {
 		slog.Info("Initializing Regelverk", "config", config)
-		err := Regelverk(config, loops, bridgeWrappers, dryRun, debug)
+		err := Regelverk(config, loops, bridgeWrappers, controllers, dryRun, debug)
 		if err != nil {
 			slog.Error("Error initializing regelverk", "error", err)
 			os.Exit(1)

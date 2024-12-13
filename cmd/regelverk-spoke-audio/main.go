@@ -14,5 +14,7 @@ func main() {
 		&internal.PulseaudioBridgeWrapper{},
 	}
 
-	internal.StartRegelverk(config, loops, &bridgeWrappers, dryRun, debug)
+	controllers := &[]internal.Controller{}
+
+	internal.StartRegelverk(config, loops, &bridgeWrappers, controllers, dryRun, debug)
 }
