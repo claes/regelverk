@@ -14,7 +14,6 @@ func main() {
 		&internal.CecLoop{},
 		&internal.KitchenLoop{},
 		&internal.LivingroomLoop{},
-		&internal.SnapcastLoop{},
 		&internal.WebLoop{},
 	}
 
@@ -30,6 +29,7 @@ func main() {
 
 	controllers := &[]internal.Controller{
 		&internal.TVController{},
+		&internal.SnapcastController{},
 	}
 
 	internal.StartRegelverk(config, loops, bridgeWrappers, controllers, dryRun, debug)
