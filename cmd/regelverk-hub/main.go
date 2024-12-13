@@ -10,10 +10,7 @@ func main() {
 
 	loops := []internal.ControlLoop{
 		//&internal.MpdLoop{},
-		&internal.BedroomLoop{},
 		&internal.CecLoop{},
-		&internal.KitchenLoop{},
-		&internal.LivingroomLoop{},
 		&internal.WebLoop{},
 	}
 
@@ -29,6 +26,9 @@ func main() {
 
 	controllers := &[]internal.Controller{
 		&internal.TVController{},
+		&internal.KitchenController{},
+		&internal.LivingroomController{},
+		&internal.BedroomController{},
 		&internal.SnapcastController{},
 	}
 
