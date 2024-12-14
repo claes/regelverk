@@ -49,27 +49,28 @@ type MQTTPublish struct {
 type ControlLoop interface {
 	sync.Locker
 
-	Init(*mqttMessageHandler, Config)
+	Init(*MQTTMessageHandler, Config)
 
 	ProcessEvent(MQTTEvent) []MQTTPublish
 }
 
 type statusLoop struct {
 	mu sync.Mutex
-	m  *mqttMessageHandler
+	m  *MQTTMessageHandler
 }
 
 func (l *statusLoop) Lock() { l.mu.Lock() }
 
 func (l *statusLoop) Unlock() { l.mu.Unlock() }
 
-type mqttMessageHandler struct {
-	dryRun bool
-	client mqtt.Client
-	loops  []ControlLoop
+type MQTTMessageHandler struct {
+	dryRun           bool
+	client           mqtt.Client
+	loops            []ControlLoop
+	masterController MasterController
 }
 
-func (h *mqttMessageHandler) handle(_ mqtt.Client, m mqtt.Message) {
+func (h *MQTTMessageHandler) handle(_ mqtt.Client, m mqtt.Message) {
 	slog.Debug("MQTT handle", "topic", m.Topic(), "payload", m.Payload())
 	ev := MQTTEvent{
 		Timestamp: time.Now(), // consistent for all loops
@@ -81,7 +82,9 @@ func (h *mqttMessageHandler) handle(_ mqtt.Client, m mqtt.Message) {
 
 var count int64 = 0
 
-func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
+func (h *MQTTMessageHandler) handleEvent(ev MQTTEvent) {
+
+	h.masterController.ProcessEvent(h.client, ev)
 
 	for _, l := range h.loops {
 		loop := l // copy
@@ -110,7 +113,7 @@ func (h *mqttMessageHandler) handleEvent(ev MQTTEvent) {
 	}
 }
 
-func createMqttMessageHandler(config Config, loops []ControlLoop, dryRun, debug *bool) (*mqttMessageHandler, error) {
+func createMQTTMessageHandler(config Config, loops []ControlLoop, masterController MasterController, dryRun, debug *bool) (*MQTTMessageHandler, error) {
 	host, err := os.Hostname()
 	if err != nil {
 		return nil, err
@@ -126,9 +129,10 @@ func createMqttMessageHandler(config Config, loops []ControlLoop, dryRun, debug 
 		slog.Debug("MQTT password", "password", mqttPassword)
 	}
 
-	mqttMessageHandler := &mqttMessageHandler{
-		dryRun: *dryRun,
-		loops:  loops,
+	mqttMessageHandler := &MQTTMessageHandler{
+		dryRun:           *dryRun,
+		loops:            loops,
+		masterController: masterController,
 	}
 
 	opts := mqtt.NewClientOptions().
@@ -154,7 +158,6 @@ func createMqttMessageHandler(config Config, loops []ControlLoop, dryRun, debug 
 		SetConnectRetry(true)
 
 	client := mqtt.NewClient(opts)
-	mqttMessageHandler.client = client
 	slog.Info("Connecting to MQTT broker", "broker", config.MQTTBroker)
 
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
@@ -163,6 +166,7 @@ func createMqttMessageHandler(config Config, loops []ControlLoop, dryRun, debug 
 	}
 	slog.Info("Connected to MQTT broker", "broker", config.MQTTBroker)
 
+	mqttMessageHandler.client = client
 	return mqttMessageHandler, nil
 }
 
@@ -180,9 +184,13 @@ func createMqttMessageHandler(config Config, loops []ControlLoop, dryRun, debug 
 // 	}()
 // }
 
-func Regelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, dryRun, debug *bool) error {
+func Regelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller,
+	dryRun, debug *bool) error {
 
-	mqttMessageHandler, err := createMqttMessageHandler(config, loops, dryRun, debug)
+	masterController := CreateMasterController()
+	masterController.controllers = controllers
+
+	mqttMessageHandler, err := createMQTTMessageHandler(config, loops, masterController, dryRun, debug)
 	if err != nil {
 		return err
 	}

@@ -10,12 +10,7 @@ func main() {
 
 	loops := []internal.ControlLoop{
 		//&internal.MpdLoop{},
-		&internal.BedroomLoop{},
 		&internal.CecLoop{},
-		&internal.KitchenLoop{},
-		&internal.LivingroomLoop{},
-		&internal.SnapcastLoop{},
-		&internal.TVLoop{},
 		&internal.WebLoop{},
 	}
 
@@ -29,5 +24,13 @@ func main() {
 		&internal.SnapcastBridgeWrapper{},
 	}
 
-	internal.StartRegelverk(config, loops, bridgeWrappers, dryRun, debug)
+	controllers := &[]internal.Controller{
+		&internal.TVController{},
+		&internal.KitchenController{},
+		&internal.LivingroomController{},
+		&internal.BedroomController{},
+		&internal.SnapcastController{},
+	}
+
+	internal.StartRegelverk(config, loops, bridgeWrappers, controllers, dryRun, debug)
 }

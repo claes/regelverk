@@ -8,14 +8,16 @@ func main() {
 
 	config, debug, dryRun := internal.ParseConfig()
 
-	loops := []internal.ControlLoop{
-		&internal.SnapcastLoop{},
-	}
+	loops := []internal.ControlLoop{}
 
 	bridgeWrappers := []internal.BridgeWrapper{
 		&internal.SnapcastBridgeWrapper{},
 		&internal.PulseaudioBridgeWrapper{},
 	}
 
-	internal.StartRegelverk(config, loops, &bridgeWrappers, dryRun, debug)
+	controllers := &[]internal.Controller{
+		&internal.SnapcastController{},
+	}
+
+	internal.StartRegelverk(config, loops, &bridgeWrappers, controllers, dryRun, debug)
 }
