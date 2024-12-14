@@ -1,12 +1,14 @@
 package regelverk
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"log/slog"
 	"os"
 	"os/signal"
+	"sync"
 )
 
 func ParseConfig() (Config, *bool, *bool) {
@@ -70,22 +72,27 @@ func printHelp() {
 
 func StartRegelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller,
 	dryRun *bool, debug *bool) {
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		slog.Info("Initializing Regelverk", "config", config)
-		err := Regelverk(config, loops, bridgeWrappers, controllers, dryRun, debug)
+		err := runRegelverk(ctx, config, loops, bridgeWrappers, controllers, dryRun, debug)
 		if err != nil {
 			slog.Error("Error initializing regelverk", "error", err)
-			os.Exit(1)
-		} else {
-			slog.Info("Initialized regelverk")
 		}
 	}()
 
 	slog.Info("Starting regelverk")
 	<-c
+	cancel()
+	wg.Wait()
 	slog.Info("Shut down regelverk")
-	os.Exit(0)
 }

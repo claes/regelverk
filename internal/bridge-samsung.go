@@ -1,6 +1,8 @@
 package regelverk
 
 import (
+	"context"
+
 	samsungmqtt "github.com/claes/samsung-mqtt/lib"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -14,7 +16,7 @@ func (l *SamsungBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config C
 	return nil
 }
 
-func (l *SamsungBridgeWrapper) Run() error {
+func (l *SamsungBridgeWrapper) Run(context context.Context) error {
 	go l.bridge.MainLoop()
 	return nil
 }

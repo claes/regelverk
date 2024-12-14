@@ -1,6 +1,7 @@
 package regelverk
 
 import (
+	"context"
 	"log/slog"
 
 	rotelmqtt "github.com/claes/rotel-mqtt/lib"
@@ -24,7 +25,7 @@ func (l *RotelBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Con
 	return nil
 }
 
-func (l *RotelBridgeWrapper) Run() error {
+func (l *RotelBridgeWrapper) Run(context context.Context) error {
 	slog.Debug("Starting rotel bridge", "bridge", l.bridge)
 	go l.bridge.SerialLoop()
 	slog.Debug("Rotel bridge started")

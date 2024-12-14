@@ -22,7 +22,7 @@ func (l *CecBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Confi
 	return nil
 }
 
-func (l *CecBridgeWrapper) Run() error {
+func (l *CecBridgeWrapper) Run(context context.Context) error {
 	go cecBridgeMainLoop(l.mqttClient, l.topicPrefix)
 	return nil
 }

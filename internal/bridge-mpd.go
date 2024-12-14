@@ -1,6 +1,7 @@
 package regelverk
 
 import (
+	"context"
 	"log/slog"
 
 	mpdmqtt "github.com/claes/mpd-mqtt/lib"
@@ -32,7 +33,7 @@ func (l *MpdBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Confi
 	return nil
 }
 
-func (l *MpdBridgeWrapper) Run() error {
+func (l *MpdBridgeWrapper) Run(context context.Context) error {
 	go func() {
 		l.bridge.DetectReconnectMPDClient(l.config.MpdServer, l.mpdPassword)
 	}()

@@ -1,6 +1,7 @@
 package regelverk
 
 import (
+	"context"
 	"log/slog"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -8,10 +9,10 @@ import (
 
 type BridgeWrapper interface {
 	InitializeBridge(mqttClient mqtt.Client, config Config) error
-	Run() error
+	Run(context context.Context) error
 }
 
-func initBridges(mqttClient mqtt.Client, config Config, bridgeWrappers *[]BridgeWrapper) {
+func initBridges(context context.Context, mqttClient mqtt.Client, config Config, bridgeWrappers *[]BridgeWrapper) {
 
 	for _, bridgeWrapper := range *bridgeWrappers {
 		slog.Debug("Initializing bridge", "bridgeWrapper", bridgeWrapper)
@@ -20,7 +21,7 @@ func initBridges(mqttClient mqtt.Client, config Config, bridgeWrappers *[]Bridge
 			slog.Error("Could not initialize bridge", "error", err, "bridgeWrapper", bridgeWrapper)
 		} else {
 			slog.Debug("Starting bridge", "bridgeWrapper", bridgeWrapper)
-			err = bridgeWrapper.Run()
+			err = bridgeWrapper.Run(context)
 			if err != nil {
 				slog.Error("Error when starting bridge", "error", err, "bridgeWrapper", bridgeWrapper)
 			} else {

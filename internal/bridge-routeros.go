@@ -1,6 +1,7 @@
 package regelverk
 
 import (
+	"context"
 	"log/slog"
 
 	routerosmqtt "github.com/claes/routeros-mqtt/lib"
@@ -36,7 +37,7 @@ func (l *RouterOSBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config 
 	return nil
 }
 
-func (l *RouterOSBridgeWrapper) Run() error {
+func (l *RouterOSBridgeWrapper) Run(context context.Context) error {
 	slog.Debug("Starting RouterOS bridge", "bridge", l.bridge)
 	go l.bridge.MainLoop()
 	slog.Debug("RouterOS bridge started")

@@ -1,6 +1,7 @@
 package regelverk
 
 import (
+	"context"
 	"log/slog"
 
 	pulsemqtt "github.com/claes/pulseaudio-mqtt/lib"
@@ -21,7 +22,7 @@ func (l *PulseaudioBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, confi
 	return nil
 }
 
-func (l *PulseaudioBridgeWrapper) Run() error {
+func (l *PulseaudioBridgeWrapper) Run(context context.Context) error {
 	go l.bridge.MainLoop()
 	slog.Info("Pulseaudio bridge started")
 	return nil

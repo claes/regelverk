@@ -66,12 +66,12 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		c.addEventsToPublish(eventHandler(ev))
 	}
 
-	slog.Info("Fire event", "name", c.name)
+	slog.Debug("Fire event", "name", c.name)
 	beforeState := c.stateMachine.MustState()
 	c.stateMachine.Fire("mqttEvent", ev)
 
 	eventsToPublish := c.getAndResetEventsToPublish()
-	slog.Info("Event fired", "fsm", c.name, "beforeState", beforeState,
+	slog.Debug("Event fired", "fsm", c.name, "beforeState", beforeState,
 		"afterState", c.stateMachine.MustState())
 	return eventsToPublish
 }
@@ -141,13 +141,13 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 
 func (l *MasterController) guardStateSnapcastOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("snapcast")
-	slog.Info("guardStateSnapcastOn", "check", check)
+	slog.Debug("guardStateSnapcastOn", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateSnapcastOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("snapcast")
-	slog.Info("guardStateSnapcastOff", "check", check)
+	slog.Debug("guardStateSnapcastOff", "check", check)
 	return check
 }
 
@@ -155,7 +155,7 @@ func (l *MasterController) guardTurnOnLivingroomLamp(_ context.Context, _ ...any
 	check := l.stateValueMap.requireTrue("phonePresent") &&
 		l.stateValueMap.requireTrue("nighttime") &&
 		l.stateValueMap.requireTrueRecently("livingroomPresence", 10*time.Minute)
-	slog.Info("guardTurnOnLamp", "check", check)
+	slog.Debug("guardTurnOnLamp", "check", check)
 	return check
 }
 
@@ -163,49 +163,49 @@ func (l *MasterController) guardTurnOffLivingroomLamp(_ context.Context, _ ...an
 	check := l.stateValueMap.requireFalse("phonePresent") ||
 		l.stateValueMap.requireFalse("nighttime") ||
 		l.stateValueMap.requireTrueNotRecently("livingroomPresence", 10*time.Minute)
-	slog.Info("guardTurnOffLamp", "check", check)
+	slog.Debug("guardTurnOffLamp", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateTvOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("tvpower")
-	slog.Info("guardStateTvOn", "check", check)
+	slog.Debug("guardStateTvOn", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateTvOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("tvpower")
-	slog.Info("guardStateTvOff", "check", check)
+	slog.Debug("guardStateTvOff", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateTvOffLong(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrueNotRecently("tvpower", 30*time.Minute)
-	slog.Info("guardStateTvOff", "check", check)
+	slog.Debug("guardStateTvOff", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateKitchenAmpOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("kitchenaudioplaying")
-	slog.Info("guardStateKitchenAmpOn", "check", check)
+	slog.Debug("guardStateKitchenAmpOn", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateKitchenAmpOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrueNotRecently("kitchenaudioplaying", 10*time.Minute)
-	slog.Info("guardStateKitchenAmpOn", "check", check)
+	slog.Debug("guardStateKitchenAmpOn", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateBedroomBlindsOpen(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("nighttime")
-	slog.Info("guardStateBedroomBlindsOpen", "check", check)
+	slog.Debug("guardStateBedroomBlindsOpen", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateBedroomBlindsClosed(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("nighttime")
-	slog.Info("guardStateBedroomBlindsClosed", "check", check)
+	slog.Debug("guardStateBedroomBlindsClosed", "check", check)
 	return check
 }
 
@@ -217,7 +217,7 @@ func (l *MasterController) detectPhonePresent(ev MQTTEvent) {
 
 		err := json.Unmarshal(ev.Payload.([]byte), &wifiClients)
 		if err != nil {
-			slog.Info("Could not parse payload", "topic", "routeros/wificlients", "error", err)
+			slog.Error("Could not parse payload", "topic", "routeros/wificlients", "error", err)
 			return
 		}
 		found := false
@@ -227,7 +227,7 @@ func (l *MasterController) detectPhonePresent(ev MQTTEvent) {
 				break
 			}
 		}
-		slog.Info("detectPhonePresent", "phonePresent", found)
+		slog.Debug("detectPhonePresent", "phonePresent", found)
 		l.stateValueMap.setState("phonePresent", found)
 	}
 }
@@ -261,7 +261,7 @@ func (l *MasterController) detectTVPower(ev MQTTEvent) {
 	if ev.Topic == "regelverk/state/tvpower" {
 		tvPower, err := strconv.ParseBool(string(ev.Payload.([]byte)))
 		if err != nil {
-			slog.Info("Could not parse payload", "topic", "regelverk/state/tvpower", "error", err)
+			slog.Error("Could not parse payload", "topic", "regelverk/state/tvpower", "error", err)
 		}
 		l.stateValueMap.setState("tvpower", tvPower)
 	}
@@ -286,7 +286,7 @@ func (l *MasterController) detectKitchenAudioPlaying(ev MQTTEvent) {
 		var pulseaudioState pulseaudiomqtt.PulseAudioState
 		err := json.Unmarshal(ev.Payload.([]byte), &pulseaudioState)
 		if err != nil {
-			slog.Info("Could not parse payload", "topic", "kitchen/pulseaudio/state", "error", err)
+			slog.Error("Could not parse payload", "topic", "kitchen/pulseaudio/state", "error", err)
 			return
 		}
 		l.stateValueMap.setState("kitchenaudioplaying", pulseaudioState.DefaultSink.State == 0)

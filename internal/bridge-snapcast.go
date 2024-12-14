@@ -1,6 +1,7 @@
 package regelverk
 
 import (
+	"context"
 	"log/slog"
 
 	snapcastmqtt "github.com/claes/snapcast-mqtt/lib"
@@ -22,7 +23,7 @@ func (l *SnapcastBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config 
 	return nil
 }
 
-func (l *SnapcastBridgeWrapper) Run() error {
+func (l *SnapcastBridgeWrapper) Run(context context.Context) error {
 	go l.bridge.MainLoop()
 	slog.Info("Snapcast bridge started")
 	return nil
