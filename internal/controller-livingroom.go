@@ -7,6 +7,11 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+const (
+	stateLivingroomFloorlampOn  = "LampOn"
+	stateLivingroomFloorlampOff = "LampOff"
+)
+
 type LivingroomController struct {
 	BaseController
 }

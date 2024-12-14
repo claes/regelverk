@@ -3,12 +3,26 @@ package regelverk
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"reflect"
+	"regexp"
+	"time"
 
 	pulsemqtt "github.com/claes/pulseaudio-mqtt/lib"
 	snapcastmqtt "github.com/claes/snapcast-mqtt/lib"
 	"github.com/qmuntal/stateless"
+)
+
+type snapcastState int
+
+var topicStreamRe = regexp.MustCompile(`snapcast/stream/([^/]+)$`)
+var topicClientRe = regexp.MustCompile(`snapcast/client/([^/]+)$`)
+var topicGroupRe = regexp.MustCompile(`snapcast/group/([^/]+)$`)
+
+const (
+	stateSnapcastOn snapcastState = iota
+	stateSnapcastOff
 )
 
 type SnapcastController struct {
@@ -144,4 +158,72 @@ func (c *SnapcastController) parsePulseaudio(ev MQTTEvent) {
 			slog.Error("Could not parse payload for topic", "topic", ev.Topic, "error", err)
 		}
 	}
+}
+
+func snapcastOnOutputTmp(sinkInputIndex uint32, sinkName string) []MQTTPublish {
+	result := []MQTTPublish{
+		{
+			Topic:    "pulseaudio/sinkinput/req",
+			Payload:  fmt.Sprintf(`{ "Command": "movesink", "SinkInputIndex": %d, "SinkName": "%s" }`, sinkInputIndex, sinkName),
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+		{
+			Topic:    "snapcast/client/livingroom/stream/set",
+			Payload:  "pulseaudio",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+		{
+			Topic:    "pulseaudio/cardprofile/0/set",
+			Payload:  "output:iec958-stereo+input:analog-stereo",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+		{
+			Topic:    "rotel/command/send",
+			Payload:  "opt2!",
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+	}
+	return result
+}
+
+func snapcastOffOutputTmp(sinkInputIndex uint32, sinkName string) []MQTTPublish {
+	result := []MQTTPublish{
+		{
+			Topic:    "pulseaudio/cardprofile/0/set",
+			Payload:  "output:hdmi-stereo", //TODO: switch this in advance?
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+		{
+			Topic:    "pulseaudio/sinkinput/req",
+			Payload:  fmt.Sprintf(`{ "Command": "movesink", "SinkInputIndex": %d, "SinkName": "%s" }`, sinkInputIndex, sinkName),
+			Qos:      2,
+			Retained: false,
+			Wait:     2 * time.Second,
+		},
+		{
+			Topic:    "snapcast/client/livingroom/stream/set",
+			Payload:  "default",
+			Qos:      2,
+			Retained: false,
+			Wait:     2 * time.Second,
+		},
+		{
+			Topic:    "rotel/command/send",
+			Payload:  "opt1!",
+			Qos:      2,
+			Retained: false,
+			Wait:     2 * time.Second,
+		},
+	}
+	return result
 }

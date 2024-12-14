@@ -7,6 +7,14 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+type tvState int
+
+const (
+	stateTvOn tvState = iota
+	stateTvOff
+	stateTvOffLong
+)
+
 type TVController struct {
 	BaseController
 }

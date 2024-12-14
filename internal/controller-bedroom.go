@@ -8,6 +8,13 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+type blindsState int
+
+const (
+	bedroomBlindsStateOpen blindsState = iota
+	bedroomBlindsStateClosed
+)
+
 type BedroomController struct {
 	BaseController
 }

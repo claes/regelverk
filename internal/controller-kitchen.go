@@ -7,6 +7,13 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+type ampState int
+
+const (
+	ampStateOn ampState = iota
+	ampStateOff
+)
+
 type KitchenController struct {
 	BaseController
 }
