@@ -170,7 +170,7 @@ func cecBridgeEventLoop(mqttClient mqtt.Client, topicPrefix string) {
 	for {
 		time.Sleep(4 * time.Second)
 		slog.Info("Creating new CEC connection", "count", i)
-		cecConfig := cecmqtt.CECClientConfig{CECName: "Regelverk", CECDeviceName: "/dev/ttyACM0"}
+		cecConfig := cecmqtt.CECClientConfig{CECDeviceName: "Regelverk", CECName: "/dev/ttyACM0"}
 		bridge, err := cecmqtt.NewCECMQTTBridge(cecConfig, mqttClient, topicPrefix)
 		if err != nil {
 			slog.Error("Could not create CEC MQTT bridge", "error", err)
