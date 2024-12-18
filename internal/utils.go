@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/sj14/astral/pkg/astral"
@@ -137,91 +136,93 @@ func (f StateValue) Age() time.Duration {
 }
 
 type StateValueMap struct {
-	stateValueMap sync.Map
+	stateValueMap map[string]StateValue
 }
 
-func NewStateValueMap() *StateValueMap {
-	return &StateValueMap{}
-}
-
-func (s *StateValueMap) setState(key string, value bool) {
-	now := time.Now()
-	newState := StateValue{
-		value:        value,
-		isDefined:    true,
-		lastUpdate:   now,
-		lastChange:   now,
-		lastSetTrue:  now,
-		lastSetFalse: now,
+func NewStateValueMap() StateValueMap {
+	return StateValueMap{
+		stateValueMap: make(map[string]StateValue),
 	}
+}
+func (s *StateValueMap) setState(key string, value bool) {
+	existingState, exists := s.stateValueMap[key]
 
-	existingValue, exists := s.stateValueMap.Load(key)
+	now := time.Now()
+	var updatedState StateValue
 	if exists {
-		existingState := existingValue.(StateValue)
 		if existingState.value == value {
-			newState.lastChange = existingState.lastChange
+			// don't change value
 		} else {
+			existingState.value = value
 			existingState.lastChange = now
 		}
-		newState = existingState
+		updatedState = existingState
+	} else {
+		// Not exists
+		updatedState = StateValue{
+			value:      value,
+			isDefined:  true,
+			lastUpdate: now,
+			lastChange: now,
+		}
 	}
 
 	if value {
-		newState.lastSetTrue = now
+		updatedState.lastSetTrue = now
 	} else {
-		newState.lastSetFalse = now
+		updatedState.lastSetFalse = now
 	}
+	s.stateValueMap[key] = updatedState
 
-	s.stateValueMap.Store(key, newState)
 }
 
 func (s *StateValueMap) getState(key string) StateValue {
-	stateValue, exists := s.stateValueMap.Load(key)
-	if !exists {
-		return StateValue{isDefined: false}
-	}
-	return stateValue.(StateValue)
+	stateValue, exists := s.stateValueMap[key]
+	stateValue.isDefined = exists
+	return stateValue
 }
 
 func (s *StateValueMap) requireTrue(key string) bool {
-	stateValue, exists := s.stateValueMap.Load(key)
+	stateValue, exists := s.stateValueMap[key]
 	if !exists {
 		return false
+	} else {
+		return stateValue.value
 	}
-	return stateValue.(StateValue).value
 }
 
 func (s *StateValueMap) requireFalse(key string) bool {
-	stateValue, exists := s.stateValueMap.Load(key)
+	stateValue, exists := s.stateValueMap[key]
 	if !exists {
 		return false
+	} else {
+		return !stateValue.value
 	}
-	return !stateValue.(StateValue).value
 }
 
 func (s *StateValueMap) requireTrueRecently(key string, duration time.Duration) bool {
-	stateValue, exists := s.stateValueMap.Load(key)
+	stateValue, exists := s.stateValueMap[key]
 	if !exists {
 		return false
+	} else {
+		return stateValue.value || time.Since(stateValue.lastSetTrue) < duration
 	}
-	return stateValue.(StateValue).value || time.Since(stateValue.(StateValue).lastSetTrue) < duration
 }
 
 func (s *StateValueMap) requireTrueNotRecently(key string, duration time.Duration) bool {
-	stateValue, exists := s.stateValueMap.Load(key)
+	stateValue, exists := s.stateValueMap[key]
 	if !exists {
 		return false
+	} else {
+		return !stateValue.value && time.Since(stateValue.lastSetTrue) > duration
 	}
-	return !stateValue.(StateValue).value && time.Since(stateValue.(StateValue).lastSetTrue) > duration
 }
 
 func (s *StateValueMap) LogState() {
 	now := time.Now()
 
 	var params [][]any
-	s.stateValueMap.Range(func(key, value any) bool {
-		stateValue := value.(StateValue)
-		strKey := key.(string)
+	for key, stateValue := range s.stateValueMap {
 
 		secondsSinceLastUpdate := int64(-1)
 		if !stateValue.lastUpdate.IsZero() {
@@ -243,7 +244,7 @@ func (s *StateValueMap) LogState() {
 			secondsSinceLastChange = int64(now.Sub(stateValue.lastChange).Seconds())
 		}
 
-		params = append(params, []any{"key", strKey,
+		params = append(params, []any{"key", key,
 			"value", stateValue.value,
 			"isDefined", stateValue.isDefined,
 			"lastUpdate", stateValue.lastUpdate,
@@ -254,8 +255,7 @@ func (s *StateValueMap) LogState() {
 			"secondsSinceLastSetTrue", secondsSinceLastSetTrue,
 			"lastSetFalse", stateValue.lastSetFalse,
 			"secondsSinceLastSetFalse", secondsSinceLastSetFalse})
-		return true
-	})
+	}
 
 	sort.Slice(params, func(i, j int) bool {
 		return params[i][1].(string) < params[j][1].(string)
