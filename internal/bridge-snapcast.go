@@ -2,9 +2,8 @@ package regelverk
 
 import (
 	"context"
-	"log/slog"
 
-	snapcastmqtt "github.com/claes/snapcast-mqtt/lib"
+	snapcastmqtt "github.com/claes/mqtt-bridges/snapcast-mqtt/lib"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -20,14 +19,10 @@ func (l *SnapcastBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config 
 	var err error
 	snapConfig := snapcastmqtt.SnapClientConfig{SnapServerAddress: config.SnapcastServer}
 	l.bridge, err = snapcastmqtt.NewSnapcastMQTTBridge(snapConfig, mqttClient, config.MQTTTopicPrefix)
-	if err != nil {
-		slog.Error("Could not create snapcast bridge", "error", err)
-		return err
-	}
-	return nil
+	return err
 }
 
-func (l *SnapcastBridgeWrapper) Run(context context.Context) error {
-	l.bridge.MainLoop()
+func (l *SnapcastBridgeWrapper) Run(ctx context.Context) error {
+	l.bridge.EventLoop(ctx)
 	return nil
 }

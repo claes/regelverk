@@ -2,9 +2,8 @@ package regelverk
 
 import (
 	"context"
-	"log/slog"
 
-	pulsemqtt "github.com/claes/pulseaudio-mqtt/lib"
+	pulsemqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -17,16 +16,13 @@ func (l *PulseaudioBridgeWrapper) String() string {
 }
 
 func (l *PulseaudioBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
-	pulseclient, err := pulsemqtt.CreatePulseClient(config.Pulseserver)
-	if err != nil {
-		slog.Error("Could not create pulse client", "error", err)
-		return err
-	}
-	l.bridge = pulsemqtt.NewPulseaudioMQTTBridge(pulseclient, mqttClient, config.MQTTTopicPrefix)
-	return nil
+	var err error
+	pulseClientConfig := pulsemqtt.PulseClientConfig{PulseServerAddress: config.Pulseserver}
+	l.bridge, err = pulsemqtt.NewPulseaudioMQTTBridge(pulseClientConfig, mqttClient, config.MQTTTopicPrefix)
+	return err
 }
 
-func (l *PulseaudioBridgeWrapper) Run(context context.Context) error {
-	l.bridge.MainLoop()
+func (l *PulseaudioBridgeWrapper) Run(ctx context.Context) error {
+	l.bridge.EventLoop(ctx)
 	return nil
 }

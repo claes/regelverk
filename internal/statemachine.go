@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	pulseaudiomqtt "github.com/claes/pulseaudio-mqtt/lib"
-	routerosmqtt "github.com/claes/routeros-mqtt/lib"
+	pulseaudiomqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
+	routerosmqtt "github.com/claes/mqtt-bridges/routeros-mqtt/lib"
 	"github.com/qmuntal/stateless"
 )
 

@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"time"
 
-	pulsemqtt "github.com/claes/pulseaudio-mqtt/lib"
-	snapcastmqtt "github.com/claes/snapcast-mqtt/lib"
+	pulsemqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
+	snapcastmqtt "github.com/claes/mqtt-bridges/snapcast-mqtt/lib"
 	"github.com/qmuntal/stateless"
 )
 
