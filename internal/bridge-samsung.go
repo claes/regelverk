@@ -23,6 +23,6 @@ func (l *SamsungBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config C
 }
 
 func (l *SamsungBridgeWrapper) Run(ctx context.Context) error {
-	go l.bridge.EventLoop(ctx)
+	l.bridge.EventLoop(ctx)
 	return nil
 }

@@ -42,6 +42,6 @@ func (l *MpdBridgeWrapper) Run(context context.Context) error {
 		l.bridge.DetectReconnectMPDClient(l.config.MpdServer, l.mpdPassword)
 	}()
 
-	go l.bridge.MainLoop()
+	l.bridge.MainLoop()
 	return nil
 }

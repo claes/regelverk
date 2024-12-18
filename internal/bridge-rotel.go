@@ -25,7 +25,6 @@ func (l *RotelBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Con
 
 func (l *RotelBridgeWrapper) Run(ctx context.Context) error {
 	slog.Debug("Starting rotel bridge", "bridge", l.bridge)
-	go l.bridge.EventLoop(ctx)
-	slog.Debug("Rotel bridge started")
+	l.bridge.EventLoop(ctx)
 	return nil
 }

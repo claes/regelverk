@@ -34,7 +34,6 @@ func (l *RouterOSBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config 
 
 func (l *RouterOSBridgeWrapper) Run(ctx context.Context) error {
 	slog.Debug("Starting RouterOS bridge", "bridge", l.bridge)
-	go l.bridge.EventLoop(ctx)
-	slog.Debug("RouterOS bridge started")
+	l.bridge.EventLoop(ctx)
 	return nil
 }
