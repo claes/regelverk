@@ -15,7 +15,7 @@ import (
 )
 
 type MasterController struct {
-	stateValueMap StateValueMap
+	stateValueMap *StateValueMap
 	controllers   *[]Controller
 	mu            sync.Mutex
 }

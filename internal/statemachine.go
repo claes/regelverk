@@ -18,7 +18,7 @@ type StateMachineMQTTBridge struct {
 	name            string
 	stateMachine    *stateless.StateMachine
 	eventsToPublish []MQTTPublish
-	stateValueMap   StateValueMap
+	stateValueMap   *StateValueMap
 	mu              sync.Mutex
 }
 
