@@ -11,6 +11,10 @@ type SamsungBridgeWrapper struct {
 	bridge samsungmqtt.SamsungRemoteMQTTBridge
 }
 
+func (l *SamsungBridgeWrapper) String() string {
+	return "SamsungBridgeWrapper"
+}
+
 func (l *SamsungBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
 	l.bridge = *samsungmqtt.NewSamsungRemoteMQTTBridge(&config.SamsungTvAddress, mqttClient, config.MQTTTopicPrefix)
 	return nil

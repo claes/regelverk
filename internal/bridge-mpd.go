@@ -14,6 +14,10 @@ type MpdBridgeWrapper struct {
 	mpdPassword string
 }
 
+func (l *MpdBridgeWrapper) String() string {
+	return "MpdBridgeWrapper"
+}
+
 func (l *MpdBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
 	mpdPassword, err := fileToString(config.MpdPasswordFile)
 	if err != nil {

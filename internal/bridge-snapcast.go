@@ -12,6 +12,10 @@ type SnapcastBridgeWrapper struct {
 	bridge *snapcastmqtt.SnapcastMQTTBridge
 }
 
+func (l *SnapcastBridgeWrapper) String() string {
+	return "SnapcastBridgeWrapper"
+}
+
 func (l *SnapcastBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
 	var err error
 	snapConfig := snapcastmqtt.SnapClientConfig{SnapServerAddress: config.SnapcastServer}
@@ -24,7 +28,6 @@ func (l *SnapcastBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config 
 }
 
 func (l *SnapcastBridgeWrapper) Run(context context.Context) error {
-	go l.bridge.MainLoop()
-	slog.Info("Snapcast bridge started")
+	l.bridge.MainLoop()
 	return nil
 }

@@ -16,6 +16,10 @@ type CecBridgeWrapper struct {
 	topicPrefix string
 }
 
+func (l *CecBridgeWrapper) String() string {
+	return "CecBridgeWrapper"
+}
+
 func (l *CecBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
 	l.mqttClient = mqttClient
 	l.topicPrefix = config.MQTTTopicPrefix

@@ -12,6 +12,10 @@ type PulseaudioBridgeWrapper struct {
 	bridge *pulsemqtt.PulseaudioMQTTBridge
 }
 
+func (l *PulseaudioBridgeWrapper) String() string {
+	return "PulseaudioBridgeWrapper"
+}
+
 func (l *PulseaudioBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
 	pulseclient, err := pulsemqtt.CreatePulseClient(config.Pulseserver)
 	if err != nil {
@@ -23,7 +27,6 @@ func (l *PulseaudioBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, confi
 }
 
 func (l *PulseaudioBridgeWrapper) Run(context context.Context) error {
-	go l.bridge.MainLoop()
-	slog.Info("Pulseaudio bridge started")
+	l.bridge.MainLoop()
 	return nil
 }

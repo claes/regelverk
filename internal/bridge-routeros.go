@@ -12,6 +12,10 @@ type RouterOSBridgeWrapper struct {
 	bridge *routerosmqtt.RouterOSMQTTBridge
 }
 
+func (l *RouterOSBridgeWrapper) String() string {
+	return "RouterOSBridgeWrapper"
+}
+
 func (l *RouterOSBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
 
 	slog.Debug("Creating RouterOS bridge")

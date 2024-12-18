@@ -12,6 +12,10 @@ type RotelBridgeWrapper struct {
 	bridge *rotelmqtt.RotelMQTTBridge
 }
 
+func (l *RotelBridgeWrapper) String() string {
+	return "RotelBridgeWrapper"
+}
+
 func (l *RotelBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
 	slog.Debug("Preparing rotel bridge", "config", config, "mqttClient", mqttClient)
 	port, err := rotelmqtt.CreateSerialPort(config.RotelSerialPort)
