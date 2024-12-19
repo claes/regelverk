@@ -77,12 +77,10 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 }
 
 func (c *BaseController) addEventsToPublish(events []MQTTPublish) {
-	//Locking?
 	c.eventsToPublish = append(c.eventsToPublish, events...)
 }
 
 func (c *BaseController) getAndResetEventsToPublish() []MQTTPublish {
-	//Locking?
 	events := c.eventsToPublish
 	c.eventsToPublish = []MQTTPublish{}
 	return events
@@ -235,14 +233,28 @@ func (l *MasterController) detectPhonePresent(ev MQTTEvent) {
 func (l *MasterController) detectLivingroomPresence(ev MQTTEvent) {
 	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
 		m := parseJSONPayload(ev)
-		l.stateValueMap.setState("livingroomPresence", m["occupancy"].(bool))
+		if m == nil {
+			return
+		}
+		val, exists := m["occupancy"]
+		if !exists || val == nil {
+			return
+		}
+		l.stateValueMap.setState("livingroomPresence", val.(bool))
 	}
 }
 
 func (l *MasterController) detectLivingroomFloorlampState(ev MQTTEvent) {
 	if ev.Topic == "zigbee2mqtt/livingroom-floorlamp" {
 		m := parseJSONPayload(ev)
-		state := m["state"].(string)
+		if m == nil {
+			return
+		}
+		val, exists := m["state"]
+		if !exists || val == nil {
+			return
+		}
+		state := val.(string)
 		on := false
 		if state == "ON" {
 			on = true
@@ -270,14 +282,28 @@ func (l *MasterController) detectTVPower(ev MQTTEvent) {
 func (l *MasterController) detectMPDPlay(ev MQTTEvent) {
 	if ev.Topic == "mpd/status" {
 		m := parseJSONPayload(ev)
-		l.stateValueMap.setState("mpdPlay", m["state"].(string) == "play")
+		if m == nil {
+			return
+		}
+		val, exists := m["state"]
+		if !exists || val == nil {
+			return
+		}
+		l.stateValueMap.setState("mpdPlay", val.(string) == "play")
 	}
 }
 
 func (l *MasterController) detectKitchenAmpPower(ev MQTTEvent) {
 	if ev.Topic == "zigbee2mqtt/kitchen-amp" {
 		m := parseJSONPayload(ev)
-		l.stateValueMap.setState("kitchenamppower", m["state"].(string) == "ON")
+		if m == nil {
+			return
+		}
+		val, exists := m["state"]
+		if !exists || val == nil {
+			return
+		}
+		l.stateValueMap.setState("kitchenamppower", val.(string) == "ON")
 	}
 }
 
@@ -296,7 +322,14 @@ func (l *MasterController) detectKitchenAudioPlaying(ev MQTTEvent) {
 func (l *MasterController) detectBedroomBlindsOpen(ev MQTTEvent) {
 	if ev.Topic == "zigbee2mqtt/blinds-bedroom" {
 		m := parseJSONPayload(ev)
-		pos, exists := m["position"]
+		if m == nil {
+			return
+		}
+		val, exists := m["position"]
+		if !exists || val == nil {
+			return
+		}
+		pos, exists := val.(string)
 		if exists {
 			l.stateValueMap.setState("bedroomblindsopen", pos.(float64) > 50)
 		}

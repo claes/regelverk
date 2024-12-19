@@ -94,7 +94,14 @@ func (c *SnapcastController) turnOffSnapcast(_ context.Context, _ ...any) error 
 func (c *SnapcastController) detectRemoteToggle(ev MQTTEvent) {
 	if ev.Topic == "zigbee2mqtt/media_remote" {
 		m := parseJSONPayload(ev)
-		action := m["action"].(string)
+		if m == nil {
+			return
+		}
+		val, exists := m["action"]
+		if !exists || val == nil {
+			return
+		}
+		action := val.(string)
 		if action == "arrow_right_click" {
 			c.masterController.stateValueMap.setState("snapcast", true)
 		} else if action == "arrow_left_click" {
