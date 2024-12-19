@@ -3,6 +3,7 @@ package regelverk
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"sync"
@@ -136,6 +137,18 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 }
 
 // Guards
+
+func (l *MasterController) guardStateMPDOn(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireTrue("mpdPlay")
+	slog.Debug("guardStateMPDOn", "check", check)
+	return check
+}
+
+func (l *MasterController) guardStateMPDOff(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireFalse("mpdPlay")
+	slog.Debug("guardStateMPDOff", "check", check)
+	return check
+}
 
 func (l *MasterController) guardStateSnapcastOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("snapcast")
@@ -330,5 +343,18 @@ func (l *MasterController) detectBedroomBlindsOpen(ev MQTTEvent) {
 			return
 		}
 		l.stateValueMap.setState("bedroomblindsopen", val.(float64) > 50)
+	}
+}
+
+func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
+	state := "OFF"
+	if on {
+		state = "ON"
+	}
+	return MQTTPublish{
+		Topic:    topic,
+		Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+		Qos:      2,
+		Retained: true,
 	}
 }

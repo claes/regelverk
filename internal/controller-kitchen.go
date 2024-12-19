@@ -55,3 +55,7 @@ func (c *KitchenController) turnOffKitchenAmp(_ context.Context, _ ...any) error
 	c.addEventsToPublish(kitchenAmpPowerOutput(false))
 	return nil
 }
+
+func kitchenAmpPowerOutput(on bool) []MQTTPublish {
+	return []MQTTPublish{setIkeaTretaktPower("zigbee2mqtt/kitchen-amp/set", on)}
+}

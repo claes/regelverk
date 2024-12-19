@@ -53,3 +53,7 @@ func (c *LivingroomController) turnOffLivingroomFloorlamp(_ context.Context, _ .
 	c.addEventsToPublish(livingroomFloorlampOutput(false))
 	return nil
 }
+
+func livingroomFloorlampOutput(on bool) []MQTTPublish {
+	return []MQTTPublish{setIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/set", on)}
+}
