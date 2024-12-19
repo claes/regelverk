@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	pulsemqtt "github.com/claes/pulseaudio-mqtt/lib"
-	rotelmqtt "github.com/claes/rotel-mqtt/lib"
+	pulsemqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
+	rotelmqtt "github.com/claes/mqtt-bridges/rotel-mqtt/lib"
 	"github.com/gorilla/websocket"
 )
 

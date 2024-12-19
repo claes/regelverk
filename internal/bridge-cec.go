@@ -7,7 +7,7 @@ import (
 
 	"github.com/bendahl/uinput"
 	"github.com/claes/cec"
-	cecmqtt "github.com/claes/cec-mqtt/lib"
+	cecmqtt "github.com/claes/mqtt-bridges/cec-mqtt/lib"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -16,14 +16,18 @@ type CecBridgeWrapper struct {
 	topicPrefix string
 }
 
+func (l *CecBridgeWrapper) String() string {
+	return "CecBridgeWrapper"
+}
+
 func (l *CecBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
 	l.mqttClient = mqttClient
 	l.topicPrefix = config.MQTTTopicPrefix
 	return nil
 }
 
-func (l *CecBridgeWrapper) Run() error {
-	go cecBridgeMainLoop(l.mqttClient, l.topicPrefix)
+func (l *CecBridgeWrapper) Run(context context.Context) error {
+	cecBridgeEventLoop(l.mqttClient, l.topicPrefix)
 	return nil
 }
 
@@ -52,7 +56,7 @@ func (l *CecBridgeWrapper) Run() error {
 // 	}
 // }
 
-func bridgeKeyPresses(ctx context.Context, bridge *cecmqtt.CecMQTTBridge, keyboard uinput.Keyboard) {
+func bridgeKeyPresses(ctx context.Context, bridge *cecmqtt.CECMQTTBridge, keyboard uinput.Keyboard) {
 
 	bridge.CECConnection.KeyPresses = make(chan *cec.KeyPress, 20) // Buffered channel
 
@@ -152,7 +156,7 @@ func translatePerformKeypress(keyPress *cec.KeyPress, keyboard uinput.Keyboard) 
 // 	go cecBridgeMainLoop(mqttClient)
 // }
 
-func cecBridgeMainLoop(mqttClient mqtt.Client, topicPrefix string) {
+func cecBridgeEventLoop(mqttClient mqtt.Client, topicPrefix string) {
 
 	keyboard, err := uinput.CreateKeyboard("/dev/uinput", []byte("regelverk"))
 	if err != nil {
@@ -166,8 +170,12 @@ func cecBridgeMainLoop(mqttClient mqtt.Client, topicPrefix string) {
 	for {
 		time.Sleep(4 * time.Second)
 		slog.Info("Creating new CEC connection", "count", i)
-		cecConnection := cecmqtt.CreateCECConnection("/dev/ttyACM0", "Regelverk")
-		bridge := cecmqtt.NewCecMQTTBridge(cecConnection, mqttClient, topicPrefix)
+		cecConfig := cecmqtt.CECClientConfig{CECDeviceName: "Regelverk", CECName: "/dev/ttyACM0"}
+		bridge, err := cecmqtt.NewCECMQTTBridge(cecConfig, mqttClient, topicPrefix)
+		if err != nil {
+			slog.Error("Could not create CEC MQTT bridge", "error", err)
+			return
+		}
 
 		ctx, cancel := context.WithCancel(context.Background())
 
@@ -192,7 +200,7 @@ func cecBridgeMainLoop(mqttClient mqtt.Client, topicPrefix string) {
 				cancel()
 				slog.Error("Destroying CEC connection")
 				//cecConnection.Destroy()
-				cecConnection.Close() //in case destroy does not work
+				bridge.CECConnection.Close() //in case destroy does not work
 				slog.Error("Will attempt to recreate connection")
 				i++
 				break

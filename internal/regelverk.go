@@ -1,6 +1,7 @@
 package regelverk
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -67,7 +68,7 @@ type MQTTMessageHandler struct {
 	dryRun           bool
 	client           mqtt.Client
 	loops            []ControlLoop
-	masterController MasterController
+	masterController *MasterController
 }
 
 func (h *MQTTMessageHandler) handle(_ mqtt.Client, m mqtt.Message) {
@@ -113,7 +114,7 @@ func (h *MQTTMessageHandler) handleEvent(ev MQTTEvent) {
 	}
 }
 
-func createMQTTMessageHandler(config Config, loops []ControlLoop, masterController MasterController, dryRun, debug *bool) (*MQTTMessageHandler, error) {
+func createMQTTMessageHandler(config Config, loops []ControlLoop, masterController *MasterController, dryRun, debug *bool) (*MQTTMessageHandler, error) {
 	host, err := os.Hostname()
 	if err != nil {
 		return nil, err
@@ -184,19 +185,20 @@ func createMQTTMessageHandler(config Config, loops []ControlLoop, masterControll
 // 	}()
 // }
 
-func Regelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller,
+func runRegelverk(ctx context.Context, config Config,
+	loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller,
 	dryRun, debug *bool) error {
 
 	masterController := CreateMasterController()
 	masterController.controllers = controllers
 
-	mqttMessageHandler, err := createMQTTMessageHandler(config, loops, masterController, dryRun, debug)
+	mqttMessageHandler, err := createMQTTMessageHandler(config, loops, &masterController, dryRun, debug)
 	if err != nil {
 		return err
 	}
 
 	slog.Info("Initializing bridges")
-	initBridges(mqttMessageHandler.client, config, bridgeWrappers)
+	initBridges(ctx, mqttMessageHandler.client, config, bridgeWrappers)
 
 	slog.Info("Initializing loops")
 	for _, l := range loops {
@@ -219,7 +221,9 @@ func Regelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapp
 	}()
 
 	slog.Info("Started regelverk")
-	select {} // loop forever
+	<-ctx.Done()
+	slog.Info("Finishing regelverk")
+	return nil
 }
 
 func fileToString(filePath string) (string, error) {

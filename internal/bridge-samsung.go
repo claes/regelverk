@@ -1,20 +1,28 @@
 package regelverk
 
 import (
-	samsungmqtt "github.com/claes/samsung-mqtt/lib"
+	"context"
+
+	samsungmqtt "github.com/claes/mqtt-bridges/samsungtv-mqtt/lib"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 type SamsungBridgeWrapper struct {
-	bridge samsungmqtt.SamsungRemoteMQTTBridge
+	bridge *samsungmqtt.SamsungTVRemoteMQTTBridge
+}
+
+func (l *SamsungBridgeWrapper) String() string {
+	return "SamsungBridgeWrapper"
 }
 
 func (l *SamsungBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Config) error {
-	l.bridge = *samsungmqtt.NewSamsungRemoteMQTTBridge(&config.SamsungTvAddress, mqttClient, config.MQTTTopicPrefix)
-	return nil
+	samsungConfig := samsungmqtt.SamsungTVClientConfig{TVIPAddress: config.SamsungTvAddress}
+	var err error
+	l.bridge, err = samsungmqtt.NewSamsungTVRemoteMQTTBridge(samsungConfig, mqttClient, config.MQTTTopicPrefix)
+	return err
 }
 
-func (l *SamsungBridgeWrapper) Run() error {
-	go l.bridge.MainLoop()
+func (l *SamsungBridgeWrapper) Run(ctx context.Context) error {
+	l.bridge.EventLoop(ctx)
 	return nil
 }
