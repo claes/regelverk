@@ -329,9 +329,6 @@ func (l *MasterController) detectBedroomBlindsOpen(ev MQTTEvent) {
 		if !exists || val == nil {
 			return
 		}
-		pos, exists := val.(string)
-		if exists {
-			l.stateValueMap.setState("bedroomblindsopen", pos.(float64) > 50)
-		}
+		l.stateValueMap.setState("bedroomblindsopen", val.(float64) > 50)
 	}
 }
