@@ -28,6 +28,8 @@ func ParseConfig() (Config, *bool, *bool) {
 	routerAddress := flag.String("routerAddress", "", "Mikrotik router address:port")
 	routerUsername := flag.String("routerUsername", "", "Mikrotik router username")
 	routerPasswordFile := flag.String("routerPasswordFile", "", "Mikrotik router password file")
+	bluetoothAddress := flag.String("bluetoothAddress", "", "Bluetooth MAC address")
+
 	help := flag.Bool("help", false, "Print help")
 	debug := flag.Bool("debug", false, "Debug logging")
 	dryRun := flag.Bool("dry_run", false, "Dry run (do not publish)")
@@ -60,6 +62,7 @@ func ParseConfig() (Config, *bool, *bool) {
 		RouterAddress:      *routerAddress,
 		RouterUsername:     *routerUsername,
 		RouterPasswordFile: *routerPasswordFile,
+		BluetoothAddress:   *bluetoothAddress,
 		Pulseserver:        *pulseServer}
 	return config, debug, dryRun
 }

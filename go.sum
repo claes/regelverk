@@ -6,6 +6,8 @@ github.com/claes/cec v0.0.0-20240820185959-6db0712de894 h1:cZOiacVo+F8/VV+dEfqzN
 github.com/claes/cec v0.0.0-20240820185959-6db0712de894/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
 github.com/claes/mpd-mqtt v0.0.0-20241117211350-5c216a578a24 h1:FnJjvtK6hNBm14PbL2Wrli2Azwm7ARoJvyPwS9eDC9E=
 github.com/claes/mpd-mqtt v0.0.0-20241117211350-5c216a578a24/go.mod h1:Hyl2NzM/XtcVRNPC5mSYs/h97hvMX2M7kG0oBVe472c=
+github.com/claes/mqtt-bridges/bluez-mqtt v0.0.0-20241221152050-6326d1ed8eef h1:P8OD40x8NeXv6A/lqhrajlCEkSxxJM8lLzKVVIGtHfI=
+github.com/claes/mqtt-bridges/bluez-mqtt v0.0.0-20241221152050-6326d1ed8eef/go.mod h1:upg8vvfTUq+GE9TJRLQU7VlpdkYDXVohahMV+tZOqDo=
 github.com/claes/mqtt-bridges/cec-mqtt v0.0.0-20241218201158-848d7a61ccf7 h1:nr9NXc0dIferCvSNFrgPzvETpASs6Wq8WcaJr1Z6HzE=
 github.com/claes/mqtt-bridges/cec-mqtt v0.0.0-20241218201158-848d7a61ccf7/go.mod h1:tiLYvfHh83U9e6gt9XoaKkQ5sb/pm5q95eVNwG6QTaM=
 github.com/claes/mqtt-bridges/common v0.0.0-20241218194001-0e0f35dcc1d1 h1:Nw8PX/btp/xcUgRWFGcb67PyIIsS4wKvZ6JrEvwTP94=
@@ -28,6 +30,8 @@ github.com/fhs/gompd/v2 v2.3.0 h1:wuruUjmOODRlJhrYx73rJnzS7vTSXSU7pWmZtM3VPE0=
 github.com/fhs/gompd/v2 v2.3.0/go.mod h1:nNdZtcpD5VpmzZbRl5rV6RhxeMmAWTxEsSIMBkmMIy4=
 github.com/go-routeros/routeros/v3 v3.0.0 h1:/V4Cgr+wmn3IyyYIXUX1KYK8pA1ADPiwLSlAi912j1M=
 github.com/go-routeros/routeros/v3 v3.0.0/go.mod h1:j4mq65czXfKtHsdLkgVv8w7sNzyhLZy1TKi2zQDMpiQ=
+github.com/godbus/dbus/v5 v5.1.0 h1:4KLkAxT3aOY8Li4FRJe/KvhoNFFxo0m6fNuFUO8QJUk=
+github.com/godbus/dbus/v5 v5.1.0/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/jfreymuth/pulse v0.1.1 h1:9WLNBNCijmtZ14ZJpatgJPu/NjwAl3TIKItSFnTh+9A=

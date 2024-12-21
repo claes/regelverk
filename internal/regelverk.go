@@ -30,6 +30,7 @@ type Config struct {
 	Pulseserver        string
 	RouterAddress      string
 	RouterUsername     string
+	BluetoothAddress   string
 	RouterPasswordFile string
 }
 

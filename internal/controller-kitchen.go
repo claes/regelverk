@@ -42,7 +42,35 @@ func (c *KitchenController) Initialize(masterController *MasterController) []MQT
 		OnEntry(c.turnOffKitchenAmp).
 		Permit("mqttEvent", ampStateOn, c.masterController.guardStateKitchenAmpOn)
 
+	c.eventHandlers = append(c.eventHandlers, c.handleMediaRemoteEvents)
+
 	c.isInitialized = true
+	return nil
+}
+
+func (c *KitchenController) handleMediaRemoteEvents(ev MQTTEvent) []MQTTPublish {
+	if ev.Topic == "zigbee2mqtt/livingroom_remote_kitchen" {
+		m := parseJSONPayload(ev)
+		if m == nil {
+			return nil
+		}
+		val, exists := m["action"]
+		if !exists || val == nil {
+			return nil
+		}
+		topicPrefix := "kitchen"
+		mac := "4C:66:A6:A1:39:58"
+		switch val {
+		case "toggle":
+			return getBluezMediaplayerCommand(topicPrefix, mac, "Play")
+		case "dots_1_initial_press":
+			return getBluezMediaplayerCommand(topicPrefix, mac, "Pause")
+		case "track_next":
+			return getBluezMediaplayerCommand(topicPrefix, mac, "Next")
+		case "track_previous":
+			return getBluezMediaplayerCommand(topicPrefix, mac, "Previous")
+		}
+	}
 	return nil
 }
 
@@ -58,4 +86,15 @@ func (c *KitchenController) turnOffKitchenAmp(_ context.Context, _ ...any) error
 
 func kitchenAmpPowerOutput(on bool) []MQTTPublish {
 	return []MQTTPublish{setIkeaTretaktPower("zigbee2mqtt/kitchen-amp/set", on)}
+}
+
+func getBluezMediaplayerCommand(topicPrefix string, mac string, command string) []MQTTPublish {
+	return []MQTTPublish{
+		{
+			Topic:    topicPrefix + "/bluez/" + mac + "/mediaplayer/command/send",
+			Payload:  command,
+			Qos:      2,
+			Retained: false,
+		},
+	}
 }
