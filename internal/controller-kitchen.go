@@ -49,7 +49,7 @@ func (c *KitchenController) Initialize(masterController *MasterController) []MQT
 }
 
 func (c *KitchenController) handleMediaRemoteEvents(ev MQTTEvent) []MQTTPublish {
-	if ev.Topic == "zigbee2mqtt/livingroom_remote_kitchen" {
+	if ev.Topic == "zigbee2mqtt/media_remote_kitchen" {
 		m := parseJSONPayload(ev)
 		if m == nil {
 			return nil
