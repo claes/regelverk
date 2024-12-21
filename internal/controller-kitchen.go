@@ -3,6 +3,7 @@ package regelverk
 import (
 	"context"
 	"reflect"
+	"strconv"
 
 	"github.com/qmuntal/stateless"
 )
@@ -69,6 +70,10 @@ func (c *KitchenController) handleMediaRemoteEvents(ev MQTTEvent) []MQTTPublish 
 			return getBluezMediaplayerCommand(topicPrefix, mac, "Next")
 		case "track_previous":
 			return getBluezMediaplayerCommand(topicPrefix, mac, "Previous")
+		case "volume_up":
+			return getPulseaudioVolumeChangeCommand(topicPrefix, 0.1)
+		case "volume_down":
+			return getPulseaudioVolumeChangeCommand(topicPrefix, -0.1)
 		}
 	}
 	return nil
@@ -93,6 +98,17 @@ func getBluezMediaplayerCommand(topicPrefix string, mac string, command string) 
 		{
 			Topic:    topicPrefix + "/bluez/" + mac + "/mediaplayer/command/send",
 			Payload:  command,
+			Qos:      2,
+			Retained: false,
+		},
+	}
+}
+
+func getPulseaudioVolumeChangeCommand(topicPrefix string, change float64) []MQTTPublish {
+	return []MQTTPublish{
+		{
+			Topic:    topicPrefix + "/pulseaudio/volume/change",
+			Payload:  strconv.FormatFloat(change, 'f', 2, 64),
 			Qos:      2,
 			Retained: false,
 		},
