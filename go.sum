@@ -16,6 +16,8 @@ github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241218201158-848d7a61ccf7
 github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241218201158-848d7a61ccf7/go.mod h1:AdPD4Ef5+co2o76KNb5f0zlpCX9F48Mix3N19B7T+aM=
 github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241221214353-2f6c1269a73f h1:AHS4W/q5CT632F9o+MBayzz6MntqAU9sfBavMGicKZ0=
 github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241221214353-2f6c1269a73f/go.mod h1:AdPD4Ef5+co2o76KNb5f0zlpCX9F48Mix3N19B7T+aM=
+github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241221222812-46a610b2dc88 h1:XKc6HPeS/cikglqxi1wJJy4L2vf27RKRWuC0Z9Jiv+w=
+github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241221222812-46a610b2dc88/go.mod h1:AdPD4Ef5+co2o76KNb5f0zlpCX9F48Mix3N19B7T+aM=
 github.com/claes/mqtt-bridges/rotel-mqtt v0.0.0-20241218201158-848d7a61ccf7 h1:iI/uGFa+5wKOOLJ3Synq7h9ZhSKGsciB3h1ZN7SFEDU=
 github.com/claes/mqtt-bridges/rotel-mqtt v0.0.0-20241218201158-848d7a61ccf7/go.mod h1:SMVI+N+SS/3fKHnbzSVO+87CKZvyuY7Jr5eXWy1UCVY=
 github.com/claes/mqtt-bridges/routeros-mqtt v0.0.0-20241218201158-848d7a61ccf7 h1:TX2u3R5cs/zziGo09SkKaLs2RbLZsTix6leAZDOmJsE=

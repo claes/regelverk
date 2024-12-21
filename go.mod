@@ -10,7 +10,7 @@ require (
 	github.com/claes/mpd-mqtt v0.0.0-20241117211350-5c216a578a24
 	github.com/claes/mqtt-bridges/bluez-mqtt v0.0.0-20241221152050-6326d1ed8eef
 	github.com/claes/mqtt-bridges/cec-mqtt v0.0.0-20241218201158-848d7a61ccf7
-	github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241221214353-2f6c1269a73f
+	github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241221222812-46a610b2dc88
 	github.com/claes/mqtt-bridges/rotel-mqtt v0.0.0-20241218201158-848d7a61ccf7
 	github.com/claes/mqtt-bridges/routeros-mqtt v0.0.0-20241218201158-848d7a61ccf7
 	github.com/claes/mqtt-bridges/samsungtv-mqtt v0.0.0-20241218201158-848d7a61ccf7
