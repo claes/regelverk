@@ -19,6 +19,8 @@ import (
 
 type Config struct {
 	BluetoothAddress   string
+	HIDVendorID        string
+	HIDProductID       string
 	MetricsAddress     string
 	MetricsRealm       string
 	MpdPasswordFile    string

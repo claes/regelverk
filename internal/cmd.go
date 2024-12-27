@@ -14,23 +14,25 @@ import (
 func ParseConfig() (Config, *bool, *bool) {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	mqttBroker := flag.String("mqttBroker", "tcp://localhost:1883", "MQTT broker URL")
-	mqttTopicPrefix := flag.String("mqttTopicPrefix", "", "MQTT topic prefix")
-	mqttUserName := flag.String("mqttUserName", "", "MQTT username")
-	mqttPasswordFile := flag.String("mqttPasswordFile", "", "MQTT password file")
-	httpListenAddress := flag.String("httpListenAddress", ":8080", "HTTP listen address")
-	rotelSerialPort := flag.String("rotelSerialPort", "", "Rotel serial port")
-	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
-	snapcastServer := flag.String("snapcastServer", "", "Snapcast server address")
-	pulseServer := flag.String("pulseServer", "", "Pulse server")
-	mpdServer := flag.String("mpdServer", "", "MPD server")
-	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password file")
-	routerAddress := flag.String("routerAddress", "", "Mikrotik router address:port")
-	routerUsername := flag.String("routerUsername", "", "Mikrotik router username")
-	routerPasswordFile := flag.String("routerPasswordFile", "", "Mikrotik router password file")
 	bluetoothAddress := flag.String("bluetoothAddress", "", "Bluetooth MAC address")
+	hidProductID := flag.String("hidProductId", "", "HID product id")
+	hidVendorID := flag.String("hidVendorId", "", "HID vendor id")
+	httpListenAddress := flag.String("httpListenAddress", ":8080", "HTTP listen address")
 	metricsAddress := flag.String("metricsAddress", "", "Metrics address")
 	metricsRealm := flag.String("metricsRealm", "", "Metrics realm")
+	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password file")
+	mpdServer := flag.String("mpdServer", "", "MPD server")
+	mqttBroker := flag.String("mqttBroker", "tcp://localhost:1883", "MQTT broker URL")
+	mqttPasswordFile := flag.String("mqttPasswordFile", "", "MQTT password file")
+	mqttTopicPrefix := flag.String("mqttTopicPrefix", "", "MQTT topic prefix")
+	mqttUserName := flag.String("mqttUserName", "", "MQTT username")
+	pulseServer := flag.String("pulseServer", "", "Pulse server")
+	rotelSerialPort := flag.String("rotelSerialPort", "", "Rotel serial port")
+	routerAddress := flag.String("routerAddress", "", "Mikrotik router address:port")
+	routerPasswordFile := flag.String("routerPasswordFile", "", "Mikrotik router password file")
+	routerUsername := flag.String("routerUsername", "", "Mikrotik router username")
+	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
+	snapcastServer := flag.String("snapcastServer", "", "Snapcast server address")
 
 	help := flag.Bool("help", false, "Print help")
 	debug := flag.Bool("debug", false, "Debug logging")
@@ -51,23 +53,26 @@ func ParseConfig() (Config, *bool, *bool) {
 	}
 
 	config := Config{
+		BluetoothAddress:   *bluetoothAddress,
+		HIDProductID:       *hidProductID,
+		HIDVendorID:        *hidVendorID,
+		MetricsAddress:     *metricsAddress,
+		MetricsRealm:       *metricsRealm,
+		MpdPasswordFile:    *mpdPasswordFile,
+		MpdServer:          *mpdServer,
 		MQTTBroker:         *mqttBroker,
+		MQTTPasswordFile:   *mqttPasswordFile,
 		MQTTTopicPrefix:    *mqttTopicPrefix,
 		MQTTUserName:       *mqttUserName,
-		MQTTPasswordFile:   *mqttPasswordFile,
-		WebAddress:         *httpListenAddress,
+		Pulseserver:        *pulseServer,
 		RotelSerialPort:    *rotelSerialPort,
+		RouterAddress:      *routerAddress,
+		RouterPasswordFile: *routerPasswordFile,
+		RouterUsername:     *routerUsername,
 		SamsungTvAddress:   *samsungTVAddress,
 		SnapcastServer:     *snapcastServer,
-		MpdServer:          *mpdServer,
-		MpdPasswordFile:    *mpdPasswordFile,
-		RouterAddress:      *routerAddress,
-		RouterUsername:     *routerUsername,
-		RouterPasswordFile: *routerPasswordFile,
-		BluetoothAddress:   *bluetoothAddress,
-		Pulseserver:        *pulseServer,
-		MetricsAddress:     *metricsAddress,
-		MetricsRealm:       *metricsRealm}
+		WebAddress:         *httpListenAddress,
+	}
 	return config, debug, dryRun
 }
 

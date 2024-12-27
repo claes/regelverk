@@ -12,6 +12,8 @@ github.com/claes/mqtt-bridges/cec-mqtt v0.0.0-20241223192612-404503887691 h1:gVc
 github.com/claes/mqtt-bridges/cec-mqtt v0.0.0-20241223192612-404503887691/go.mod h1:tiLYvfHh83U9e6gt9XoaKkQ5sb/pm5q95eVNwG6QTaM=
 github.com/claes/mqtt-bridges/common v0.0.0-20241223192612-404503887691 h1:47xgr4VTF1Ts0pSp0woBR+N/HC1Jdtu0NA4nDF5sz7M=
 github.com/claes/mqtt-bridges/common v0.0.0-20241223192612-404503887691/go.mod h1:ai22pI1SqvdrBrFKllI5cJCr5oN0g5GtVJAx8ewcE0k=
+github.com/claes/mqtt-bridges/hid-mqtt v0.0.0-20241223192612-404503887691 h1:R9QTgQZ3amoqUVbo0QGxeqYI/vHSvY93KpkyhrpKJMo=
+github.com/claes/mqtt-bridges/hid-mqtt v0.0.0-20241223192612-404503887691/go.mod h1:MH5hjeUNqh4c4kAmHv6PF/tDrUvUfgrBs5NKWWfB7M4=
 github.com/claes/mqtt-bridges/mpd-mqtt v0.0.0-20241223192612-404503887691 h1:4Nqx19jDJOacGyQuZ8cDiqB7iuJKYw5Sjvo78CjAojA=
 github.com/claes/mqtt-bridges/mpd-mqtt v0.0.0-20241223192612-404503887691/go.mod h1:HCPKbpRWc5NPU1xRkJGy27+mji8GD4LpuBNdV49tyUw=
 github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241223192612-404503887691 h1:/HF7Ub677jNX/pUVGLRTbvJ5Y9GD655sgP3u8mMNObA=
@@ -38,6 +40,8 @@ github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aN
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/jfreymuth/pulse v0.1.1 h1:9WLNBNCijmtZ14ZJpatgJPu/NjwAl3TIKItSFnTh+9A=
 github.com/jfreymuth/pulse v0.1.1/go.mod h1:cpYspI6YljhkUf1WLXLLDmeaaPFc3CnGLjDZf9dZ4no=
+github.com/karalabe/hid v1.0.1-0.20240919124526-821c38d2678e h1:ryNJIEs1fyZNVwJ/Dsz7+EFZTow0ggBdnAIVo8SAs+A=
+github.com/karalabe/hid v1.0.1-0.20240919124526-821c38d2678e/go.mod h1:qk1sX/IBgppQNcGCRoj90u6EGC056EBoIc1oEjCWla8=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/qmuntal/stateless v1.7.1 h1:dI+BtLHq/nD6u46POkOINTDjY9uE33/4auEzfX3TWp0=
