@@ -40,7 +40,7 @@ func (l *MasterController) Init() {
 }
 
 func (l *MasterController) StateValueCallback(key string, value, new, updated bool) {
-	gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`statevalue{name="%s"}`, key), nil)
+	gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`statevalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
 	if value {
 		gauge.Set(1)
 	} else {
@@ -69,6 +69,10 @@ type BaseController struct {
 	mu               sync.Mutex
 }
 
+func (c *BaseController) String() string {
+	return c.name
+}
+
 func (c *BaseController) Lock() {
 	c.mu.Lock()
 }
@@ -82,7 +86,8 @@ func (c *BaseController) SetInitialized() {
 
 	firstStateInt, ok := c.stateMachine.MustState().(int)
 	if ok {
-		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
+		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s",realm="%s"}`,
+			c.name, c.masterController.metricsConfig.MetricsRealm), nil)
 		gauge.Set(float64(firstStateInt))
 		c.masterController.pushMetrics = true
 	}
@@ -112,7 +117,8 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 	if intState, ok := afterState.(interface{ ToInt() int }); ok {
 		i := intState.ToInt()
-		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
+		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s",realm="%s"}`,
+			c.name, c.masterController.metricsConfig.MetricsRealm), nil)
 		gauge.Set(float64(i))
 	} else {
 		slog.Error("State does not implement ToInt", "state", afterState)
@@ -175,6 +181,9 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 						time.Sleep(toPublish.Wait)
 					}
 					client.Publish(toPublish.Topic, toPublish.Qos, toPublish.Retained, toPublish.Payload)
+					counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_published{topic="%s",realm="%s"}`,
+						toPublish.Topic, masterController.metricsConfig.MetricsRealm))
+					counter.Inc()
 				}(result)
 			}
 		}()
@@ -200,25 +209,21 @@ func (masterController *MasterController) checkPushMetrics() {
 
 func (l *MasterController) guardStateMPDOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("mpdPlay")
-	slog.Debug("guardStateMPDOn", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateMPDOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("mpdPlay")
-	slog.Debug("guardStateMPDOff", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateSnapcastOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("snapcast")
-	slog.Debug("guardStateSnapcastOn", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateSnapcastOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("snapcast")
-	slog.Debug("guardStateSnapcastOff", "check", check)
 	return check
 }
 
@@ -226,7 +231,6 @@ func (l *MasterController) guardTurnOnLivingroomLamp(_ context.Context, _ ...any
 	check := l.stateValueMap.requireTrue("phonePresent") &&
 		l.stateValueMap.requireTrue("nighttime") &&
 		l.stateValueMap.requireTrueRecently("livingroomPresence", 10*time.Minute)
-	slog.Debug("guardTurnOnLamp", "check", check)
 	return check
 }
 
@@ -234,49 +238,41 @@ func (l *MasterController) guardTurnOffLivingroomLamp(_ context.Context, _ ...an
 	check := l.stateValueMap.requireFalse("phonePresent") ||
 		l.stateValueMap.requireFalse("nighttime") ||
 		l.stateValueMap.requireTrueNotRecently("livingroomPresence", 10*time.Minute)
-	slog.Debug("guardTurnOffLamp", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateTvOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("tvpower")
-	slog.Debug("guardStateTvOn", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateTvOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("tvpower")
-	slog.Debug("guardStateTvOff", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateTvOffLong(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrueNotRecently("tvpower", 30*time.Minute)
-	slog.Debug("guardStateTvOff", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateKitchenAmpOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("kitchenaudioplaying")
-	slog.Debug("guardStateKitchenAmpOn", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateKitchenAmpOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrueNotRecently("kitchenaudioplaying", 10*time.Minute)
-	slog.Debug("guardStateKitchenAmpOn", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateBedroomBlindsOpen(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("nighttime")
-	slog.Debug("guardStateBedroomBlindsOpen", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateBedroomBlindsClosed(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("nighttime")
-	slog.Debug("guardStateBedroomBlindsClosed", "check", check)
 	return check
 }
 
@@ -298,7 +294,6 @@ func (l *MasterController) detectPhonePresent(ev MQTTEvent) {
 				break
 			}
 		}
-		slog.Debug("detectPhonePresent", "phonePresent", found)
 		l.stateValueMap.setState("phonePresent", found)
 	}
 }

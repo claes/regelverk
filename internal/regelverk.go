@@ -84,7 +84,11 @@ func (h *MQTTMessageHandler) handle(_ mqtt.Client, m mqtt.Message) {
 		Topic:     m.Topic(),
 		Payload:   m.Payload(),
 	}
+
 	h.handleEvent(ev)
+	counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_handled{topic="%s",realm="%s"}`,
+		m.Topic(), h.masterController.metricsConfig.MetricsRealm))
+	counter.Inc()
 }
 
 var count int64 = 0
@@ -113,6 +117,9 @@ func (h *MQTTMessageHandler) handleEvent(ev MQTTEvent) {
 							time.Sleep(toPublish.Wait)
 						}
 						h.client.Publish(toPublish.Topic, toPublish.Qos, toPublish.Retained, toPublish.Payload)
+						counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_published{topic="%s",realm="%s"}`,
+							toPublish.Topic, h.masterController.metricsConfig.MetricsRealm))
+						counter.Inc()
 					}(result)
 				}
 			}
