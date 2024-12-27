@@ -211,6 +211,7 @@ func runRegelverk(ctx context.Context, config Config,
 		return err
 	}
 
+	slog.Info("FOOOOOO")
 	metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "", true)
 	//metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "realm="+config.MetricsRealm, true)
 
