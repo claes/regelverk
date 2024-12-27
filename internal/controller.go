@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/VictoriaMetrics/metrics"
 	pulseaudiomqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
 	routerosmqtt "github.com/claes/mqtt-bridges/routeros-mqtt/lib"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -26,6 +27,16 @@ func CreateMasterController() MasterController {
 }
 
 func (l *MasterController) Init() {
+	l.stateValueMap.registerCallback(l.StateValueCallback)
+}
+
+func (l *MasterController) StateValueCallback(key string, value, new, updated bool) {
+	gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`statevalue{name="%s"}`, key), nil)
+	if value {
+		gauge.Set(1)
+	} else {
+		gauge.Set(0)
+	}
 }
 
 type Controller interface {

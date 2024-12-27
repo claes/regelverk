@@ -23,12 +23,15 @@ require (
 
 require (
 	github.com/ConnorsApps/snapcast-go v0.2.0 // indirect
+	github.com/VictoriaMetrics/metrics v1.35.1 // indirect
 	github.com/claes/mqtt-bridges/common v0.0.0-20241223192612-404503887691 // indirect
 	github.com/fhs/gompd/v2 v2.3.0 // indirect
 	github.com/go-routeros/routeros/v3 v3.0.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/jfreymuth/pulse v0.1.1 // indirect
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07 // indirect
+	github.com/valyala/fastrand v1.1.0 // indirect
+	github.com/valyala/histogram v1.2.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect

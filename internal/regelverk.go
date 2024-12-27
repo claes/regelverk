@@ -11,27 +11,29 @@ import (
 	"sync"
 	"time"
 
+	"github.com/VictoriaMetrics/metrics"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 // Mostly reused from https://github.com/stapelberg/regelwerk
 
 type Config struct {
+	BluetoothAddress   string
+	MetricsAddress     string
+	MpdPasswordFile    string
+	MpdServer          string
 	MQTTBroker         string
-	MQTTUserName       string
 	MQTTPasswordFile   string
 	MQTTTopicPrefix    string
-	WebAddress         string
+	MQTTUserName       string
+	Pulseserver        string
 	RotelSerialPort    string
+	RouterAddress      string
+	RouterPasswordFile string
+	RouterUsername     string
 	SamsungTvAddress   string
 	SnapcastServer     string
-	MpdServer          string
-	MpdPasswordFile    string
-	Pulseserver        string
-	RouterAddress      string
-	RouterUsername     string
-	BluetoothAddress   string
-	RouterPasswordFile string
+	WebAddress         string
 }
 
 type MQTTEvent struct {
@@ -196,6 +198,11 @@ func runRegelverk(ctx context.Context, config Config,
 	mqttMessageHandler, err := createMQTTMessageHandler(config, loops, &masterController, dryRun, debug)
 	if err != nil {
 		return err
+	}
+
+	if len(config.MetricsAddress) > 0 {
+		slog.Info("Initializing metrics collection")
+		metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "", true)
 	}
 
 	slog.Info("Initializing bridges")
