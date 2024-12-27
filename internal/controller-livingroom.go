@@ -7,17 +7,23 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+type livingroomLamp int
+
 const (
-	stateLivingroomFloorlampOn  = "LampOn"
-	stateLivingroomFloorlampOff = "LampOff"
+	stateLivingroomFloorlampOff livingroomLamp = iota
+	stateLivingroomFloorlampOn
 )
+
+func (t livingroomLamp) ToInt() int {
+	return int(t)
+}
 
 type LivingroomController struct {
 	BaseController
 }
 
 func (c *LivingroomController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.name = "livingroom-controller"
+	c.name = "livingroom"
 	c.masterController = masterController
 
 	// var initialState tvState
@@ -52,4 +58,8 @@ func (c *LivingroomController) turnOnLivingroomFloorlamp(_ context.Context, _ ..
 func (c *LivingroomController) turnOffLivingroomFloorlamp(_ context.Context, _ ...any) error {
 	c.addEventsToPublish(livingroomFloorlampOutput(false))
 	return nil
+}
+
+func livingroomFloorlampOutput(on bool) []MQTTPublish {
+	return []MQTTPublish{setIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/set", on)}
 }

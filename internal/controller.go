@@ -3,21 +3,29 @@ package regelverk
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/VictoriaMetrics/metrics"
 	pulseaudiomqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
 	routerosmqtt "github.com/claes/mqtt-bridges/routeros-mqtt/lib"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/qmuntal/stateless"
 )
 
+type MetricsConfig struct {
+	MetricsAddress string
+	MetricsRealm   string
+}
 type MasterController struct {
 	stateValueMap StateValueMap
 	controllers   *[]Controller
 	mu            sync.Mutex
+	pushMetrics   bool
+	metricsConfig MetricsConfig
 }
 
 func CreateMasterController() MasterController {
@@ -25,6 +33,22 @@ func CreateMasterController() MasterController {
 }
 
 func (l *MasterController) Init() {
+	if len(l.metricsConfig.MetricsAddress) > 0 {
+		slog.Info("Reigstering state value callback in master controller")
+		l.stateValueMap.registerCallback(l.StateValueCallback)
+	}
+}
+
+func (l *MasterController) StateValueCallback(key string, value, new, updated bool) {
+	gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`statevalue{name="%s"}`, key), nil)
+	if value {
+		gauge.Set(1)
+	} else {
+		gauge.Set(0)
+	}
+	if new || updated {
+		l.pushMetrics = true
+	}
 }
 
 type Controller interface {
@@ -53,6 +77,17 @@ func (c *BaseController) Unlock() {
 	c.mu.Unlock()
 }
 
+func (c *BaseController) SetInitialized() {
+	c.isInitialized = true
+
+	firstStateInt, ok := c.stateMachine.MustState().(int)
+	if ok {
+		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
+		gauge.Set(float64(firstStateInt))
+		c.masterController.pushMetrics = true
+	}
+}
+
 func (c *BaseController) IsInitialized() bool {
 	return c.isInitialized
 }
@@ -71,8 +106,18 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	c.stateMachine.Fire("mqttEvent", ev)
 
 	eventsToPublish := c.getAndResetEventsToPublish()
+	afterState := c.stateMachine.MustState()
 	slog.Debug("Event fired", "fsm", c.name, "beforeState", beforeState,
-		"afterState", c.stateMachine.MustState())
+		"afterState", afterState)
+
+	if intState, ok := afterState.(interface{ ToInt() int }); ok {
+		i := intState.ToInt()
+		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
+		gauge.Set(float64(i))
+	} else {
+		slog.Error("State does not implement ToInt", "state", afterState)
+	}
+
 	return eventsToPublish
 }
 
@@ -91,6 +136,7 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 	masterController.mu.Lock()
 	defer masterController.mu.Unlock()
 
+	masterController.pushMetrics = false // Reset
 	masterController.detectPhonePresent(ev)
 	masterController.detectLivingroomPresence(ev)
 	masterController.detectLivingroomFloorlampState(ev)
@@ -133,9 +179,36 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 			}
 		}()
 	}
+	masterController.checkPushMetrics()
+}
+
+func (masterController *MasterController) checkPushMetrics() {
+	if masterController.pushMetrics {
+		ctx := context.Background()
+		metrics.PushMetrics(ctx, "http://"+masterController.metricsConfig.MetricsAddress+"/api/v1/import/prometheus", false, nil)
+		// ctx := context.Background()
+		// //ctx, err := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		// if err != nil {
+		// 	slog.Error("Error creating context with timeout", "error", err)
+		// } else {
+		// 	metrics.PushMetrics(ctx, "http://"+masterController.metricsConfig.MetricsAddress+"/api/v1/import/prometheus", false, nil)
+		// }
+	}
 }
 
 // Guards
+
+func (l *MasterController) guardStateMPDOn(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireTrue("mpdPlay")
+	slog.Debug("guardStateMPDOn", "check", check)
+	return check
+}
+
+func (l *MasterController) guardStateMPDOff(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireFalse("mpdPlay")
+	slog.Debug("guardStateMPDOff", "check", check)
+	return check
+}
 
 func (l *MasterController) guardStateSnapcastOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("snapcast")
@@ -330,5 +403,18 @@ func (l *MasterController) detectBedroomBlindsOpen(ev MQTTEvent) {
 			return
 		}
 		l.stateValueMap.setState("bedroomblindsopen", val.(float64) > 50)
+	}
+}
+
+func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
+	state := "OFF"
+	if on {
+		state = "ON"
+	}
+	return MQTTPublish{
+		Topic:    topic,
+		Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+		Qos:      2,
+		Retained: true,
 	}
 }

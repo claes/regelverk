@@ -12,6 +12,7 @@ func main() {
 
 	bridgeWrappers := []internal.BridgeWrapper{
 		&internal.PulseaudioBridgeWrapper{},
+		&internal.BluezBridgeWrapper{},
 	}
 
 	controllers := &[]internal.Controller{}

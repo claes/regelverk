@@ -4,14 +4,14 @@ import (
 	"context"
 	"log/slog"
 
-	mpdmqtt "github.com/claes/mpd-mqtt/lib"
+	mpdmqtt "github.com/claes/mqtt-bridges/mpd-mqtt/lib"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 type MpdBridgeWrapper struct {
-	bridge      *mpdmqtt.MpdMQTTBridge
-	config      Config
-	mpdPassword string
+	bridge          *mpdmqtt.MpdMQTTBridge
+	config          Config
+	mpdClientConfig mpdmqtt.MpdClientConfig
 }
 
 func (l *MpdBridgeWrapper) String() string {
@@ -24,24 +24,19 @@ func (l *MpdBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Confi
 		slog.Error("Error reading mpd password",
 			"mpdPasswordFile", config.MpdPasswordFile, "error", err)
 	}
-	//slog.Debug("MPD password", "password", mpdPassword)
 
-	mpdClient, mpdWatcher, err := mpdmqtt.CreateMPDClient(config.MpdServer, mpdPassword)
-	if err != nil {
-		slog.Error("Could not create MPD client", "error", err, "mpdserver", config.MpdServer, "mpdpassword", mpdPassword)
-	}
+	l.mpdClientConfig = mpdmqtt.MpdClientConfig{MpdServer: config.MpdServer, MpdPassword: mpdPassword}
 
-	l.mpdPassword = mpdPassword
-	l.bridge = mpdmqtt.NewMpdMQTTBridge(mpdClient, mpdWatcher, mqttClient, config.MQTTTopicPrefix)
+	l.bridge, err = mpdmqtt.NewMpdMQTTBridge(l.mpdClientConfig, mqttClient, config.MQTTTopicPrefix)
 
 	return nil
 }
 
-func (l *MpdBridgeWrapper) Run(context context.Context) error {
+func (l *MpdBridgeWrapper) Run(ctx context.Context) error {
 	go func() {
-		l.bridge.DetectReconnectMPDClient(l.config.MpdServer, l.mpdPassword)
+		l.bridge.DetectReconnectMPDClient(l.mpdClientConfig)
 	}()
 
-	l.bridge.MainLoop()
+	l.bridge.EventLoop(ctx)
 	return nil
 }

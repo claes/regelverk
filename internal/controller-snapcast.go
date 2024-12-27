@@ -16,14 +16,18 @@ import (
 
 type snapcastState int
 
+const (
+	stateSnapcastOff snapcastState = iota
+	stateSnapcastOn
+)
+
+func (t snapcastState) ToInt() int {
+	return int(t)
+}
+
 var topicStreamRe = regexp.MustCompile(`snapcast/stream/([^/]+)$`)
 var topicClientRe = regexp.MustCompile(`snapcast/client/([^/]+)$`)
 var topicGroupRe = regexp.MustCompile(`snapcast/group/([^/]+)$`)
-
-const (
-	stateSnapcastOn snapcastState = iota
-	stateSnapcastOff
-)
 
 type SnapcastController struct {
 	BaseController
@@ -32,7 +36,7 @@ type SnapcastController struct {
 }
 
 func (c *SnapcastController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.name = "snapcast-controller"
+	c.name = "snapcast"
 	c.masterController = masterController
 
 	// var initialState snapcastState
@@ -74,7 +78,7 @@ func (c *SnapcastController) customProcessEvent(ev MQTTEvent) []MQTTPublish {
 func (c *SnapcastController) turnOnSnapcast(_ context.Context, _ ...any) error {
 	for _, sinkInput := range c.pulseAudioState.SinkInputs {
 		if sinkInput.Properties["application.process.binary"] == "kodi.bin" {
-			events := snapcastOnOutputTmp(sinkInput.SinkInputIndex, "Snapcast")
+			events := snapcastOnOutput(sinkInput.SinkInputIndex, "Snapcast")
 			c.addEventsToPublish(events)
 		}
 	}
@@ -84,7 +88,7 @@ func (c *SnapcastController) turnOnSnapcast(_ context.Context, _ ...any) error {
 func (c *SnapcastController) turnOffSnapcast(_ context.Context, _ ...any) error {
 	for _, sinkInput := range c.pulseAudioState.SinkInputs {
 		if sinkInput.Properties["application.process.binary"] == "kodi.bin" {
-			events := snapcastOffOutputTmp(sinkInput.SinkInputIndex, "alsa_output.pci-0000_00_0e.0.hdmi-stereo")
+			events := snapcastOffOutput(sinkInput.SinkInputIndex, "alsa_output.pci-0000_00_0e.0.hdmi-stereo")
 			c.addEventsToPublish(events)
 		}
 	}
@@ -167,7 +171,7 @@ func (c *SnapcastController) parsePulseaudio(ev MQTTEvent) {
 	}
 }
 
-func snapcastOnOutputTmp(sinkInputIndex uint32, sinkName string) []MQTTPublish {
+func snapcastOnOutput(sinkInputIndex uint32, sinkName string) []MQTTPublish {
 	result := []MQTTPublish{
 		{
 			Topic:    "pulseaudio/sinkinput/req",
@@ -201,7 +205,7 @@ func snapcastOnOutputTmp(sinkInputIndex uint32, sinkName string) []MQTTPublish {
 	return result
 }
 
-func snapcastOffOutputTmp(sinkInputIndex uint32, sinkName string) []MQTTPublish {
+func snapcastOffOutput(sinkInputIndex uint32, sinkName string) []MQTTPublish {
 	result := []MQTTPublish{
 		{
 			Topic:    "pulseaudio/cardprofile/0/set",

@@ -117,9 +117,7 @@ func foo() {
 		currentHour := midnight.Add(time.Duration(i*15) * time.Minute)
 		timeOfDay := ComputeTimeOfDay(currentHour, 59, 18)
 		fmt.Printf("Phase of the day for %v is %s\n", currentHour.In(location).Format("2006-01-02 15:04:05 MST"), timeOfDay)
-
 	}
-
 }
 
 type StateValue struct {
@@ -137,6 +135,7 @@ func (f StateValue) Age() time.Duration {
 
 type StateValueMap struct {
 	stateValueMap map[string]StateValue
+	callbacks     []func(key string, value, new, updated bool)
 }
 
 func NewStateValueMap() StateValueMap {
@@ -144,17 +143,25 @@ func NewStateValueMap() StateValueMap {
 		stateValueMap: make(map[string]StateValue),
 	}
 }
+
+func (s *StateValueMap) registerCallback(callback func(key string, value, new, updated bool)) {
+	s.callbacks = append(s.callbacks, callback)
+}
+
 func (s *StateValueMap) setState(key string, value bool) {
 	existingState, exists := s.stateValueMap[key]
 
 	now := time.Now()
 	var updatedState StateValue
+	stateNew := false
+	stateUpdate := false
 	if exists {
 		if existingState.value == value {
 			// don't change value
 		} else {
 			existingState.value = value
 			existingState.lastChange = now
+			stateUpdate = true
 		}
 		updatedState = existingState
 	} else {
@@ -165,6 +172,7 @@ func (s *StateValueMap) setState(key string, value bool) {
 			lastUpdate: now,
 			lastChange: now,
 		}
+		stateNew = true
 	}
 
 	if value {
@@ -172,8 +180,12 @@ func (s *StateValueMap) setState(key string, value bool) {
 	} else {
 		updatedState.lastSetFalse = now
 	}
-	s.stateValueMap[key] = updatedState
 
+	for _, callback := range s.callbacks {
+		callback(key, value, stateNew, stateUpdate)
+	}
+
+	s.stateValueMap[key] = updatedState
 }
 
 func (s *StateValueMap) getState(key string) StateValue {

@@ -2,6 +2,7 @@ package regelverk
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -11,16 +12,20 @@ import (
 type blindsState int
 
 const (
-	bedroomBlindsStateOpen blindsState = iota
-	bedroomBlindsStateClosed
+	bedroomBlindsStateClosed blindsState = iota
+	bedroomBlindsStateOpen
 )
+
+func (t blindsState) ToInt() int {
+	return int(t)
+}
 
 type BedroomController struct {
 	BaseController
 }
 
 func (c *BedroomController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.name = "bedroom-controller"
+	c.name = "bedroom"
 	c.masterController = masterController
 
 	// var initialState tvState
@@ -88,4 +93,37 @@ func (c *BedroomController) closeBedroomBlinds(_ context.Context, _ ...any) erro
 func (c *BedroomController) refreshBedroomBlinds(_ context.Context, _ ...any) error {
 	c.addEventsToPublish(bedroomBlindsRefreshOutput())
 	return nil
+}
+
+func bedroomBlindsRefreshOutput() []MQTTPublish {
+	return []MQTTPublish{
+		{
+			Topic:    "zigbee2mqtt/blinds-bedroom/get",
+			Payload:  "{\"state\": \"\"}",
+			Qos:      2,
+			Retained: false,
+		},
+	}
+}
+
+func bedroomBlindsOutput(open bool) []MQTTPublish {
+	state := "CLOSE"
+	if open {
+		state = "OPEN"
+	}
+	return []MQTTPublish{
+		{
+			Topic:    "zigbee2mqtt/blinds-bedroom/set",
+			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+			Qos:      2,
+			Retained: true,
+		},
+		{
+			Topic:    "zigbee2mqtt/blinds-bedroom/get",
+			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+			Qos:      2,
+			Wait:     60 * time.Second,
+			Retained: true,
+		},
+	}
 }
