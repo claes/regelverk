@@ -16,6 +16,10 @@ const (
 	stateTvOffLong
 )
 
+func (t tvState) ToInt() int {
+	return int(t)
+}
+
 type TVController struct {
 	BaseController
 }

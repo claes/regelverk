@@ -14,6 +14,10 @@ const (
 	stateLivingroomFloorlampOff
 )
 
+func (t livingroomLamp) ToInt() int {
+	return int(t)
+}
+
 type LivingroomController struct {
 	BaseController
 }

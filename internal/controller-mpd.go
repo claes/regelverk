@@ -15,6 +15,10 @@ const (
 	mpdStateOff
 )
 
+func (t mpdState) ToInt() int {
+	return int(t)
+}
+
 type MPDController struct {
 	BaseController
 }

@@ -15,6 +15,10 @@ const (
 	ampStateOff
 )
 
+func (t ampState) ToInt() int {
+	return int(t)
+}
+
 type KitchenController struct {
 	BaseController
 }

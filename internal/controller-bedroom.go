@@ -16,6 +16,10 @@ const (
 	bedroomBlindsStateClosed
 )
 
+func (t blindsState) ToInt() int {
+	return int(t)
+}
+
 type BedroomController struct {
 	BaseController
 }

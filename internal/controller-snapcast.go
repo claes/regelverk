@@ -16,14 +16,18 @@ import (
 
 type snapcastState int
 
-var topicStreamRe = regexp.MustCompile(`snapcast/stream/([^/]+)$`)
-var topicClientRe = regexp.MustCompile(`snapcast/client/([^/]+)$`)
-var topicGroupRe = regexp.MustCompile(`snapcast/group/([^/]+)$`)
-
 const (
 	stateSnapcastOn snapcastState = iota
 	stateSnapcastOff
 )
+
+func (t snapcastState) ToInt() int {
+	return int(t)
+}
+
+var topicStreamRe = regexp.MustCompile(`snapcast/stream/([^/]+)$`)
+var topicClientRe = regexp.MustCompile(`snapcast/client/([^/]+)$`)
+var topicGroupRe = regexp.MustCompile(`snapcast/group/([^/]+)$`)
 
 type SnapcastController struct {
 	BaseController
