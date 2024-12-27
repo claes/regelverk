@@ -111,10 +111,11 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 	afterStateInt, ok := afterState.(int)
 	if ok {
+		slog.Info("Could create int from state", "state", afterState, "controller", c.name)
 		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
 		gauge.Set(float64(afterStateInt))
 	} else {
-		slog.Info("Could not create int from state", "state", afterState)
+		slog.Info("Could not create int from state", "state", afterState, "controller", c.name)
 	}
 
 	// if beforeState != afterState {

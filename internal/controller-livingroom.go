@@ -7,9 +7,11 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+type livingroomLamp int
+
 const (
-	stateLivingroomFloorlampOn  = "LampOn"
-	stateLivingroomFloorlampOff = "LampOff"
+	stateLivingroomFloorlampOn livingroomLamp = iota
+	stateLivingroomFloorlampOff
 )
 
 type LivingroomController struct {
