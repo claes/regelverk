@@ -32,7 +32,7 @@ type SnapcastController struct {
 }
 
 func (c *SnapcastController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.name = "snapcast-controller"
+	c.name = "snapcast"
 	c.masterController = masterController
 
 	// var initialState snapcastState

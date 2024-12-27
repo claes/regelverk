@@ -21,7 +21,7 @@ type TVController struct {
 }
 
 func (c *TVController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.name = "tv-controller"
+	c.name = "tv"
 	c.masterController = masterController
 
 	var initialState tvState

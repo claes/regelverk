@@ -16,10 +16,16 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+type MetricsConfig struct {
+	MetricsAddress string
+	MetricsRealm   string
+}
 type MasterController struct {
 	stateValueMap StateValueMap
 	controllers   *[]Controller
 	mu            sync.Mutex
+	pushMetrics   bool
+	metricsConfig MetricsConfig
 }
 
 func CreateMasterController() MasterController {
@@ -27,16 +33,20 @@ func CreateMasterController() MasterController {
 }
 
 func (l *MasterController) Init() {
-	l.stateValueMap.registerCallback(l.StateValueCallback)
+	if len(l.metricsConfig.MetricsAddress) > 0 {
+		l.stateValueMap.registerCallback(l.StateValueCallback)
+	}
 }
 
 func (l *MasterController) StateValueCallback(key string, value, new, updated bool) {
-	slog.Info("Logging metrics", "key", key, "value", value)
 	gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`statevalue{name="%s"}`, key), nil)
 	if value {
 		gauge.Set(1)
 	} else {
 		gauge.Set(0)
+	}
+	if new || updated {
+		l.pushMetrics = true
 	}
 }
 
@@ -66,6 +76,17 @@ func (c *BaseController) Unlock() {
 	c.mu.Unlock()
 }
 
+func (c *BaseController) SetInitialized() {
+	c.isInitialized = true
+
+	firstStateInt, ok := c.stateMachine.MustState().(int)
+	if ok {
+		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
+		gauge.Set(float64(firstStateInt))
+		c.masterController.pushMetrics = true
+	}
+}
+
 func (c *BaseController) IsInitialized() bool {
 	return c.isInitialized
 }
@@ -84,8 +105,18 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	c.stateMachine.Fire("mqttEvent", ev)
 
 	eventsToPublish := c.getAndResetEventsToPublish()
+	afterState := c.stateMachine.MustState()
 	slog.Debug("Event fired", "fsm", c.name, "beforeState", beforeState,
-		"afterState", c.stateMachine.MustState())
+		"afterState", afterState)
+
+	if beforeState != afterState {
+		afterStateInt, ok := afterState.(int)
+		if ok {
+			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
+			gauge.Set(float64(afterStateInt))
+			c.masterController.pushMetrics = true
+		}
+	}
 	return eventsToPublish
 }
 
@@ -104,6 +135,7 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 	masterController.mu.Lock()
 	defer masterController.mu.Unlock()
 
+	masterController.pushMetrics = false // Reset
 	masterController.detectPhonePresent(ev)
 	masterController.detectLivingroomPresence(ev)
 	masterController.detectLivingroomFloorlampState(ev)
@@ -145,6 +177,18 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 				}(result)
 			}
 		}()
+	}
+	masterController.checkPushMetrics()
+}
+
+func (masterController *MasterController) checkPushMetrics() {
+	if masterController.pushMetrics {
+		ctx, err := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		if err != nil {
+			slog.Error("Error creating context with timeout", "error", err)
+		} else {
+			metrics.PushMetrics(ctx, "http://"+masterController.metricsConfig.MetricsAddress+"/api/v1/import/prometheus", false, nil)
+		}
 	}
 }
 

@@ -15,11 +15,12 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-// Mostly reused from https://github.com/stapelberg/regelwerk
+// Inspired by https://github.com/stapelberg/regelwerk
 
 type Config struct {
 	BluetoothAddress   string
 	MetricsAddress     string
+	MetricsRealm       string
 	MpdPasswordFile    string
 	MpdServer          string
 	MQTTBroker         string
@@ -193,17 +194,18 @@ func runRegelverk(ctx context.Context, config Config,
 	dryRun, debug *bool) error {
 
 	masterController := CreateMasterController()
+
+	if len(config.MetricsAddress) > 0 {
+		masterController.metricsConfig = MetricsConfig{MetricsAddress: config.MetricsAddress, MetricsRealm: config.MetricsRealm}
+		metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "realm="+config.MetricsRealm, true)
+	}
+
 	masterController.Init()
 	masterController.controllers = controllers
 
 	mqttMessageHandler, err := createMQTTMessageHandler(config, loops, &masterController, dryRun, debug)
 	if err != nil {
 		return err
-	}
-
-	if len(config.MetricsAddress) > 0 {
-		slog.Info("Initializing metrics collection")
-		metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "", true)
 	}
 
 	slog.Info("Initializing bridges")
