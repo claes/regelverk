@@ -34,6 +34,7 @@ func CreateMasterController() MasterController {
 
 func (l *MasterController) Init() {
 	if len(l.metricsConfig.MetricsAddress) > 0 {
+		slog.Info("Reigstering state value callback in master controller")
 		l.stateValueMap.registerCallback(l.StateValueCallback)
 	}
 }

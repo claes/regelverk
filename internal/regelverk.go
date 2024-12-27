@@ -196,8 +196,11 @@ func runRegelverk(ctx context.Context, config Config,
 	masterController := CreateMasterController()
 
 	if len(config.MetricsAddress) > 0 {
+		slog.Info("Initialzing metrics collection", "address", config.MetricsAddress)
 		masterController.metricsConfig = MetricsConfig{MetricsAddress: config.MetricsAddress, MetricsRealm: config.MetricsRealm}
 		metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "realm="+config.MetricsRealm, true)
+	} else {
+		slog.Info("Metrics collection not used")
 	}
 
 	masterController.Init()
