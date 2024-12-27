@@ -110,8 +110,10 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		"afterState", afterState)
 
 	if intState, ok := afterState.(interface{ ToInt() int }); ok {
+		i := intState.ToInt()
+		slog.Info("Updating state with int", "state", afterState, "int", i)
 		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
-		gauge.Set(float64(intState.ToInt()))
+		gauge.Set(float64(i))
 	} else {
 		slog.Error("State does not implement ToInt", "state", afterState)
 	}
