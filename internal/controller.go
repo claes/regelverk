@@ -109,14 +109,22 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	slog.Debug("Event fired", "fsm", c.name, "beforeState", beforeState,
 		"afterState", afterState)
 
-	if beforeState != afterState {
-		afterStateInt, ok := afterState.(int)
-		if ok {
-			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
-			gauge.Set(float64(afterStateInt))
-			c.masterController.pushMetrics = true
-		}
+	afterStateInt, ok := afterState.(int)
+	if ok {
+		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
+		gauge.Set(float64(afterStateInt))
+	} else {
+		slog.Info("Could not create int from state", "state", afterState)
 	}
+
+	// if beforeState != afterState {
+	// 	afterStateInt, ok := afterState.(int)
+	// 	if ok {
+	// 		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
+	// 		gauge.Set(float64(afterStateInt))
+	// 		c.masterController.pushMetrics = true
+	// 	}
+	// }
 	return eventsToPublish
 }
 
@@ -178,7 +186,7 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 			}
 		}()
 	}
-	masterController.checkPushMetrics()
+	//masterController.checkPushMetrics()
 }
 
 func (masterController *MasterController) checkPushMetrics() {
