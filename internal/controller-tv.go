@@ -11,9 +11,9 @@ import (
 type tvState int
 
 const (
-	stateTvOn tvState = iota
-	stateTvOff
+	stateTvOff = iota
 	stateTvOffLong
+	stateTvOn
 )
 
 func (t tvState) ToInt() int {

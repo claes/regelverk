@@ -198,9 +198,9 @@ func runRegelverk(ctx context.Context, config Config,
 	if len(config.MetricsAddress) > 0 {
 		slog.Info("Initialzing metrics collection", "address", config.MetricsAddress)
 		masterController.metricsConfig = MetricsConfig{MetricsAddress: config.MetricsAddress, MetricsRealm: config.MetricsRealm}
-		//metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "realm="+config.MetricsRealm, true)
+		metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "", true)
 	} else {
-		slog.Info("Metrics collection not used")
+		slog.Info("Metrics collection not initialized")
 	}
 
 	masterController.Init()
@@ -210,10 +210,6 @@ func runRegelverk(ctx context.Context, config Config,
 	if err != nil {
 		return err
 	}
-
-	slog.Info("FOOOOOO")
-	metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "", true)
-	//metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "realm="+config.MetricsRealm, true)
 
 	slog.Info("Initializing bridges")
 	initBridges(ctx, mqttMessageHandler.client, config, bridgeWrappers)

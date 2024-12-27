@@ -11,8 +11,8 @@ import (
 type ampState int
 
 const (
-	ampStateOn ampState = iota
-	ampStateOff
+	ampStateOff ampState = iota
+	ampStateOn
 )
 
 func (t ampState) ToInt() int {

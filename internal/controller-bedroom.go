@@ -12,8 +12,8 @@ import (
 type blindsState int
 
 const (
-	bedroomBlindsStateOpen blindsState = iota
-	bedroomBlindsStateClosed
+	bedroomBlindsStateClosed blindsState = iota
+	bedroomBlindsStateOpen
 )
 
 func (t blindsState) ToInt() int {

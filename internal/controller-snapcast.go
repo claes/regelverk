@@ -17,8 +17,8 @@ import (
 type snapcastState int
 
 const (
-	stateSnapcastOn snapcastState = iota
-	stateSnapcastOff
+	stateSnapcastOff snapcastState = iota
+	stateSnapcastOn
 )
 
 func (t snapcastState) ToInt() int {

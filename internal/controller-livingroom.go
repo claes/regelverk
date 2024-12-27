@@ -10,8 +10,8 @@ import (
 type livingroomLamp int
 
 const (
-	stateLivingroomFloorlampOn livingroomLamp = iota
-	stateLivingroomFloorlampOff
+	stateLivingroomFloorlampOff livingroomLamp = iota
+	stateLivingroomFloorlampOn
 )
 
 func (t livingroomLamp) ToInt() int {

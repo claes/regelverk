@@ -112,30 +112,12 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 	if intState, ok := afterState.(interface{ ToInt() int }); ok {
 		i := intState.ToInt()
-		slog.Info("Updating state with int", "state", afterState, "int", i)
 		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
 		gauge.Set(float64(i))
 	} else {
 		slog.Error("State does not implement ToInt", "state", afterState)
 	}
 
-	// afterStateInt, ok := afterState.(int)
-	// if ok {
-	// 	slog.Info("Could create int from state", "state", afterState, "controller", c.name)
-	// 	gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
-	// 	gauge.Set(float64(afterStateInt))
-	// } else {
-	// 	slog.Info("Could not create int from state", "state", afterState)
-	// }
-
-	// if beforeState != afterState {
-	// 	afterStateInt, ok := afterState.(int)
-	// 	if ok {
-	// 		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
-	// 		gauge.Set(float64(afterStateInt))
-	// 		c.masterController.pushMetrics = true
-	// 	}
-	// }
 	return eventsToPublish
 }
 
@@ -197,7 +179,7 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 			}
 		}()
 	}
-	//masterController.checkPushMetrics()
+	masterController.checkPushMetrics()
 }
 
 func (masterController *MasterController) checkPushMetrics() {

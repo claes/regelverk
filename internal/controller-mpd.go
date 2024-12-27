@@ -11,8 +11,8 @@ import (
 type mpdState int
 
 const (
-	mpdStateOn mpdState = iota
-	mpdStateOff
+	mpdStateOff mpdState = iota
+	mpdStateOn
 )
 
 func (t mpdState) ToInt() int {
