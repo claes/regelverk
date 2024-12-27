@@ -31,6 +31,7 @@ func (l *MasterController) Init() {
 }
 
 func (l *MasterController) StateValueCallback(key string, value, new, updated bool) {
+	slog.Info("Logging metrics", "key", key, "value", value)
 	gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`statevalue{name="%s"}`, key), nil)
 	if value {
 		gauge.Set(1)

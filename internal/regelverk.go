@@ -193,6 +193,7 @@ func runRegelverk(ctx context.Context, config Config,
 	dryRun, debug *bool) error {
 
 	masterController := CreateMasterController()
+	masterController.Init()
 	masterController.controllers = controllers
 
 	mqttMessageHandler, err := createMQTTMessageHandler(config, loops, &masterController, dryRun, debug)
