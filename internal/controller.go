@@ -183,12 +183,15 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 
 func (masterController *MasterController) checkPushMetrics() {
 	if masterController.pushMetrics {
-		ctx, err := context.WithTimeout(context.Background(), 100*time.Millisecond)
-		if err != nil {
-			slog.Error("Error creating context with timeout", "error", err)
-		} else {
-			metrics.PushMetrics(ctx, "http://"+masterController.metricsConfig.MetricsAddress+"/api/v1/import/prometheus", false, nil)
-		}
+		ctx := context.Background()
+		metrics.PushMetrics(ctx, "http://"+masterController.metricsConfig.MetricsAddress+"/api/v1/import/prometheus", false, nil)
+		// ctx := context.Background()
+		// //ctx, err := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		// if err != nil {
+		// 	slog.Error("Error creating context with timeout", "error", err)
+		// } else {
+		// 	metrics.PushMetrics(ctx, "http://"+masterController.metricsConfig.MetricsAddress+"/api/v1/import/prometheus", false, nil)
+		// }
 	}
 }
 
