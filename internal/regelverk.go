@@ -211,7 +211,8 @@ func runRegelverk(ctx context.Context, config Config,
 		return err
 	}
 
-	metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "realm="+config.MetricsRealm, true)
+	metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "", true)
+	//metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "realm="+config.MetricsRealm, true)
 
 	slog.Info("Initializing bridges")
 	initBridges(ctx, mqttMessageHandler.client, config, bridgeWrappers)
