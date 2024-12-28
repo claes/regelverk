@@ -2,6 +2,7 @@ package regelverk
 
 import (
 	"context"
+	"log/slog"
 	"reflect"
 	"time"
 
@@ -25,6 +26,7 @@ type TVController struct {
 }
 
 func (c *TVController) Initialize(masterController *MasterController) []MQTTPublish {
+	slog.Info("TV Controller initialzing")
 	c.name = "tv"
 	c.masterController = masterController
 
@@ -54,6 +56,7 @@ func (c *TVController) Initialize(masterController *MasterController) []MQTTPubl
 		Permit("mqttEvent", stateTvOn, masterController.guardStateTvOn)
 
 	c.SetInitialized()
+	slog.Info("TV Controller initialized", "initialState", initialState)
 	return nil
 }
 

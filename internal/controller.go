@@ -90,11 +90,11 @@ func (c *BaseController) SetInitialized() {
 	c.isInitialized = true
 
 	if c.masterController.metricsConfig.CollectMetrics {
-		firstStateInt, ok := c.stateMachine.MustState().(int)
+		stateInt, ok := c.stateMachine.MustState().(int)
 		if ok {
 			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s",realm="%s"}`,
 				c.name, c.masterController.metricsConfig.MetricsRealm), nil)
-			gauge.Set(float64(firstStateInt))
+			gauge.Set(float64(stateInt))
 			c.masterController.pushMetrics = true
 		}
 	}
@@ -302,16 +302,19 @@ func (l *MasterController) guardTurnOffLivingroomLamp(_ context.Context, _ ...an
 
 func (l *MasterController) guardStateTvOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("tvpower")
+	slog.Info("Guard state TV on", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateTvOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("tvpower")
+	slog.Info("Guard state TV off", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateTvOffLong(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrueNotRecently("tvpower", 30*time.Minute)
+	slog.Info("Guard state TV off long", "check", check)
 	return check
 }
 
