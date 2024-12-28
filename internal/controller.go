@@ -179,7 +179,6 @@ func (c *BaseController) StateMachineFire(trigger stateless.Trigger, args ...any
 			c.name, c.masterController.metricsConfig.MetricsRealm))
 		counter.Inc()
 	}
-	slog.Info("Fire into ", "controller", c.name, "trigger", trigger, "fsm", c.stateMachine)
 	return c.stateMachine.Fire(trigger, args...)
 }
 
@@ -278,13 +277,11 @@ func (l *MasterController) guardStateMPDOff(_ context.Context, _ ...any) bool {
 
 func (l *MasterController) guardStateSnapcastOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("snapcast")
-	slog.Info("Guard state snapcast on", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateSnapcastOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("snapcast")
-	slog.Info("Guard state snapcast off", "check", check)
 	return check
 }
 
@@ -304,19 +301,16 @@ func (l *MasterController) guardTurnOffLivingroomLamp(_ context.Context, _ ...an
 
 func (l *MasterController) guardStateTvOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("tvpower")
-	slog.Info("Guard state TV on", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateTvOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("tvpower")
-	slog.Info("Guard state TV off", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateTvOffLong(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrueNotRecently("tvpower", 30*time.Minute)
-	slog.Info("Guard state TV off long", "check", check)
 	return check
 }
 

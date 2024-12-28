@@ -16,7 +16,7 @@ func main() {
 	bridgeWrappers := &[]internal.BridgeWrapper{
 		&internal.CecBridgeWrapper{},
 		&internal.MpdBridgeWrapper{},
-		//&internal.HidBridgeWrapper{},
+		&internal.HidBridgeWrapper{},
 		&internal.PulseaudioBridgeWrapper{},
 		&internal.RotelBridgeWrapper{},
 		&internal.RouterOSBridgeWrapper{},
