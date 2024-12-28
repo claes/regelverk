@@ -160,7 +160,7 @@ func createTriggerString(trigger stateless.Trigger) string {
 	}
 	return triggerStr
 }
-func (c *BaseController) StateMachineFire(trigger stateless.Trigger, args ...any) {
+func (c *BaseController) StateMachineFire(trigger stateless.Trigger, args ...any) error {
 
 	if c.masterController.metricsConfig.CollectMetrics {
 
@@ -170,7 +170,7 @@ func (c *BaseController) StateMachineFire(trigger stateless.Trigger, args ...any
 		counter.Inc()
 	}
 
-	c.stateMachine.Fire(trigger, args...)
+	return c.stateMachine.Fire(trigger, args...)
 }
 
 func (c *BaseController) addEventsToPublish(events []MQTTPublish) {

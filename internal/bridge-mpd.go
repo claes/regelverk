@@ -28,14 +28,14 @@ func (l *MpdBridgeWrapper) InitializeBridge(mqttClient mqtt.Client, config Confi
 	l.mpdClientConfig = mpdmqtt.MpdClientConfig{MpdServer: config.MpdServer, MpdPassword: mpdPassword}
 
 	l.bridge, err = mpdmqtt.NewMpdMQTTBridge(l.mpdClientConfig, mqttClient, config.MQTTTopicPrefix)
+	// go func() {
+	// 	l.bridge.DetectReconnectMPDClient(l.mpdClientConfig)
+	// }()
 
 	return nil
 }
 
 func (l *MpdBridgeWrapper) Run(ctx context.Context) error {
-	go func() {
-		l.bridge.DetectReconnectMPDClient(l.mpdClientConfig)
-	}()
 
 	l.bridge.EventLoop(ctx)
 	return nil
