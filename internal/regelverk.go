@@ -18,26 +18,27 @@ import (
 // Inspired by https://github.com/stapelberg/regelwerk
 
 type Config struct {
-	BluetoothAddress   string
-	CollectMetrics     bool
-	HIDVendorID        string
-	HIDProductID       string
-	MetricsAddress     string
-	MetricsRealm       string
-	MpdPasswordFile    string
-	MpdServer          string
-	MQTTBroker         string
-	MQTTPasswordFile   string
-	MQTTTopicPrefix    string
-	MQTTUserName       string
-	Pulseserver        string
-	RotelSerialPort    string
-	RouterAddress      string
-	RouterPasswordFile string
-	RouterUsername     string
-	SamsungTvAddress   string
-	SnapcastServer     string
-	WebAddress         string
+	BluetoothAddress    string
+	CollectMetrics      bool
+	CollectDebugMetrics bool
+	HIDVendorID         string
+	HIDProductID        string
+	MetricsAddress      string
+	MetricsRealm        string
+	MpdPasswordFile     string
+	MpdServer           string
+	MQTTBroker          string
+	MQTTPasswordFile    string
+	MQTTTopicPrefix     string
+	MQTTUserName        string
+	Pulseserver         string
+	RotelSerialPort     string
+	RouterAddress       string
+	RouterPasswordFile  string
+	RouterUsername      string
+	SamsungTvAddress    string
+	SnapcastServer      string
+	WebAddress          string
 }
 
 type MQTTEvent struct {
@@ -87,9 +88,11 @@ func (h *MQTTMessageHandler) handle(_ mqtt.Client, m mqtt.Message) {
 	}
 
 	h.handleEvent(ev)
-	counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_handled{topic="%s",realm="%s"}`,
-		m.Topic(), h.masterController.metricsConfig.MetricsRealm))
-	counter.Inc()
+	if h.masterController.metricsConfig.CollectDebugMetrics {
+		counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_handled{topic="%s",realm="%s"}`,
+			m.Topic(), h.masterController.metricsConfig.MetricsRealm))
+		counter.Inc()
+	}
 }
 
 var count int64 = 0
@@ -118,9 +121,12 @@ func (h *MQTTMessageHandler) handleEvent(ev MQTTEvent) {
 							time.Sleep(toPublish.Wait)
 						}
 						h.client.Publish(toPublish.Topic, toPublish.Qos, toPublish.Retained, toPublish.Payload)
-						counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_published{topic="%s",realm="%s"}`,
-							toPublish.Topic, h.masterController.metricsConfig.MetricsRealm))
-						counter.Inc()
+
+						if h.masterController.metricsConfig.CollectDebugMetrics {
+							counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_published{topic="%s",realm="%s"}`,
+								toPublish.Topic, h.masterController.metricsConfig.MetricsRealm))
+							counter.Inc()
+						}
 					}(result)
 				}
 			}
@@ -189,9 +195,9 @@ func runRegelverk(ctx context.Context, config Config,
 	loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller,
 	dryRun, debug *bool) error {
 
-	metricsConfig := MetricsConfig{CollectMetrics: config.CollectMetrics,
+	metricsConfig := MetricsConfig{CollectMetrics: config.CollectMetrics, CollectDebugMetrics: config.CollectDebugMetrics,
 		MetricsAddress: config.MetricsAddress, MetricsRealm: config.MetricsRealm}
-	if metricsConfig.CollectMetrics {
+	if metricsConfig.CollectMetrics || metricsConfig.CollectDebugMetrics {
 		slog.Info("Initialzing metrics collection", "address", config.MetricsAddress)
 		metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "", true)
 	} else {

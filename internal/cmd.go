@@ -19,6 +19,7 @@ func ParseConfig() (Config, *bool, *bool) {
 	hidVendorID := flag.String("hidVendorId", "", "HID vendor id")
 	httpListenAddress := flag.String("httpListenAddress", ":8080", "HTTP listen address")
 	collectMetrics := flag.Bool("collectMetrics", false, "true/false whether to collect metrics")
+	collectDebugMetrics := flag.Bool("collectDebugMetrics", false, "true/false whether to collect debug metrics")
 	metricsAddress := flag.String("metricsAddress", "", "Metrics address")
 	metricsRealm := flag.String("metricsRealm", "", "Metrics realm")
 	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password file")
@@ -54,26 +55,27 @@ func ParseConfig() (Config, *bool, *bool) {
 	}
 
 	config := Config{
-		BluetoothAddress:   *bluetoothAddress,
-		HIDProductID:       *hidProductID,
-		HIDVendorID:        *hidVendorID,
-		CollectMetrics:     *collectMetrics,
-		MetricsAddress:     *metricsAddress,
-		MetricsRealm:       *metricsRealm,
-		MpdPasswordFile:    *mpdPasswordFile,
-		MpdServer:          *mpdServer,
-		MQTTBroker:         *mqttBroker,
-		MQTTPasswordFile:   *mqttPasswordFile,
-		MQTTTopicPrefix:    *mqttTopicPrefix,
-		MQTTUserName:       *mqttUserName,
-		Pulseserver:        *pulseServer,
-		RotelSerialPort:    *rotelSerialPort,
-		RouterAddress:      *routerAddress,
-		RouterPasswordFile: *routerPasswordFile,
-		RouterUsername:     *routerUsername,
-		SamsungTvAddress:   *samsungTVAddress,
-		SnapcastServer:     *snapcastServer,
-		WebAddress:         *httpListenAddress,
+		BluetoothAddress:    *bluetoothAddress,
+		HIDProductID:        *hidProductID,
+		HIDVendorID:         *hidVendorID,
+		CollectMetrics:      *collectMetrics,
+		CollectDebugMetrics: *collectDebugMetrics,
+		MetricsAddress:      *metricsAddress,
+		MetricsRealm:        *metricsRealm,
+		MpdPasswordFile:     *mpdPasswordFile,
+		MpdServer:           *mpdServer,
+		MQTTBroker:          *mqttBroker,
+		MQTTPasswordFile:    *mqttPasswordFile,
+		MQTTTopicPrefix:     *mqttTopicPrefix,
+		MQTTUserName:        *mqttUserName,
+		Pulseserver:         *pulseServer,
+		RotelSerialPort:     *rotelSerialPort,
+		RouterAddress:       *routerAddress,
+		RouterPasswordFile:  *routerPasswordFile,
+		RouterUsername:      *routerUsername,
+		SamsungTvAddress:    *samsungTVAddress,
+		SnapcastServer:      *snapcastServer,
+		WebAddress:          *httpListenAddress,
 	}
 	return config, debug, dryRun
 }

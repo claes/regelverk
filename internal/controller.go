@@ -17,10 +17,12 @@ import (
 )
 
 type MetricsConfig struct {
-	CollectMetrics bool
-	MetricsAddress string
-	MetricsRealm   string
+	CollectMetrics      bool
+	CollectDebugMetrics bool
+	MetricsAddress      string
+	MetricsRealm        string
 }
+
 type MasterController struct {
 	stateValueMap StateValueMap
 	controllers   *[]Controller
@@ -119,7 +121,7 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	slog.Debug("Event fired", "fsm", c.name, "beforeState", beforeState,
 		"afterState", afterState)
 
-	if c.masterController.metricsConfig.CollectMetrics {
+	if c.masterController.metricsConfig.CollectDebugMetrics {
 		triggerStr := createTriggerString(ev)
 
 		if intState, ok := beforeState.(interface{ ToInt() int }); ok {
@@ -226,7 +228,7 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 					}
 					client.Publish(toPublish.Topic, toPublish.Qos, toPublish.Retained, toPublish.Payload)
 
-					if masterController.metricsConfig.CollectMetrics {
+					if masterController.metricsConfig.CollectDebugMetrics {
 						counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_published{topic="%s",realm="%s"}`,
 							toPublish.Topic, masterController.metricsConfig.MetricsRealm))
 						counter.Inc()
