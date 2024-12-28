@@ -112,7 +112,7 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	}
 
 	beforeState := c.stateMachine.MustState()
-	c.stateMachine.Fire("mqttEvent", ev)
+	c.StateMachineFire("mqttEvent", ev)
 
 	eventsToPublish := c.getAndResetEventsToPublish()
 	afterState := c.stateMachine.MustState()
@@ -120,17 +120,55 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		"afterState", afterState)
 
 	if c.masterController.metricsConfig.CollectMetrics {
-		if intState, ok := afterState.(interface{ ToInt() int }); ok {
-			i := intState.ToInt()
-			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s",realm="%s"}`,
-				c.name, c.masterController.metricsConfig.MetricsRealm), nil)
-			gauge.Set(float64(i))
+		triggerStr := createTriggerString(ev)
+
+		if intState, ok := beforeState.(interface{ ToInt() int }); ok {
+			beforeStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_before{controller="%s",trigger="%s",realm="%s"}`,
+				c.name, triggerStr, c.masterController.metricsConfig.MetricsRealm), nil)
+			beforeStateGauge.Set(float64(intState.ToInt()))
 		} else {
 			slog.Error("State does not implement ToInt", "state", afterState)
 		}
+
+		if intState, ok := afterState.(interface{ ToInt() int }); ok {
+			afterStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_after{controller="%s",trigger="%s",realm="%s"}`,
+				c.name, triggerStr, c.masterController.metricsConfig.MetricsRealm), nil)
+			afterStateGauge.Set(float64(intState.ToInt()))
+		} else {
+			slog.Error("State does not implement ToInt", "state", afterState)
+		}
+
+		counter := metrics.GetOrCreateCounter(fmt.Sprintf(`fsm_state_events{controller="%s",trigger="%s",realm="%s"}`,
+			c.name, triggerStr, c.masterController.metricsConfig.MetricsRealm))
+		counter.Add(len(eventsToPublish))
+	}
+	return eventsToPublish
+}
+
+func createTriggerString(trigger stateless.Trigger) string {
+	var triggerStr string
+	switch trigger.(type) {
+	case string:
+		triggerStr = trigger.(string)
+	case MQTTEvent:
+		ev := trigger.(MQTTEvent)
+		triggerStr = ev.Topic
+	default:
+		triggerStr = "trigger"
+	}
+	return triggerStr
+}
+func (c *BaseController) StateMachineFire(trigger stateless.Trigger, args ...any) {
+
+	if c.masterController.metricsConfig.CollectMetrics {
+
+		triggerStr := createTriggerString(trigger)
+		counter := metrics.GetOrCreateCounter(fmt.Sprintf(`fsm_fire{controller="%s",trigger="%s",realm="%s"}`,
+			c.name, triggerStr, c.masterController.metricsConfig.MetricsRealm))
+		counter.Inc()
 	}
 
-	return eventsToPublish
+	c.stateMachine.Fire(trigger, args)
 }
 
 func (c *BaseController) addEventsToPublish(events []MQTTPublish) {

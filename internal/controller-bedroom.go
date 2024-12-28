@@ -61,15 +61,15 @@ func (c *BedroomController) Initialize(masterController *MasterController) []MQT
 		for {
 			now := time.Now()
 			if now.Hour() == 9 && now.Minute() == 0 {
-				c.stateMachine.Fire("blindsup")
+				c.StateMachineFire("blindsup")
 			} else if now.Hour() == 21 && now.Minute() == 0 {
-				c.stateMachine.Fire("blindsdown")
+				c.StateMachineFire("blindsdown")
 			}
 
 			if now.Hour() == 8 && now.Minute() == 0 {
-				c.stateMachine.Fire("timer")
+				c.StateMachineFire("timer")
 			} else if now.Hour() == 20 && now.Minute() == 0 {
-				c.stateMachine.Fire("timer")
+				c.StateMachineFire("timer")
 			}
 
 			time.Sleep(1 * time.Minute)
