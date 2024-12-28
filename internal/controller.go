@@ -170,7 +170,7 @@ func (c *BaseController) StateMachineFire(trigger stateless.Trigger, args ...any
 		counter.Inc()
 	}
 
-	c.stateMachine.Fire(trigger, args)
+	c.stateMachine.Fire(trigger, args...)
 }
 
 func (c *BaseController) addEventsToPublish(events []MQTTPublish) {
