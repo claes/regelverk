@@ -12,7 +12,7 @@ import (
 type tvState int
 
 const (
-	stateTvOff = iota
+	stateTvOff tvState = iota
 	stateTvOffLong
 	stateTvOn
 )
@@ -40,7 +40,7 @@ func (c *TVController) Initialize(masterController *MasterController) []MQTTPubl
 		return nil
 	}
 
-	stateMachine := stateless.NewStateMachine(stateTvOn)
+	stateMachine := stateless.NewStateMachine(initialState)
 	stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
 	stateMachine.Configure(stateTvOn).
