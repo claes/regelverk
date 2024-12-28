@@ -49,7 +49,7 @@ func (c *KitchenController) Initialize(masterController *MasterController) []MQT
 
 	c.eventHandlers = append(c.eventHandlers, c.handleMediaRemoteEvents)
 
-	c.isInitialized = true
+	c.SetInitialized()
 	return nil
 }
 

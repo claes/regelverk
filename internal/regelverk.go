@@ -19,6 +19,7 @@ import (
 
 type Config struct {
 	BluetoothAddress   string
+	CollectMetrics     bool
 	HIDVendorID        string
 	HIDProductID       string
 	MetricsAddress     string
@@ -61,14 +62,14 @@ type ControlLoop interface {
 	ProcessEvent(MQTTEvent) []MQTTPublish
 }
 
-type statusLoop struct {
+type StatusLoop struct {
 	mu sync.Mutex
 	m  *MQTTMessageHandler
 }
 
-func (l *statusLoop) Lock() { l.mu.Lock() }
+func (l *StatusLoop) Lock() { l.mu.Lock() }
 
-func (l *statusLoop) Unlock() { l.mu.Unlock() }
+func (l *StatusLoop) Unlock() { l.mu.Unlock() }
 
 type MQTTMessageHandler struct {
 	dryRun           bool
@@ -184,34 +185,21 @@ func createMQTTMessageHandler(config Config, loops []ControlLoop, masterControll
 	return mqttMessageHandler, nil
 }
 
-// func createWebServer(config Config) {
-// 	go func() {
-// 		slog.Info("Initializing HTTP server", "address", config.webAddress)
-
-// 		err := http.ListenAndServe(config.webAddress, nil)
-
-// 		if err != nil {
-// 			slog.Error("Error initializing HTTP server",
-// 				"listenAddr", config.webAddress, "error", err)
-// 			os.Exit(1)
-// 		}
-// 	}()
-// }
-
 func runRegelverk(ctx context.Context, config Config,
 	loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller,
 	dryRun, debug *bool) error {
 
-	masterController := CreateMasterController()
-
-	if len(config.MetricsAddress) > 0 {
+	metricsConfig := MetricsConfig{CollectMetrics: config.CollectMetrics,
+		MetricsAddress: config.MetricsAddress, MetricsRealm: config.MetricsRealm}
+	if metricsConfig.CollectMetrics {
 		slog.Info("Initialzing metrics collection", "address", config.MetricsAddress)
-		masterController.metricsConfig = MetricsConfig{MetricsAddress: config.MetricsAddress, MetricsRealm: config.MetricsRealm}
 		metrics.InitPush("http://"+config.MetricsAddress+"/api/v1/import/prometheus", 10*time.Second, "", true)
 	} else {
 		slog.Info("Metrics collection not initialized")
 	}
 
+	masterController := CreateMasterController()
+	masterController.metricsConfig = metricsConfig
 	masterController.Init()
 	masterController.controllers = controllers
 

@@ -24,7 +24,7 @@ var rotelStateUpdated = make(chan struct{})
 var pulseaudioStateUpdated = make(chan struct{})
 
 type WebLoop struct {
-	statusLoop
+	StatusLoop
 	mqttMessageHandler *MQTTMessageHandler
 	rotelState         rotelmqtt.RotelState
 	pulseAudioState    pulsemqtt.PulseAudioState

@@ -17,6 +17,7 @@ import (
 )
 
 type MetricsConfig struct {
+	CollectMetrics bool
 	MetricsAddress string
 	MetricsRealm   string
 }
@@ -33,21 +34,23 @@ func CreateMasterController() MasterController {
 }
 
 func (l *MasterController) Init() {
-	if len(l.metricsConfig.MetricsAddress) > 0 {
-		slog.Info("Reigstering state value callback in master controller")
+	if l.metricsConfig.CollectMetrics {
+		slog.Info("Registering state value callback in master controller")
 		l.stateValueMap.registerCallback(l.StateValueCallback)
 	}
 }
 
 func (l *MasterController) StateValueCallback(key string, value, new, updated bool) {
-	gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`statevalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
-	if value {
-		gauge.Set(1)
-	} else {
-		gauge.Set(0)
-	}
-	if new || updated {
-		l.pushMetrics = true
+	if l.metricsConfig.CollectMetrics {
+		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`statevalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
+		if value {
+			gauge.Set(1)
+		} else {
+			gauge.Set(0)
+		}
+		if new || updated {
+			l.pushMetrics = true
+		}
 	}
 }
 
@@ -84,12 +87,14 @@ func (c *BaseController) Unlock() {
 func (c *BaseController) SetInitialized() {
 	c.isInitialized = true
 
-	firstStateInt, ok := c.stateMachine.MustState().(int)
-	if ok {
-		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s",realm="%s"}`,
-			c.name, c.masterController.metricsConfig.MetricsRealm), nil)
-		gauge.Set(float64(firstStateInt))
-		c.masterController.pushMetrics = true
+	if c.masterController.metricsConfig.CollectMetrics {
+		firstStateInt, ok := c.stateMachine.MustState().(int)
+		if ok {
+			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s",realm="%s"}`,
+				c.name, c.masterController.metricsConfig.MetricsRealm), nil)
+			gauge.Set(float64(firstStateInt))
+			c.masterController.pushMetrics = true
+		}
 	}
 }
 
@@ -106,7 +111,6 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		c.addEventsToPublish(eventHandler(ev))
 	}
 
-	slog.Debug("Fire event", "name", c.name)
 	beforeState := c.stateMachine.MustState()
 	c.stateMachine.Fire("mqttEvent", ev)
 
@@ -115,13 +119,15 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	slog.Debug("Event fired", "fsm", c.name, "beforeState", beforeState,
 		"afterState", afterState)
 
-	if intState, ok := afterState.(interface{ ToInt() int }); ok {
-		i := intState.ToInt()
-		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s",realm="%s"}`,
-			c.name, c.masterController.metricsConfig.MetricsRealm), nil)
-		gauge.Set(float64(i))
-	} else {
-		slog.Error("State does not implement ToInt", "state", afterState)
+	if c.masterController.metricsConfig.CollectMetrics {
+		if intState, ok := afterState.(interface{ ToInt() int }); ok {
+			i := intState.ToInt()
+			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s",realm="%s"}`,
+				c.name, c.masterController.metricsConfig.MetricsRealm), nil)
+			gauge.Set(float64(i))
+		} else {
+			slog.Error("State does not implement ToInt", "state", afterState)
+		}
 	}
 
 	return eventsToPublish
@@ -181,9 +187,12 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 						time.Sleep(toPublish.Wait)
 					}
 					client.Publish(toPublish.Topic, toPublish.Qos, toPublish.Retained, toPublish.Payload)
-					counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_published{topic="%s",realm="%s"}`,
-						toPublish.Topic, masterController.metricsConfig.MetricsRealm))
-					counter.Inc()
+
+					if masterController.metricsConfig.CollectMetrics {
+						counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_published{topic="%s",realm="%s"}`,
+							toPublish.Topic, masterController.metricsConfig.MetricsRealm))
+						counter.Inc()
+					}
 				}(result)
 			}
 		}()
@@ -192,7 +201,7 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 }
 
 func (masterController *MasterController) checkPushMetrics() {
-	if masterController.pushMetrics {
+	if masterController.metricsConfig.CollectMetrics && masterController.pushMetrics {
 		ctx := context.Background()
 		metrics.PushMetrics(ctx, "http://"+masterController.metricsConfig.MetricsAddress+"/api/v1/import/prometheus", false, nil)
 		// ctx := context.Background()

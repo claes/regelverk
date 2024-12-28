@@ -76,7 +76,7 @@ func (c *BedroomController) Initialize(masterController *MasterController) []MQT
 		}
 	}()
 
-	c.isInitialized = true
+	c.SetInitialized()
 	return nil
 }
 

@@ -46,7 +46,7 @@ func (c *LivingroomController) Initialize(masterController *MasterController) []
 		OnEntry(c.turnOffLivingroomFloorlamp).
 		Permit("mqttEvent", stateLivingroomFloorlampOn, c.masterController.guardTurnOnLivingroomLamp)
 
-	c.isInitialized = true
+	c.SetInitialized()
 	return nil
 }
 

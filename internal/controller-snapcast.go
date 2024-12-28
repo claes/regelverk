@@ -62,7 +62,7 @@ func (c *SnapcastController) Initialize(masterController *MasterController) []MQ
 
 	c.eventHandlers = append(c.eventHandlers, c.customProcessEvent)
 
-	c.isInitialized = true
+	c.SetInitialized()
 	return nil
 }
 

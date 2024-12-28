@@ -7,7 +7,7 @@ import (
 )
 
 type CecLoop struct {
-	statusLoop
+	StatusLoop
 }
 
 func (l *CecLoop) Init(m *MQTTMessageHandler, config Config) {}

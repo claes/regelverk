@@ -18,6 +18,7 @@ func ParseConfig() (Config, *bool, *bool) {
 	hidProductID := flag.String("hidProductId", "", "HID product id")
 	hidVendorID := flag.String("hidVendorId", "", "HID vendor id")
 	httpListenAddress := flag.String("httpListenAddress", ":8080", "HTTP listen address")
+	collectMetrics := flag.Bool("collectMetrics", false, "true/false whether to collect metrics")
 	metricsAddress := flag.String("metricsAddress", "", "Metrics address")
 	metricsRealm := flag.String("metricsRealm", "", "Metrics realm")
 	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password file")
@@ -56,6 +57,7 @@ func ParseConfig() (Config, *bool, *bool) {
 		BluetoothAddress:   *bluetoothAddress,
 		HIDProductID:       *hidProductID,
 		HIDVendorID:        *hidVendorID,
+		CollectMetrics:     *collectMetrics,
 		MetricsAddress:     *metricsAddress,
 		MetricsRealm:       *metricsRealm,
 		MpdPasswordFile:    *mpdPasswordFile,

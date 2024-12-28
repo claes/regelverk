@@ -53,7 +53,7 @@ func (c *TVController) Initialize(masterController *MasterController) []MQTTPubl
 		OnEntry(c.turnOffTvAppliancesLong).
 		Permit("mqttEvent", stateTvOn, masterController.guardStateTvOn)
 
-	c.isInitialized = true
+	c.SetInitialized()
 	return nil
 }
 
