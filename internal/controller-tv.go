@@ -40,7 +40,7 @@ func (c *TVController) Initialize(masterController *MasterController) []MQTTPubl
 		return nil
 	}
 
-	stateMachine := stateless.NewStateMachine(initialState)
+	stateMachine := stateless.NewStateMachine(stateTvOn)
 	stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
 	stateMachine.Configure(stateTvOn).

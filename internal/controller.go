@@ -179,7 +179,7 @@ func (c *BaseController) StateMachineFire(trigger stateless.Trigger, args ...any
 			c.name, c.masterController.metricsConfig.MetricsRealm))
 		counter.Inc()
 	}
-
+	slog.Info("Fire into ", "controller", c.name, "trigger", trigger)
 	return c.stateMachine.Fire(trigger, args...)
 }
 
