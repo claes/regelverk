@@ -26,7 +26,7 @@ type TVController struct {
 }
 
 func (c *TVController) Initialize(masterController *MasterController) []MQTTPublish {
-	slog.Info("TV Controller initialzing")
+	slog.Info("TV Controller initializing")
 	c.name = "tv"
 	c.masterController = masterController
 
@@ -36,26 +36,28 @@ func (c *TVController) Initialize(masterController *MasterController) []MQTTPubl
 	} else if masterController.stateValueMap.requireFalse("tvpower") {
 		initialState = stateTvOff
 	} else {
+		slog.Info("TV Controller initializing aborted")
 		return nil
 	}
 
-	c.stateMachine = stateless.NewStateMachine(initialState)
-	c.stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
+	stateMachine := stateless.NewStateMachine(initialState)
+	stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
-	c.stateMachine.Configure(stateTvOn).
+	stateMachine.Configure(stateTvOn).
 		OnEntry(c.turnOnTvAppliances).
 		Permit("mqttEvent", stateTvOff, masterController.guardStateTvOff)
 
-	c.stateMachine.Configure(stateTvOff).
+	stateMachine.Configure(stateTvOff).
 		OnEntry(c.turnOffTvAppliances).
 		Permit("mqttEvent", stateTvOn, masterController.guardStateTvOn).
 		Permit("mqttEvent", stateTvOffLong, masterController.guardStateTvOffLong)
 
-	c.stateMachine.Configure(stateTvOffLong).
+	stateMachine.Configure(stateTvOffLong).
 		OnEntry(c.turnOffTvAppliancesLong).
 		Permit("mqttEvent", stateTvOn, masterController.guardStateTvOn)
 
 	c.SetInitialized()
+	c.stateMachine = stateMachine
 	slog.Info("TV Controller initialized", "initialState", initialState)
 	return nil
 }

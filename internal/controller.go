@@ -278,11 +278,13 @@ func (l *MasterController) guardStateMPDOff(_ context.Context, _ ...any) bool {
 
 func (l *MasterController) guardStateSnapcastOn(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrue("snapcast")
+	slog.Info("Guard state snapcast on", "check", check)
 	return check
 }
 
 func (l *MasterController) guardStateSnapcastOff(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireFalse("snapcast")
+	slog.Info("Guard state snapcast off", "check", check)
 	return check
 }
 
