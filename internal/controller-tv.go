@@ -2,7 +2,6 @@ package regelverk
 
 import (
 	"context"
-	"log/slog"
 	"reflect"
 	"time"
 
@@ -26,7 +25,6 @@ type TVController struct {
 }
 
 func (c *TVController) Initialize(masterController *MasterController) []MQTTPublish {
-	slog.Info("TV Controller initializing")
 	c.name = "tv"
 	c.masterController = masterController
 
@@ -36,7 +34,6 @@ func (c *TVController) Initialize(masterController *MasterController) []MQTTPubl
 	} else if masterController.stateValueMap.requireFalse("tvpower") {
 		initialState = stateTvOff
 	} else {
-		slog.Info("TV Controller initializing aborted")
 		return nil
 	}
 
@@ -58,7 +55,6 @@ func (c *TVController) Initialize(masterController *MasterController) []MQTTPubl
 
 	c.stateMachine = stateMachine
 	c.SetInitialized()
-	slog.Info("TV Controller initialized", "initialState", initialState)
 	return nil
 }
 

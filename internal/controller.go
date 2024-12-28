@@ -118,7 +118,7 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 	eventsToPublish := c.getAndResetEventsToPublish()
 	afterState := c.stateMachine.MustState()
-	slog.Info("Event fired", "fsm", c.name, "topic", ev.Topic,
+	slog.Debug("Event fired", "fsm", c.name, "topic", ev.Topic,
 		"beforeState", beforeState,
 		"afterState", afterState,
 		"stateDiff", (beforeState != afterState),
