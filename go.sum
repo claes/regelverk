@@ -8,6 +8,8 @@ github.com/claes/cec v0.0.0-20240820185959-6db0712de894 h1:cZOiacVo+F8/VV+dEfqzN
 github.com/claes/cec v0.0.0-20240820185959-6db0712de894/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
 github.com/claes/mqtt-bridges v0.0.0-20241229205252-af2105d42d33 h1:nm8SEJOUV3wIX8VULbnLaagbw+9FTeP4x9CrprgT9fE=
 github.com/claes/mqtt-bridges v0.0.0-20241229205252-af2105d42d33/go.mod h1:kFrVYc5AsbTeWrIVACkEOU5k1hWZvavksqyVLZ+Y6hc=
+github.com/claes/mqtt-bridges v0.0.0-20241229211304-c5db5d4c7a36 h1:E56LilykLxxyG5FBtmfwDkbhBvgdx+DBR1PRWk3h9vI=
+github.com/claes/mqtt-bridges v0.0.0-20241229211304-c5db5d4c7a36/go.mod h1:kFrVYc5AsbTeWrIVACkEOU5k1hWZvavksqyVLZ+Y6hc=
 github.com/claes/mqtt-bridges/bluez-mqtt v0.0.0-20241223192612-404503887691 h1:JO0kkjkXVmHZZTXB0POHXtZO54ynCg20me74x+rxGoM=
 github.com/claes/mqtt-bridges/bluez-mqtt v0.0.0-20241223192612-404503887691/go.mod h1:upg8vvfTUq+GE9TJRLQU7VlpdkYDXVohahMV+tZOqDo=
 github.com/claes/mqtt-bridges/cec-mqtt v0.0.0-20241223192612-404503887691 h1:gVcbNqIORjOr1MWbt1gRO5y2hAGERFyv+BmjjS/TQMA=
