@@ -24,6 +24,7 @@ require (
 require (
 	github.com/ConnorsApps/snapcast-go v0.2.0 // indirect
 	github.com/VictoriaMetrics/metrics v1.35.1 // indirect
+	github.com/claes/mqtt-bridges v0.0.0-20241229205252-af2105d42d33 // indirect
 	github.com/claes/mqtt-bridges/common v0.0.0-20241223192612-404503887691 // indirect
 	github.com/claes/mqtt-bridges/hid-mqtt v0.0.0-20241223192612-404503887691 // indirect
 	github.com/fhs/gompd/v2 v2.3.0 // indirect
