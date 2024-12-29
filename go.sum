@@ -16,10 +16,16 @@ github.com/claes/mqtt-bridges/cec-mqtt v0.0.0-20241223192612-404503887691 h1:gVc
 github.com/claes/mqtt-bridges/cec-mqtt v0.0.0-20241223192612-404503887691/go.mod h1:tiLYvfHh83U9e6gt9XoaKkQ5sb/pm5q95eVNwG6QTaM=
 github.com/claes/mqtt-bridges/common v0.0.0-20241223192612-404503887691 h1:47xgr4VTF1Ts0pSp0woBR+N/HC1Jdtu0NA4nDF5sz7M=
 github.com/claes/mqtt-bridges/common v0.0.0-20241223192612-404503887691/go.mod h1:ai22pI1SqvdrBrFKllI5cJCr5oN0g5GtVJAx8ewcE0k=
+github.com/claes/mqtt-bridges/common v0.0.0-20241229211304-c5db5d4c7a36 h1:+elDZDMCO1tuuyJjnt9uEYlMIZVRYH/1+bnD02XYQY0=
+github.com/claes/mqtt-bridges/common v0.0.0-20241229211304-c5db5d4c7a36/go.mod h1:ai22pI1SqvdrBrFKllI5cJCr5oN0g5GtVJAx8ewcE0k=
 github.com/claes/mqtt-bridges/hid-mqtt v0.0.0-20241223192612-404503887691 h1:R9QTgQZ3amoqUVbo0QGxeqYI/vHSvY93KpkyhrpKJMo=
 github.com/claes/mqtt-bridges/hid-mqtt v0.0.0-20241223192612-404503887691/go.mod h1:MH5hjeUNqh4c4kAmHv6PF/tDrUvUfgrBs5NKWWfB7M4=
+github.com/claes/mqtt-bridges/hid-mqtt v0.0.0-20241229211304-c5db5d4c7a36 h1:0fZLTzXoZ2M4WXaGi9h8itFACtrYEMZoCxIbZpeNyDo=
+github.com/claes/mqtt-bridges/hid-mqtt v0.0.0-20241229211304-c5db5d4c7a36/go.mod h1:MH5hjeUNqh4c4kAmHv6PF/tDrUvUfgrBs5NKWWfB7M4=
 github.com/claes/mqtt-bridges/mpd-mqtt v0.0.0-20241223192612-404503887691 h1:4Nqx19jDJOacGyQuZ8cDiqB7iuJKYw5Sjvo78CjAojA=
 github.com/claes/mqtt-bridges/mpd-mqtt v0.0.0-20241223192612-404503887691/go.mod h1:HCPKbpRWc5NPU1xRkJGy27+mji8GD4LpuBNdV49tyUw=
+github.com/claes/mqtt-bridges/mpd-mqtt v0.0.0-20241229211304-c5db5d4c7a36 h1:xE+Bqiy91fQq/99C/8I+9MiZP5p1zPYQx0r6plLDrnQ=
+github.com/claes/mqtt-bridges/mpd-mqtt v0.0.0-20241229211304-c5db5d4c7a36/go.mod h1:HCPKbpRWc5NPU1xRkJGy27+mji8GD4LpuBNdV49tyUw=
 github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241223192612-404503887691 h1:/HF7Ub677jNX/pUVGLRTbvJ5Y9GD655sgP3u8mMNObA=
 github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241223192612-404503887691/go.mod h1:AdPD4Ef5+co2o76KNb5f0zlpCX9F48Mix3N19B7T+aM=
 github.com/claes/mqtt-bridges/rotel-mqtt v0.0.0-20241223192612-404503887691 h1:c+7aBNKRZXcd/kKOdiqi5g41bTlRYbyoKx86DP6puzo=

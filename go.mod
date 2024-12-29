@@ -9,7 +9,7 @@ require (
 	github.com/claes/cec v0.0.0-20240820185959-6db0712de894
 	github.com/claes/mqtt-bridges/bluez-mqtt v0.0.0-20241223192612-404503887691
 	github.com/claes/mqtt-bridges/cec-mqtt v0.0.0-20241223192612-404503887691
-	github.com/claes/mqtt-bridges/mpd-mqtt v0.0.0-20241223192612-404503887691
+	github.com/claes/mqtt-bridges/mpd-mqtt v0.0.0-20241229211304-c5db5d4c7a36
 	github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20241223192612-404503887691
 	github.com/claes/mqtt-bridges/rotel-mqtt v0.0.0-20241223192612-404503887691
 	github.com/claes/mqtt-bridges/routeros-mqtt v0.0.0-20241223192612-404503887691
@@ -25,8 +25,8 @@ require (
 	github.com/ConnorsApps/snapcast-go v0.2.0 // indirect
 	github.com/VictoriaMetrics/metrics v1.35.1 // indirect
 	github.com/claes/mqtt-bridges v0.0.0-20241229211304-c5db5d4c7a36 // indirect
-	github.com/claes/mqtt-bridges/common v0.0.0-20241223192612-404503887691 // indirect
-	github.com/claes/mqtt-bridges/hid-mqtt v0.0.0-20241223192612-404503887691 // indirect
+	github.com/claes/mqtt-bridges/common v0.0.0-20241229211304-c5db5d4c7a36 // indirect
+	github.com/claes/mqtt-bridges/hid-mqtt v0.0.0-20241229211304-c5db5d4c7a36 // indirect
 	github.com/fhs/gompd/v2 v2.3.0 // indirect
 	github.com/go-routeros/routeros/v3 v3.0.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
