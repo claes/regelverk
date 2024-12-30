@@ -208,6 +208,11 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 	masterController.detectKitchenAudioPlaying(ev)
 	masterController.detectBedroomBlindsOpen(ev)
 
+	masterController.detectBalconyDoorOpen(ev)
+	masterController.detectBalconyDoorLowBattery(ev)
+	masterController.detectBalconyDoorLowBatteryTest(ev)
+	masterController.detectLivingroomPresenceLowBattery(ev)
+
 	for _, c := range *masterController.controllers {
 		controller := c
 		go func() {
@@ -515,7 +520,7 @@ func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 }
 
 func (l *MasterController) detectBalconyDoorLowBatteryTest(ev MQTTEvent) {
-	l.processJSONProperty(ev, "zigbee2mqtt/balcony-door", "battery", "balconyDoorLowBattery",
+	l.processJSONProperty(ev, "zigbee2mqtt/balcony-door", "battery", "balconyDoorLowBatteryTest",
 		func(val any) (bool, *float64) { return val.(float64) < 30, val.(*float64) })
 }
 
