@@ -300,27 +300,27 @@ func (l *MasterController) guardTurnOffLivingroomLamp(_ context.Context, _ ...an
 }
 
 func (l *MasterController) guardStateTvOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrue("tvpower")
+	check := l.stateValueMap.requireTrue("tvPower")
 	return check
 }
 
 func (l *MasterController) guardStateTvOff(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireFalse("tvpower")
+	check := l.stateValueMap.requireFalse("tvPower")
 	return check
 }
 
 func (l *MasterController) guardStateTvOffLong(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrueNotRecently("tvpower", 30*time.Minute)
+	check := l.stateValueMap.requireTrueNotRecently("tvPower", 30*time.Minute)
 	return check
 }
 
 func (l *MasterController) guardStateKitchenAmpOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrue("kitchenaudioplaying")
+	check := l.stateValueMap.requireTrue("kitchenAudioPlaying")
 	return check
 }
 
 func (l *MasterController) guardStateKitchenAmpOff(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrueNotRecently("kitchenaudioplaying", 10*time.Minute)
+	check := l.stateValueMap.requireTrueNotRecently("kitchenAudioPlaying", 10*time.Minute)
 	return check
 }
 
@@ -370,6 +370,20 @@ func (l *MasterController) detectLivingroomPresence(ev MQTTEvent) {
 	}
 }
 
+func (l *MasterController) detectLivingroomPresenceLowBattery(ev MQTTEvent) {
+	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
+		m := parseJSONPayload(ev)
+		if m == nil {
+			return
+		}
+		val, exists := m["battery"]
+		if !exists || val == nil {
+			return
+		}
+		l.stateValueMap.setState("livingroomPresenceLowBattery", val.(float64) < 30)
+	}
+}
+
 func (l *MasterController) detectLivingroomFloorlampState(ev MQTTEvent) {
 	if ev.Topic == "zigbee2mqtt/livingroom-floorlamp" {
 		m := parseJSONPayload(ev)
@@ -401,7 +415,7 @@ func (l *MasterController) detectTVPower(ev MQTTEvent) {
 		if err != nil {
 			slog.Error("Could not parse payload", "topic", "regelverk/state/tvpower", "error", err)
 		}
-		l.stateValueMap.setState("tvpower", tvPower)
+		l.stateValueMap.setState("tvPower", tvPower)
 	}
 }
 
@@ -429,7 +443,7 @@ func (l *MasterController) detectKitchenAmpPower(ev MQTTEvent) {
 		if !exists || val == nil {
 			return
 		}
-		l.stateValueMap.setState("kitchenamppower", val.(string) == "ON")
+		l.stateValueMap.setState("kitchenAmpPower", val.(string) == "ON")
 	}
 }
 
@@ -441,7 +455,7 @@ func (l *MasterController) detectKitchenAudioPlaying(ev MQTTEvent) {
 			slog.Error("Could not parse payload", "topic", "kitchen/pulseaudio/state", "error", err)
 			return
 		}
-		l.stateValueMap.setState("kitchenaudioplaying", pulseaudioState.DefaultSink.State == 0)
+		l.stateValueMap.setState("kitchenAudioPlaying", pulseaudioState.DefaultSink.State == 0)
 	}
 }
 
@@ -455,7 +469,35 @@ func (l *MasterController) detectBedroomBlindsOpen(ev MQTTEvent) {
 		if !exists || val == nil {
 			return
 		}
-		l.stateValueMap.setState("bedroomblindsopen", val.(float64) > 50)
+		l.stateValueMap.setState("bedroomBlindsOpen", val.(float64) > 50)
+	}
+}
+
+func (l *MasterController) detectBalconyDoorOpen(ev MQTTEvent) {
+	if ev.Topic == "zigbee2mqtt/balcony-door" {
+		m := parseJSONPayload(ev)
+		if m == nil {
+			return
+		}
+		val, exists := m["contact"]
+		if !exists || val == nil {
+			return
+		}
+		l.stateValueMap.setState("balconyDoorOpen", !val.(bool))
+	}
+}
+
+func (l *MasterController) detectBalconyDoorLowBattery(ev MQTTEvent) {
+	if ev.Topic == "zigbee2mqtt/balcony-door" {
+		m := parseJSONPayload(ev)
+		if m == nil {
+			return
+		}
+		val, exists := m["battery"]
+		if !exists || val == nil {
+			return
+		}
+		l.stateValueMap.setState("balconyDoorLowBattery", val.(float64) < 30)
 	}
 }
 
@@ -469,5 +511,31 @@ func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 		Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
 		Qos:      2,
 		Retained: true,
+	}
+}
+
+func (l *MasterController) detectBalconyDoorLowBatteryTest(ev MQTTEvent) {
+	l.processJSONProperty(ev, "zigbee2mqtt/balcony-door", "battery", "balconyDoorLowBattery",
+		func(val any) (bool, *float64) { return val.(float64) < 30, val.(*float64) })
+}
+
+func (l *MasterController) processJSONProperty(ev MQTTEvent, topic, eventProperty, key string,
+	output func(any) (bool, *float64)) {
+	if ev.Topic == topic {
+		m := parseJSONPayload(ev)
+		if m == nil {
+			return
+		}
+		val, exists := m[eventProperty]
+		if !exists || val == nil {
+			return
+		}
+		b, v := output(val)
+		l.stateValueMap.setState(key, b)
+
+		if v != nil && l.metricsConfig.CollectMetrics {
+			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`eventvalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
+			gauge.Set(*v)
+		}
 	}
 }

@@ -28,9 +28,9 @@ func (c *KitchenController) Initialize(masterController *MasterController) []MQT
 	c.masterController = masterController
 
 	// var initialState tvState
-	// if masterController.stateValueMap.requireTrue("tvpower") {
+	// if masterController.stateValueMap.requireTrue("tvPower") {
 	// 	initialState = stateTvOn
-	// } else if masterController.stateValueMap.requireFalse("tvpower") {
+	// } else if masterController.stateValueMap.requireFalse("tvPower") {
 	// 	initialState = stateTvOff
 	// } else {
 	// 	return nil

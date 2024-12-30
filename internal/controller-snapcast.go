@@ -40,9 +40,9 @@ func (c *SnapcastController) Initialize(masterController *MasterController) []MQ
 	c.masterController = masterController
 
 	// var initialState snapcastState
-	// if masterController.stateValueMap.requireTrue("tvpower") {
+	// if masterController.stateValueMap.requireTrue("tvPower") {
 	// 	initialState = stateSnapcastOff
-	// } else if masterController.stateValueMap.requireFalse("tvpower") {
+	// } else if masterController.stateValueMap.requireFalse("tvPower") {
 	// 	initialState = stateSnapcastOn
 	// } else {
 	// 	return nil
