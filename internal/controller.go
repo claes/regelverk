@@ -212,6 +212,7 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 	masterController.detectBalconyDoorLowBattery(ev)
 	masterController.detectBalconyDoorLowBatteryTest(ev)
 	masterController.detectLivingroomPresenceLowBattery(ev)
+	masterController.detectBalconyDoorLowBatteryTest2(ev)
 
 	for _, c := range *masterController.controllers {
 		controller := c
