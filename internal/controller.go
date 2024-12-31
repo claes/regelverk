@@ -24,11 +24,12 @@ type MetricsConfig struct {
 }
 
 type MasterController struct {
-	stateValueMap StateValueMap
-	controllers   *[]Controller
-	mu            sync.Mutex
-	pushMetrics   bool
-	metricsConfig MetricsConfig
+	stateValueMap  StateValueMap
+	controllers    *[]Controller
+	mu             sync.Mutex
+	pushMetrics    bool
+	metricsConfig  MetricsConfig
+	eventCallbacks []func(MQTTEvent)
 }
 
 func CreateMasterController() MasterController {
@@ -36,6 +37,7 @@ func CreateMasterController() MasterController {
 }
 
 func (l *MasterController) Init() {
+	l.registerCallbacks()
 	if l.metricsConfig.CollectMetrics {
 		slog.Info("Registering state value callback in master controller")
 		l.stateValueMap.registerCallback(l.StateValueCallback)
@@ -198,21 +200,21 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 	defer masterController.mu.Unlock()
 
 	masterController.pushMetrics = false // Reset
-	masterController.detectPhonePresent(ev)
-	masterController.detectLivingroomPresence(ev)
-	masterController.detectLivingroomFloorlampState(ev)
-	masterController.detectNighttime(ev)
-	masterController.detectTVPower(ev)
-	masterController.detectMPDPlay(ev)
-	masterController.detectKitchenAmpPower(ev)
-	masterController.detectKitchenAudioPlaying(ev)
-	masterController.detectBedroomBlindsOpen(ev)
+	masterController.executeCallbacks(ev)
+	// masterController.detectPhonePresent(ev)
+	// masterController.detectLivingroomPresence(ev)
+	// masterController.detectLivingroomFloorlampState(ev)
+	// masterController.detectNighttime(ev)
+	// masterController.detectTVPower(ev)
+	// masterController.detectMPDPlay(ev)
+	// masterController.detectKitchenAmpPower(ev)
+	// masterController.detectKitchenAudioPlaying(ev)
+	// masterController.detectBedroomBlindsOpen(ev)
 
-	masterController.detectBalconyDoorOpen(ev)
-	masterController.detectBalconyDoorLowBattery(ev)
-	masterController.detectBalconyDoorLowBatteryTest(ev)
-	masterController.detectLivingroomPresenceLowBattery(ev)
-	masterController.detectBalconyDoorLowBatteryTest2(ev)
+	// masterController.detectBalconyDoorOpen(ev)
+	// masterController.detectBalconyDoorLowBattery(ev)
+	// masterController.detectBalconyDoorLowBatteryTest(ev)
+	// masterController.detectLivingroomPresenceLowBattery(ev)
 
 	for _, c := range *masterController.controllers {
 		controller := c
@@ -554,7 +556,7 @@ func (l *MasterController) processJSONProperty(ev MQTTEvent, topic, eventPropert
 	}
 }
 
-func (l *MasterController) processJSON(ev MQTTEvent, topic, eventProperty string) (any, bool) {
+func processJSON(ev MQTTEvent, topic, eventProperty string) (any, bool) {
 	if ev.Topic == topic {
 		m := parseJSONPayload(ev)
 		if m == nil {
@@ -570,53 +572,134 @@ func (l *MasterController) processJSON(ev MQTTEvent, topic, eventProperty string
 	}
 }
 
-func (l *MasterController) detectBalconyDoorLowBatteryTest2(ev MQTTEvent) {
-	l.processEvent(ev,
-		func(ev MQTTEvent) (any, bool) { return l.processJSON(ev, "zigbee2mqtt/balcony-door", "battery") },
-		func(val any) (string, bool) { return "balconyDoorLowBatteryTest2", val.(float64) < 30 },
-		func(val any) (string, float64) { return "balconyDoorLowBattery2", val.(float64) })
+func processString(ev MQTTEvent, topic string) (string, bool) {
+	if ev.Topic == topic {
+		s := string(ev.Payload.([]byte))
+		return s, true
+	} else {
+		return "", false
+	}
 }
 
-func (l *MasterController) processEvent(ev MQTTEvent,
-	extractValueFunc func(MQTTEvent) (any, bool),
+func (l *MasterController) createProcessEventFunc(extractValueFunc func(MQTTEvent) (any, bool),
 	stateValueFunc func(any) (string, bool),
-	metricsGaugeFunc func(any) (string, float64)) {
+	metricsGaugeFunc func(any) (string, float64)) func(MQTTEvent) {
 
-	val, _ := extractValueFunc(ev)
-	if val != nil {
+	return func(ev MQTTEvent) {
+		val, _ := extractValueFunc(ev)
+		if val != nil {
 
-		if stateValueFunc != nil {
-			key, b := stateValueFunc(val)
-			l.stateValueMap.setState(key, b)
-		}
+			if stateValueFunc != nil {
+				key, b := stateValueFunc(val)
+				l.stateValueMap.setState(key, b)
+			}
 
-		if metricsGaugeFunc != nil {
-			key, v := metricsGaugeFunc(val)
-			if l.metricsConfig.CollectMetrics {
-				gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`eventvalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
-				gauge.Set(v)
+			if metricsGaugeFunc != nil {
+				key, v := metricsGaugeFunc(val)
+				if l.metricsConfig.CollectMetrics {
+					gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`eventvalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
+					gauge.Set(v)
+				}
 			}
 		}
 	}
 }
 
-func (masterController *MasterController) urk(client mqtt.Client, ev MQTTEvent) {
+func (masterController *MasterController) registerCallback(callback func(MQTTEvent)) {
+	masterController.eventCallbacks = append(masterController.eventCallbacks, callback)
+}
 
-	var list []func(ev MQTTEvent)
-	list = append(list, masterController.detectBalconyDoorLowBattery)
+func (masterController *MasterController) executeCallbacks(ev MQTTEvent) {
+	for _, callback := range masterController.eventCallbacks {
+		callback(ev)
+	}
+}
 
-	masterController.detectPhonePresent(ev)
-	masterController.detectLivingroomPresence(ev)
-	masterController.detectLivingroomFloorlampState(ev)
-	masterController.detectNighttime(ev)
-	masterController.detectTVPower(ev)
-	masterController.detectMPDPlay(ev)
-	masterController.detectKitchenAmpPower(ev)
-	masterController.detectKitchenAudioPlaying(ev)
-	masterController.detectBedroomBlindsOpen(ev)
+func (masterController *MasterController) registerCallbacks() {
 
-	masterController.detectBalconyDoorOpen(ev)
-	masterController.detectBalconyDoorLowBattery(ev)
-	masterController.detectBalconyDoorLowBatteryTest(ev)
-	masterController.detectLivingroomPresenceLowBattery(ev)
+	masterController.registerCallback(masterController.detectPhonePresent)
+	masterController.registerCallback(masterController.detectNighttime)
+
+	// Livingroom
+	masterController.registerCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/livingroom-presence", "occupancy")
+		},
+		func(val any) (string, bool) { b, _ := strconv.ParseBool(val.(string)); return "livingroomPresence", b },
+		nil,
+	))
+	masterController.registerCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/livingroom-presence", "battery")
+		},
+		func(val any) (string, bool) { return "livingroomPresenceBatteryLow", val.(float64) < 20 },
+		func(val any) (string, float64) { return "livingroomPresenceBattery", val.(float64) },
+	))
+	masterController.registerCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/livingroom-presence", "illuminance_lux")
+		},
+		nil,
+		func(val any) (string, float64) { return "livingroomPresenceIlluminanceLux", val.(float64) },
+	))
+
+	masterController.registerCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/livingroom-floorlamp", "state")
+		},
+		func(val any) (string, bool) { return "livingroomFloorlamp", val.(string) == "ON" },
+		nil,
+	))
+	masterController.registerCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processString(ev, "regelverk/state/tvpower")
+		},
+		func(val any) (string, bool) { b, _ := strconv.ParseBool(val.(string)); return "tvPower", b },
+		nil,
+	))
+
+	// Kitchen
+	masterController.registerCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/kitchen-amp", "state")
+		},
+		func(val any) (string, bool) { return "kitchenAmpPower", val.(string) == "ON" },
+		nil,
+	))
+	masterController.registerCallback(masterController.detectKitchenAudioPlaying)
+
+	// Bedroom
+	masterController.registerCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/blinds-bedroom", "position")
+		},
+		func(val any) (string, bool) { return "bedroomBlindsOpen", val.(float64) > 50 },
+		func(val any) (string, float64) { return "bedroomBlindsPosition", val.(float64) },
+	))
+
+	// Balcony door
+	masterController.registerCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/balcony-door", "contact")
+		},
+		func(val any) (string, bool) { return "balconyDoorOpen", !val.(bool) },
+		nil,
+	))
+	masterController.registerCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/balcony-door", "battery")
+		},
+		func(val any) (string, bool) { return "balconyDoorBatteryLow", val.(float64) < 20 },
+		func(val any) (string, float64) { return "balconyDoorBattery", val.(float64) },
+	))
+
+	// MPD
+	masterController.registerCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "mpd/status", "state")
+		},
+		func(val any) (string, bool) { return "mpdPlay", val.(string) == "play" },
+		nil,
+	))
+
 }
