@@ -521,11 +521,13 @@ func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 
 func (l *MasterController) detectBalconyDoorLowBatteryTest(ev MQTTEvent) {
 	l.processJSONProperty(ev, "zigbee2mqtt/balcony-door", "battery", "balconyDoorLowBatteryTest",
-		func(val any) (bool, *float64) { return val.(float64) < 30, val.(*float64) })
+		func(val any) bool { return val.(float64) < 30 },
+		func(val any) float64 { return val.(float64) })
 }
 
 func (l *MasterController) processJSONProperty(ev MQTTEvent, topic, eventProperty, key string,
-	output func(any) (bool, *float64)) {
+	stateValueFunc func(any) bool,
+	metricsGaugeFunc func(any) float64) {
 	if ev.Topic == topic {
 		m := parseJSONPayload(ev)
 		if m == nil {
@@ -535,12 +537,18 @@ func (l *MasterController) processJSONProperty(ev MQTTEvent, topic, eventPropert
 		if !exists || val == nil {
 			return
 		}
-		b, v := output(val)
-		l.stateValueMap.setState(key, b)
 
-		if v != nil && l.metricsConfig.CollectMetrics {
-			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`eventvalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
-			gauge.Set(*v)
+		if stateValueFunc != nil {
+			b := stateValueFunc(val)
+			l.stateValueMap.setState(key, b)
+		}
+
+		if metricsGaugeFunc != nil {
+			v := metricsGaugeFunc(val)
+			if l.metricsConfig.CollectMetrics {
+				gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`eventvalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
+				gauge.Set(v)
+			}
 		}
 	}
 }
