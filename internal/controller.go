@@ -37,7 +37,7 @@ func CreateMasterController() MasterController {
 }
 
 func (l *MasterController) Init() {
-	l.registerCallbacks()
+	l.registerEventCallbacks()
 	if l.metricsConfig.CollectMetrics {
 		slog.Info("Registering state value callback in master controller")
 		l.stateValueMap.registerCallback(l.StateValueCallback)
@@ -200,21 +200,7 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 	defer masterController.mu.Unlock()
 
 	masterController.pushMetrics = false // Reset
-	masterController.executeCallbacks(ev)
-
-	masterController.detectPhonePresent(ev)
-	masterController.detectNighttime(ev)
-	masterController.detectTVPower(ev)
-	masterController.detectKitchenAudioPlaying(ev)
-	// masterController.detectBalconyDoorLowBatteryTest(ev)
-	// masterController.detectLivingroomPresence(ev)
-	// masterController.detectLivingroomFloorlampState(ev)
-	// masterController.detectBedroomBlindsOpen(ev)
-	// masterController.detectMPDPlay(ev)
-	// masterController.detectKitchenAmpPower(ev)
-	// masterController.detectBalconyDoorOpen(ev)
-	// masterController.detectBalconyDoorLowBattery(ev)
-	// masterController.detectLivingroomPresenceLowBattery(ev)
+	masterController.executeEventCallbacks(ev)
 
 	for _, c := range *masterController.controllers {
 		controller := c
@@ -344,168 +330,51 @@ func (l *MasterController) guardStateBedroomBlindsClosed(_ context.Context, _ ..
 
 // Detections
 
-func (l *MasterController) detectPhonePresent(ev MQTTEvent) {
-	if ev.Topic == "routeros/wificlients" {
-		var wifiClients []routerosmqtt.WifiClient
+// func (l *MasterController) detectPhonePresent(ev MQTTEvent) {
+// 	if ev.Topic == "routeros/wificlients" {
+// 		var wifiClients []routerosmqtt.WifiClient
 
-		err := json.Unmarshal(ev.Payload.([]byte), &wifiClients)
-		if err != nil {
-			slog.Error("Could not parse payload", "topic", "routeros/wificlients", "error", err)
-			return
-		}
-		found := false
-		for _, wifiClient := range wifiClients {
-			if wifiClient.MacAddress == "AA:73:49:2B:D8:45" {
-				found = true
-				break
-			}
-		}
-		l.stateValueMap.setState("phonePresent", found)
-	}
-}
-
-// func (l *MasterController) detectLivingroomPresence(ev MQTTEvent) {
-// 	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
-// 		m := parseJSONPayload(ev)
-// 		if m == nil {
+// 		err := json.Unmarshal(ev.Payload.([]byte), &wifiClients)
+// 		if err != nil {
+// 			slog.Error("Could not parse payload", "topic", "routeros/wificlients", "error", err)
 // 			return
 // 		}
-// 		val, exists := m["occupancy"]
-// 		if !exists || val == nil {
-// 			return
+// 		found := false
+// 		for _, wifiClient := range wifiClients {
+// 			if wifiClient.MacAddress == "AA:73:49:2B:D8:45" {
+// 				found = true
+// 				break
+// 			}
 // 		}
-// 		l.stateValueMap.setState("livingroomPresence", val.(bool))
+// 		l.stateValueMap.setState("phonePresent", found)
 // 	}
 // }
 
-// func (l *MasterController) detectLivingroomPresenceLowBattery(ev MQTTEvent) {
-// 	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
-// 		m := parseJSONPayload(ev)
-// 		if m == nil {
-// 			return
-// 		}
-// 		val, exists := m["battery"]
-// 		if !exists || val == nil {
-// 			return
-// 		}
-// 		l.stateValueMap.setState("livingroomPresenceLowBattery", val.(float64) < 30)
+// func (l *MasterController) detectNighttime(ev MQTTEvent) {
+// 	if ev.Topic == "regelverk/ticker/timeofday" {
+// 		l.stateValueMap.setState("nighttime", ev.Payload.(TimeOfDay) == Nighttime)
 // 	}
 // }
 
-// func (l *MasterController) detectLivingroomFloorlampState(ev MQTTEvent) {
-// 	if ev.Topic == "zigbee2mqtt/livingroom-floorlamp" {
-// 		m := parseJSONPayload(ev)
-// 		if m == nil {
-// 			return
+// func (l *MasterController) detectTVPower(ev MQTTEvent) {
+// 	if ev.Topic == "regelverk/state/tvpower" {
+// 		tvPower, err := strconv.ParseBool(string(ev.Payload.([]byte)))
+// 		if err != nil {
+// 			slog.Error("Could not parse payload", "topic", "regelverk/state/tvpower", "error", err)
 // 		}
-// 		val, exists := m["state"]
-// 		if !exists || val == nil {
-// 			return
-// 		}
-// 		state := val.(string)
-// 		on := false
-// 		if state == "ON" {
-// 			on = true
-// 		}
-// 		l.stateValueMap.setState("livingroomFloorlamp", on)
+// 		l.stateValueMap.setState("tvPower", tvPower)
 // 	}
 // }
 
-func (l *MasterController) detectNighttime(ev MQTTEvent) {
-	if ev.Topic == "regelverk/ticker/timeofday" {
-		l.stateValueMap.setState("nighttime", ev.Payload.(TimeOfDay) == Nighttime)
-	}
-}
-
-func (l *MasterController) detectTVPower(ev MQTTEvent) {
-	if ev.Topic == "regelverk/state/tvpower" {
-		tvPower, err := strconv.ParseBool(string(ev.Payload.([]byte)))
-		if err != nil {
-			slog.Error("Could not parse payload", "topic", "regelverk/state/tvpower", "error", err)
-		}
-		l.stateValueMap.setState("tvPower", tvPower)
-	}
-}
-
-// func (l *MasterController) detectMPDPlay(ev MQTTEvent) {
-// 	if ev.Topic == "mpd/status" {
-// 		m := parseJSONPayload(ev)
-// 		if m == nil {
+// func (l *MasterController) detectKitchenAudioPlaying(ev MQTTEvent) {
+// 	if ev.Topic == "kitchen/pulseaudio/state" {
+// 		var pulseaudioState pulseaudiomqtt.PulseAudioState
+// 		err := json.Unmarshal(ev.Payload.([]byte), &pulseaudioState)
+// 		if err != nil {
+// 			slog.Error("Could not parse payload", "topic", "kitchen/pulseaudio/state", "error", err)
 // 			return
 // 		}
-// 		val, exists := m["state"]
-// 		if !exists || val == nil {
-// 			return
-// 		}
-// 		l.stateValueMap.setState("mpdPlay", val.(string) == "play")
-// 	}
-// }
-
-// func (l *MasterController) detectKitchenAmpPower(ev MQTTEvent) {
-// 	if ev.Topic == "zigbee2mqtt/kitchen-amp" {
-// 		m := parseJSONPayload(ev)
-// 		if m == nil {
-// 			return
-// 		}
-// 		val, exists := m["state"]
-// 		if !exists || val == nil {
-// 			return
-// 		}
-// 		l.stateValueMap.setState("kitchenAmpPower", val.(string) == "ON")
-// 	}
-// }
-
-func (l *MasterController) detectKitchenAudioPlaying(ev MQTTEvent) {
-	if ev.Topic == "kitchen/pulseaudio/state" {
-		var pulseaudioState pulseaudiomqtt.PulseAudioState
-		err := json.Unmarshal(ev.Payload.([]byte), &pulseaudioState)
-		if err != nil {
-			slog.Error("Could not parse payload", "topic", "kitchen/pulseaudio/state", "error", err)
-			return
-		}
-		l.stateValueMap.setState("kitchenAudioPlaying", pulseaudioState.DefaultSink.State == 0)
-	}
-}
-
-// func (l *MasterController) detectBedroomBlindsOpen(ev MQTTEvent) {
-// 	if ev.Topic == "zigbee2mqtt/blinds-bedroom" {
-// 		m := parseJSONPayload(ev)
-// 		if m == nil {
-// 			return
-// 		}
-// 		val, exists := m["position"]
-// 		if !exists || val == nil {
-// 			return
-// 		}
-// 		l.stateValueMap.setState("bedroomBlindsOpen", val.(float64) > 50)
-// 	}
-// }
-
-// func (l *MasterController) detectBalconyDoorOpen(ev MQTTEvent) {
-// 	if ev.Topic == "zigbee2mqtt/balcony-door" {
-// 		m := parseJSONPayload(ev)
-// 		if m == nil {
-// 			return
-// 		}
-// 		val, exists := m["contact"]
-// 		if !exists || val == nil {
-// 			return
-// 		}
-// 		l.stateValueMap.setState("balconyDoorOpen", !val.(bool))
-// 	}
-// }
-
-// func (l *MasterController) detectBalconyDoorLowBattery(ev MQTTEvent) {
-// 	if ev.Topic == "zigbee2mqtt/balcony-door" {
-// 		m := parseJSONPayload(ev)
-// 		if m == nil {
-// 			return
-// 		}
-// 		val, exists := m["battery"]
-// 		if !exists || val == nil {
-// 			return
-// 		}
-// 		l.stateValueMap.setState("balconyDoorLowBattery", val.(float64) < 30)
+// 		l.stateValueMap.setState("kitchenAudioPlaying", pulseaudioState.DefaultSink.State == 0)
 // 	}
 // }
 
@@ -519,40 +388,6 @@ func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 		Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
 		Qos:      2,
 		Retained: true,
-	}
-}
-
-// func (l *MasterController) detectBalconyDoorLowBatteryTest(ev MQTTEvent) {
-// 	l.processJSONProperty(ev, "zigbee2mqtt/balcony-door", "battery",
-// 		func(val any) (string, bool) { return "balconyDoorLowBatteryTest", val.(float64) < 30 },
-// 		func(val any) (string, float64) { return "balconyDoorLowBattery", val.(float64) })
-// }
-
-func (l *MasterController) processJSONProperty(ev MQTTEvent, topic, eventProperty string,
-	stateValueFunc func(any) (string, bool),
-	metricsGaugeFunc func(any) (string, float64)) {
-	if ev.Topic == topic {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m[eventProperty]
-		if !exists || val == nil {
-			return
-		}
-
-		if stateValueFunc != nil {
-			key, b := stateValueFunc(val)
-			l.stateValueMap.setState(key, b)
-		}
-
-		if metricsGaugeFunc != nil {
-			key, v := metricsGaugeFunc(val)
-			if l.metricsConfig.CollectMetrics {
-				gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`eventvalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
-				gauge.Set(v)
-			}
-		}
 	}
 }
 
@@ -605,37 +440,61 @@ func (l *MasterController) createProcessEventFunc(extractValueFunc func(MQTTEven
 	}
 }
 
-func (masterController *MasterController) registerCallback(callback func(MQTTEvent)) {
+func (masterController *MasterController) registerEventCallback(callback func(MQTTEvent)) {
 	masterController.eventCallbacks = append(masterController.eventCallbacks, callback)
 }
 
-func (masterController *MasterController) executeCallbacks(ev MQTTEvent) {
+func (masterController *MasterController) executeEventCallbacks(ev MQTTEvent) {
 	for _, callback := range masterController.eventCallbacks {
 		callback(ev)
 	}
 }
 
-func (masterController *MasterController) registerCallbacks() {
+func (masterController *MasterController) registerEventCallbacks() {
 
-	masterController.registerCallback(masterController.detectPhonePresent)
-	masterController.registerCallback(masterController.detectNighttime)
+	//masterController.registerCallback(masterController.detectPhonePresent)
+	masterController.registerEventCallback(func(ev MQTTEvent) {
+		if ev.Topic == "routeros/wificlients" {
+			var wifiClients []routerosmqtt.WifiClient
+
+			err := json.Unmarshal(ev.Payload.([]byte), &wifiClients)
+			if err != nil {
+				slog.Error("Could not parse payload", "topic", "routeros/wificlients", "error", err)
+				return
+			}
+			found := false
+			for _, wifiClient := range wifiClients {
+				if wifiClient.MacAddress == "AA:73:49:2B:D8:45" {
+					found = true
+					break
+				}
+			}
+			masterController.stateValueMap.setState("phonePresent", found)
+		}
+	})
+	// masterController.registerCallback(masterController.detectNighttime)
+	masterController.registerEventCallback(func(ev MQTTEvent) {
+		if ev.Topic == "regelverk/ticker/timeofday" {
+			masterController.stateValueMap.setState("nighttime", ev.Payload.(TimeOfDay) == Nighttime)
+		}
+	})
 
 	// Livingroom
-	masterController.registerCallback(masterController.createProcessEventFunc(
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/livingroom-presence", "occupancy")
 		},
 		func(val any) (string, bool) { return "livingroomPresence", val.(bool) },
 		nil,
 	))
-	masterController.registerCallback(masterController.createProcessEventFunc(
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/livingroom-presence", "battery")
 		},
 		func(val any) (string, bool) { return "livingroomPresenceBatteryLow", val.(float64) < 20 },
 		func(val any) (string, float64) { return "livingroomPresenceBattery", val.(float64) },
 	))
-	masterController.registerCallback(masterController.createProcessEventFunc(
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/livingroom-presence", "illuminance_lux")
 		},
@@ -643,34 +502,46 @@ func (masterController *MasterController) registerCallbacks() {
 		func(val any) (string, float64) { return "livingroomPresenceIlluminanceLux", val.(float64) },
 	))
 
-	masterController.registerCallback(masterController.createProcessEventFunc(
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/livingroom-floorlamp", "state")
 		},
 		func(val any) (string, bool) { return "livingroomFloorlamp", val.(string) == "ON" },
 		nil,
 	))
-	masterController.registerCallback(masterController.createProcessEventFunc(
+	// masterController.registerCallback(masterController.detectTVPower)
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
 			return processString(ev, "regelverk/state/tvpower")
 		},
 		func(val any) (string, bool) { b, _ := strconv.ParseBool(val.(string)); return "tvPower", b },
 		nil,
 	))
-	// masterController.registerCallback(masterController.detectTVPower)
 
 	// Kitchen
-	masterController.registerCallback(masterController.createProcessEventFunc(
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/kitchen-amp", "state")
 		},
 		func(val any) (string, bool) { return "kitchenAmpPower", val.(string) == "ON" },
 		nil,
 	))
-	masterController.registerCallback(masterController.detectKitchenAudioPlaying)
+
+	//masterController.registerCallback(masterController.detectKitchenAudioPlaying)
+	masterController.registerEventCallback(func(ev MQTTEvent) {
+		if ev.Topic == "kitchen/pulseaudio/state" {
+			var pulseaudioState pulseaudiomqtt.PulseAudioState
+			err := json.Unmarshal(ev.Payload.([]byte), &pulseaudioState)
+			if err != nil {
+				slog.Error("Could not parse payload", "topic", "kitchen/pulseaudio/state", "error", err)
+				return
+			}
+			masterController.stateValueMap.setState("kitchenAudioPlaying", pulseaudioState.DefaultSink.State == 0)
+		}
+	})
 
 	// Bedroom
-	masterController.registerCallback(masterController.createProcessEventFunc(
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/blinds-bedroom", "position")
 		},
@@ -679,14 +550,14 @@ func (masterController *MasterController) registerCallbacks() {
 	))
 
 	// Balcony door
-	masterController.registerCallback(masterController.createProcessEventFunc(
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/balcony-door", "contact")
 		},
 		func(val any) (string, bool) { return "balconyDoorOpen", !val.(bool) },
 		nil,
 	))
-	masterController.registerCallback(masterController.createProcessEventFunc(
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/balcony-door", "battery")
 		},
@@ -695,7 +566,7 @@ func (masterController *MasterController) registerCallbacks() {
 	))
 
 	// MPD
-	masterController.registerCallback(masterController.createProcessEventFunc(
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "mpd/status", "state")
 		},
