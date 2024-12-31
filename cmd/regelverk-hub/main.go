@@ -9,7 +9,7 @@ func main() {
 	config, debug, dryRun := internal.ParseConfig()
 
 	loops := []internal.ControlLoop{
-		&internal.CecLoop{},
+		//&internal.CecLoop{},
 		&internal.WebLoop{},
 	}
 
