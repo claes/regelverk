@@ -650,13 +650,14 @@ func (masterController *MasterController) registerCallbacks() {
 		func(val any) (string, bool) { return "livingroomFloorlamp", val.(string) == "ON" },
 		nil,
 	))
-	masterController.registerCallback(masterController.createProcessEventFunc(
-		func(ev MQTTEvent) (any, bool) {
-			return processString(ev, "regelverk/state/tvpower")
-		},
-		func(val any) (string, bool) { b, _ := strconv.ParseBool(val.(string)); return "tvPower", b },
-		nil,
-	))
+	// masterController.registerCallback(masterController.createProcessEventFunc(
+	// 	func(ev MQTTEvent) (any, bool) {
+	// 		return processString(ev, "regelverk/state/tvpower")
+	// 	},
+	// 	func(val any) (string, bool) { b, _ := strconv.ParseBool(val.(string)); return "tvPower", b },
+	// 	nil,
+	// ))
+	masterController.registerCallback(masterController.detectTVPower)
 
 	// Kitchen
 	masterController.registerCallback(masterController.createProcessEventFunc(
