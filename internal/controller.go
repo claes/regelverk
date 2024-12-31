@@ -520,14 +520,14 @@ func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 }
 
 func (l *MasterController) detectBalconyDoorLowBatteryTest(ev MQTTEvent) {
-	l.processJSONProperty(ev, "zigbee2mqtt/balcony-door", "battery", "balconyDoorLowBatteryTest",
-		func(val any) bool { return val.(float64) < 30 },
-		func(val any) float64 { return val.(float64) })
+	l.processJSONProperty(ev, "zigbee2mqtt/balcony-door", "battery",
+		func(val any) (string, bool) { return "balconyDoorLowBatteryTest", val.(float64) < 30 },
+		func(val any) (string, float64) { return "balconyDoorLowBattery", val.(float64) })
 }
 
-func (l *MasterController) processJSONProperty(ev MQTTEvent, topic, eventProperty, key string,
-	stateValueFunc func(any) bool,
-	metricsGaugeFunc func(any) float64) {
+func (l *MasterController) processJSONProperty(ev MQTTEvent, topic, eventProperty string,
+	stateValueFunc func(any) (string, bool),
+	metricsGaugeFunc func(any) (string, float64)) {
 	if ev.Topic == topic {
 		m := parseJSONPayload(ev)
 		if m == nil {
@@ -539,16 +539,83 @@ func (l *MasterController) processJSONProperty(ev MQTTEvent, topic, eventPropert
 		}
 
 		if stateValueFunc != nil {
-			b := stateValueFunc(val)
+			key, b := stateValueFunc(val)
 			l.stateValueMap.setState(key, b)
 		}
 
 		if metricsGaugeFunc != nil {
-			v := metricsGaugeFunc(val)
+			key, v := metricsGaugeFunc(val)
 			if l.metricsConfig.CollectMetrics {
 				gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`eventvalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
 				gauge.Set(v)
 			}
 		}
 	}
+}
+
+func (l *MasterController) processJSON(ev MQTTEvent, topic, eventProperty string) (any, bool) {
+	if ev.Topic == topic {
+		m := parseJSONPayload(ev)
+		if m == nil {
+			return nil, false
+		}
+		val, exists := m[eventProperty]
+		if !exists || val == nil {
+			return nil, false
+		}
+		return val, true
+	} else {
+		return nil, false
+	}
+}
+
+func (l *MasterController) detectBalconyDoorLowBatteryTest2(ev MQTTEvent) {
+	l.processEvent(ev,
+		func(ev MQTTEvent) (any, bool) { return l.processJSON(ev, "zigbee2mqtt/balcony-door", "battery") },
+		func(val any) (string, bool) { return "balconyDoorLowBatteryTest2", val.(float64) < 30 },
+		func(val any) (string, float64) { return "balconyDoorLowBattery2", val.(float64) })
+}
+
+func (l *MasterController) processEvent(ev MQTTEvent,
+	extractValueFunc func(MQTTEvent) (any, bool),
+	stateValueFunc func(any) (string, bool),
+	metricsGaugeFunc func(any) (string, float64)) {
+
+	val, _ := extractValueFunc(ev)
+	if val != nil {
+
+		if stateValueFunc != nil {
+			key, b := stateValueFunc(val)
+			l.stateValueMap.setState(key, b)
+		}
+
+		if metricsGaugeFunc != nil {
+			key, v := metricsGaugeFunc(val)
+			if l.metricsConfig.CollectMetrics {
+				gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`eventvalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
+				gauge.Set(v)
+			}
+		}
+	}
+}
+
+func (masterController *MasterController) urk(client mqtt.Client, ev MQTTEvent) {
+
+	var list []func(ev MQTTEvent)
+	list = append(list, masterController.detectBalconyDoorLowBattery)
+
+	masterController.detectPhonePresent(ev)
+	masterController.detectLivingroomPresence(ev)
+	masterController.detectLivingroomFloorlampState(ev)
+	masterController.detectNighttime(ev)
+	masterController.detectTVPower(ev)
+	masterController.detectMPDPlay(ev)
+	masterController.detectKitchenAmpPower(ev)
+	masterController.detectKitchenAudioPlaying(ev)
+	masterController.detectBedroomBlindsOpen(ev)
+
+	masterController.detectBalconyDoorOpen(ev)
+	masterController.detectBalconyDoorLowBattery(ev)
+	masterController.detectBalconyDoorLowBatteryTest(ev)
+	masterController.detectLivingroomPresenceLowBattery(ev)
 }
