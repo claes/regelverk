@@ -356,15 +356,15 @@ func (l *MasterController) guardStateBedroomBlindsClosed(_ context.Context, _ ..
 // 	}
 // }
 
-// func (l *MasterController) detectTVPower(ev MQTTEvent) {
-// 	if ev.Topic == "regelverk/state/tvpower" {
-// 		tvPower, err := strconv.ParseBool(string(ev.Payload.([]byte)))
-// 		if err != nil {
-// 			slog.Error("Could not parse payload", "topic", "regelverk/state/tvpower", "error", err)
-// 		}
-// 		l.stateValueMap.setState("tvPower", tvPower)
-// 	}
-// }
+func (l *MasterController) detectTVPower(ev MQTTEvent) {
+	if ev.Topic == "regelverk/state/tvpower" {
+		tvPower, err := strconv.ParseBool(string(ev.Payload.([]byte)))
+		if err != nil {
+			slog.Error("Could not parse payload", "topic", "regelverk/state/tvpower", "error", err)
+		}
+		l.stateValueMap.setState("tvPower", tvPower)
+	}
+}
 
 // func (l *MasterController) detectKitchenAudioPlaying(ev MQTTEvent) {
 // 	if ev.Topic == "kitchen/pulseaudio/state" {
@@ -509,14 +509,14 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(val any) (string, bool) { return "livingroomFloorlamp", val.(string) == "ON" },
 		nil,
 	))
-	// masterController.registerCallback(masterController.detectTVPower)
-	masterController.registerEventCallback(masterController.createProcessEventFunc(
-		func(ev MQTTEvent) (any, bool) {
-			return processString(ev, "regelverk/state/tvpower")
-		},
-		func(val any) (string, bool) { b, _ := strconv.ParseBool(val.(string)); return "tvPower", b },
-		nil,
-	))
+	masterController.registerEventCallback(masterController.detectTVPower)
+	// masterController.registerEventCallback(masterController.createProcessEventFunc(
+	// 	func(ev MQTTEvent) (any, bool) {
+	// 		return processString(ev, "regelverk/state/tvpower")
+	// 	},
+	// 	func(val any) (string, bool) { b, _ := strconv.ParseBool(val.(string)); return "tvPower", b },
+	// 	nil,
+	// ))
 
 	// Kitchen
 	masterController.registerEventCallback(masterController.createProcessEventFunc(
