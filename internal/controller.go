@@ -625,7 +625,7 @@ func (masterController *MasterController) registerCallbacks() {
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/livingroom-presence", "occupancy")
 		},
-		func(val any) (string, bool) { b, _ := strconv.ParseBool(val.(string)); return "livingroomPresence", b },
+		func(val any) (string, bool) { return "livingroomPresence", val.(bool) },
 		nil,
 	))
 	masterController.registerCallback(masterController.createProcessEventFunc(
