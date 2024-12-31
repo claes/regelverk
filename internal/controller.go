@@ -201,19 +201,19 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 
 	masterController.pushMetrics = false // Reset
 	masterController.executeCallbacks(ev)
-	// masterController.detectPhonePresent(ev)
+
+	masterController.detectPhonePresent(ev)
+	masterController.detectNighttime(ev)
+	masterController.detectTVPower(ev)
+	masterController.detectKitchenAudioPlaying(ev)
+	// masterController.detectBalconyDoorLowBatteryTest(ev)
 	// masterController.detectLivingroomPresence(ev)
 	// masterController.detectLivingroomFloorlampState(ev)
-	// masterController.detectNighttime(ev)
-	// masterController.detectTVPower(ev)
+	// masterController.detectBedroomBlindsOpen(ev)
 	// masterController.detectMPDPlay(ev)
 	// masterController.detectKitchenAmpPower(ev)
-	// masterController.detectKitchenAudioPlaying(ev)
-	// masterController.detectBedroomBlindsOpen(ev)
-
 	// masterController.detectBalconyDoorOpen(ev)
 	// masterController.detectBalconyDoorLowBattery(ev)
-	// masterController.detectBalconyDoorLowBatteryTest(ev)
 	// masterController.detectLivingroomPresenceLowBattery(ev)
 
 	for _, c := range *masterController.controllers {
@@ -364,52 +364,52 @@ func (l *MasterController) detectPhonePresent(ev MQTTEvent) {
 	}
 }
 
-func (l *MasterController) detectLivingroomPresence(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["occupancy"]
-		if !exists || val == nil {
-			return
-		}
-		l.stateValueMap.setState("livingroomPresence", val.(bool))
-	}
-}
+// func (l *MasterController) detectLivingroomPresence(ev MQTTEvent) {
+// 	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
+// 		m := parseJSONPayload(ev)
+// 		if m == nil {
+// 			return
+// 		}
+// 		val, exists := m["occupancy"]
+// 		if !exists || val == nil {
+// 			return
+// 		}
+// 		l.stateValueMap.setState("livingroomPresence", val.(bool))
+// 	}
+// }
 
-func (l *MasterController) detectLivingroomPresenceLowBattery(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["battery"]
-		if !exists || val == nil {
-			return
-		}
-		l.stateValueMap.setState("livingroomPresenceLowBattery", val.(float64) < 30)
-	}
-}
+// func (l *MasterController) detectLivingroomPresenceLowBattery(ev MQTTEvent) {
+// 	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
+// 		m := parseJSONPayload(ev)
+// 		if m == nil {
+// 			return
+// 		}
+// 		val, exists := m["battery"]
+// 		if !exists || val == nil {
+// 			return
+// 		}
+// 		l.stateValueMap.setState("livingroomPresenceLowBattery", val.(float64) < 30)
+// 	}
+// }
 
-func (l *MasterController) detectLivingroomFloorlampState(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/livingroom-floorlamp" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["state"]
-		if !exists || val == nil {
-			return
-		}
-		state := val.(string)
-		on := false
-		if state == "ON" {
-			on = true
-		}
-		l.stateValueMap.setState("livingroomFloorlamp", on)
-	}
-}
+// func (l *MasterController) detectLivingroomFloorlampState(ev MQTTEvent) {
+// 	if ev.Topic == "zigbee2mqtt/livingroom-floorlamp" {
+// 		m := parseJSONPayload(ev)
+// 		if m == nil {
+// 			return
+// 		}
+// 		val, exists := m["state"]
+// 		if !exists || val == nil {
+// 			return
+// 		}
+// 		state := val.(string)
+// 		on := false
+// 		if state == "ON" {
+// 			on = true
+// 		}
+// 		l.stateValueMap.setState("livingroomFloorlamp", on)
+// 	}
+// }
 
 func (l *MasterController) detectNighttime(ev MQTTEvent) {
 	if ev.Topic == "regelverk/ticker/timeofday" {
@@ -427,33 +427,33 @@ func (l *MasterController) detectTVPower(ev MQTTEvent) {
 	}
 }
 
-func (l *MasterController) detectMPDPlay(ev MQTTEvent) {
-	if ev.Topic == "mpd/status" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["state"]
-		if !exists || val == nil {
-			return
-		}
-		l.stateValueMap.setState("mpdPlay", val.(string) == "play")
-	}
-}
+// func (l *MasterController) detectMPDPlay(ev MQTTEvent) {
+// 	if ev.Topic == "mpd/status" {
+// 		m := parseJSONPayload(ev)
+// 		if m == nil {
+// 			return
+// 		}
+// 		val, exists := m["state"]
+// 		if !exists || val == nil {
+// 			return
+// 		}
+// 		l.stateValueMap.setState("mpdPlay", val.(string) == "play")
+// 	}
+// }
 
-func (l *MasterController) detectKitchenAmpPower(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/kitchen-amp" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["state"]
-		if !exists || val == nil {
-			return
-		}
-		l.stateValueMap.setState("kitchenAmpPower", val.(string) == "ON")
-	}
-}
+// func (l *MasterController) detectKitchenAmpPower(ev MQTTEvent) {
+// 	if ev.Topic == "zigbee2mqtt/kitchen-amp" {
+// 		m := parseJSONPayload(ev)
+// 		if m == nil {
+// 			return
+// 		}
+// 		val, exists := m["state"]
+// 		if !exists || val == nil {
+// 			return
+// 		}
+// 		l.stateValueMap.setState("kitchenAmpPower", val.(string) == "ON")
+// 	}
+// }
 
 func (l *MasterController) detectKitchenAudioPlaying(ev MQTTEvent) {
 	if ev.Topic == "kitchen/pulseaudio/state" {
@@ -467,47 +467,47 @@ func (l *MasterController) detectKitchenAudioPlaying(ev MQTTEvent) {
 	}
 }
 
-func (l *MasterController) detectBedroomBlindsOpen(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/blinds-bedroom" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["position"]
-		if !exists || val == nil {
-			return
-		}
-		l.stateValueMap.setState("bedroomBlindsOpen", val.(float64) > 50)
-	}
-}
+// func (l *MasterController) detectBedroomBlindsOpen(ev MQTTEvent) {
+// 	if ev.Topic == "zigbee2mqtt/blinds-bedroom" {
+// 		m := parseJSONPayload(ev)
+// 		if m == nil {
+// 			return
+// 		}
+// 		val, exists := m["position"]
+// 		if !exists || val == nil {
+// 			return
+// 		}
+// 		l.stateValueMap.setState("bedroomBlindsOpen", val.(float64) > 50)
+// 	}
+// }
 
-func (l *MasterController) detectBalconyDoorOpen(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/balcony-door" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["contact"]
-		if !exists || val == nil {
-			return
-		}
-		l.stateValueMap.setState("balconyDoorOpen", !val.(bool))
-	}
-}
+// func (l *MasterController) detectBalconyDoorOpen(ev MQTTEvent) {
+// 	if ev.Topic == "zigbee2mqtt/balcony-door" {
+// 		m := parseJSONPayload(ev)
+// 		if m == nil {
+// 			return
+// 		}
+// 		val, exists := m["contact"]
+// 		if !exists || val == nil {
+// 			return
+// 		}
+// 		l.stateValueMap.setState("balconyDoorOpen", !val.(bool))
+// 	}
+// }
 
-func (l *MasterController) detectBalconyDoorLowBattery(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/balcony-door" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["battery"]
-		if !exists || val == nil {
-			return
-		}
-		l.stateValueMap.setState("balconyDoorLowBattery", val.(float64) < 30)
-	}
-}
+// func (l *MasterController) detectBalconyDoorLowBattery(ev MQTTEvent) {
+// 	if ev.Topic == "zigbee2mqtt/balcony-door" {
+// 		m := parseJSONPayload(ev)
+// 		if m == nil {
+// 			return
+// 		}
+// 		val, exists := m["battery"]
+// 		if !exists || val == nil {
+// 			return
+// 		}
+// 		l.stateValueMap.setState("balconyDoorLowBattery", val.(float64) < 30)
+// 	}
+// }
 
 func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 	state := "OFF"
@@ -522,11 +522,11 @@ func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 	}
 }
 
-func (l *MasterController) detectBalconyDoorLowBatteryTest(ev MQTTEvent) {
-	l.processJSONProperty(ev, "zigbee2mqtt/balcony-door", "battery",
-		func(val any) (string, bool) { return "balconyDoorLowBatteryTest", val.(float64) < 30 },
-		func(val any) (string, float64) { return "balconyDoorLowBattery", val.(float64) })
-}
+// func (l *MasterController) detectBalconyDoorLowBatteryTest(ev MQTTEvent) {
+// 	l.processJSONProperty(ev, "zigbee2mqtt/balcony-door", "battery",
+// 		func(val any) (string, bool) { return "balconyDoorLowBatteryTest", val.(float64) < 30 },
+// 		func(val any) (string, float64) { return "balconyDoorLowBattery", val.(float64) })
+// }
 
 func (l *MasterController) processJSONProperty(ev MQTTEvent, topic, eventProperty string,
 	stateValueFunc func(any) (string, bool),
@@ -650,14 +650,14 @@ func (masterController *MasterController) registerCallbacks() {
 		func(val any) (string, bool) { return "livingroomFloorlamp", val.(string) == "ON" },
 		nil,
 	))
-	// masterController.registerCallback(masterController.createProcessEventFunc(
-	// 	func(ev MQTTEvent) (any, bool) {
-	// 		return processString(ev, "regelverk/state/tvpower")
-	// 	},
-	// 	func(val any) (string, bool) { b, _ := strconv.ParseBool(val.(string)); return "tvPower", b },
-	// 	nil,
-	// ))
-	masterController.registerCallback(masterController.detectTVPower)
+	masterController.registerCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processString(ev, "regelverk/state/tvpower")
+		},
+		func(val any) (string, bool) { b, _ := strconv.ParseBool(val.(string)); return "tvPower", b },
+		nil,
+	))
+	// masterController.registerCallback(masterController.detectTVPower)
 
 	// Kitchen
 	masterController.registerCallback(masterController.createProcessEventFunc(
