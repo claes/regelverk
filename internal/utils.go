@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/sj14/astral/pkg/astral"
@@ -134,13 +135,14 @@ func (f StateValue) Age() time.Duration {
 }
 
 type StateValueMap struct {
-	stateValueMap map[string]StateValue
-	callbacks     []func(key string, value, new, updated bool)
+	svMap     map[string]StateValue
+	mu        sync.RWMutex
+	callbacks []func(key string, value, new, updated bool)
 }
 
 func NewStateValueMap() StateValueMap {
 	return StateValueMap{
-		stateValueMap: make(map[string]StateValue),
+		svMap: make(map[string]StateValue),
 	}
 }
 
@@ -149,7 +151,10 @@ func (s *StateValueMap) registerCallback(callback func(key string, value, new, u
 }
 
 func (s *StateValueMap) setState(key string, value bool) {
-	existingState, exists := s.stateValueMap[key]
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	existingState, exists := s.svMap[key]
 
 	now := time.Now()
 	var updatedState StateValue
@@ -185,17 +190,23 @@ func (s *StateValueMap) setState(key string, value bool) {
 		callback(key, value, stateNew, stateUpdate)
 	}
 
-	s.stateValueMap[key] = updatedState
+	s.svMap[key] = updatedState
 }
 
 func (s *StateValueMap) getState(key string) StateValue {
-	stateValue, exists := s.stateValueMap[key]
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
 	stateValue.isDefined = exists
 	return stateValue
 }
 
 func (s *StateValueMap) requireTrue(key string) bool {
-	stateValue, exists := s.stateValueMap[key]
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
 	if !exists {
 		return false
 	} else {
@@ -204,7 +215,10 @@ func (s *StateValueMap) requireTrue(key string) bool {
 }
 
 func (s *StateValueMap) requireFalse(key string) bool {
-	stateValue, exists := s.stateValueMap[key]
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
 	if !exists {
 		return false
 	} else {
@@ -213,7 +227,10 @@ func (s *StateValueMap) requireFalse(key string) bool {
 }
 
 func (s *StateValueMap) requireTrueRecently(key string, duration time.Duration) bool {
-	stateValue, exists := s.stateValueMap[key]
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
 	if !exists {
 		return false
 	} else {
@@ -222,7 +239,10 @@ func (s *StateValueMap) requireTrueRecently(key string, duration time.Duration) 
 }
 
 func (s *StateValueMap) requireTrueNotRecently(key string, duration time.Duration) bool {
-	stateValue, exists := s.stateValueMap[key]
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
 	if !exists {
 		return false
 	} else {
@@ -231,10 +251,13 @@ func (s *StateValueMap) requireTrueNotRecently(key string, duration time.Duratio
 }
 
 func (s *StateValueMap) LogState() {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	now := time.Now()
 
 	var params [][]any
-	for key, stateValue := range s.stateValueMap {
+	for key, stateValue := range s.svMap {
 
 		secondsSinceLastUpdate := int64(-1)
 		if !stateValue.lastUpdate.IsZero() {
