@@ -14,10 +14,17 @@ import (
 	pulsemqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
 	rotelmqtt "github.com/claes/mqtt-bridges/rotel-mqtt/lib"
 	"github.com/gorilla/websocket"
+	"github.com/qmuntal/stateless"
 )
 
 //go:embed templates/rotel.html templates/styles.css
 var webContent embed.FS
+
+type webState int
+
+const (
+	initialWebState webState = iota
+)
 
 type WebController struct {
 	BaseController
@@ -35,6 +42,9 @@ func IsInitialized() bool {
 func (l *WebController) Initialize(masterController *MasterController) []MQTTPublish {
 	l.name = "web"
 	l.masterController = masterController
+
+	// Define a dummy state machine as the basecontroller assumes that
+	l.stateMachine = stateless.NewStateMachine(initialWebState)
 
 	slog.Info("Setting up HTTP handlers")
 	http.HandleFunc("/", l.mainHandler)
