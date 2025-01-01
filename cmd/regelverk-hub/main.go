@@ -9,7 +9,7 @@ func main() {
 	config, debug, dryRun := internal.ParseConfig()
 
 	loops := []internal.ControlLoop{
-		&internal.WebLoop{},
+		// &internal.WebLoop{},
 	}
 
 	bridgeWrappers := &[]internal.BridgeWrapper{
@@ -29,6 +29,7 @@ func main() {
 		&internal.LivingroomController{},
 		&internal.BedroomController{},
 		&internal.SnapcastController{},
+		&internal.WebController{},
 	}
 
 	internal.StartRegelverk(config, loops, bridgeWrappers, controllers, dryRun, debug)

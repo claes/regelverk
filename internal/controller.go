@@ -20,11 +20,13 @@ type Controller interface {
 }
 
 type MasterController struct {
+	mqttClient     mqtt.Client
 	stateValueMap  StateValueMap
 	controllers    *[]Controller
 	mu             sync.Mutex
 	pushMetrics    bool
 	metricsConfig  MetricsConfig
+	config         Config
 	eventCallbacks []func(MQTTEvent)
 }
 

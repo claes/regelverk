@@ -205,6 +205,7 @@ func runRegelverk(ctx context.Context, config Config,
 	}
 
 	masterController := CreateMasterController()
+	masterController.config = config
 	masterController.metricsConfig = metricsConfig
 	masterController.Init()
 	masterController.controllers = controllers
@@ -213,6 +214,8 @@ func runRegelverk(ctx context.Context, config Config,
 	if err != nil {
 		return err
 	}
+
+	masterController.mqttClient = mqttMessageHandler.masterController.mqttClient
 
 	slog.Info("Initializing bridges")
 	initBridges(ctx, mqttMessageHandler.client, config, bridgeWrappers)
