@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 
 	pulsemqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
@@ -45,6 +46,8 @@ func (l *WebController) Initialize(masterController *MasterController) []MQTTPub
 
 	// Define a dummy state machine as the basecontroller assumes that
 	l.stateMachine = stateless.NewStateMachine(initialWebState)
+	l.stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
+	l.stateMachine.Configure(initialWebState)
 
 	slog.Info("Setting up HTTP handlers")
 	http.HandleFunc("/", l.mainHandler)
