@@ -146,7 +146,7 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "rotel/state", "state")
 		},
-		func(val any) (string, bool) { return "rotelActive", val.(string) == "" },
+		func(val any) (string, bool) { return "rotelActive", val.(string) == "on" },
 		nil,
 	))
 
@@ -233,7 +233,7 @@ func (l *MasterController) detectCECState(ev MQTTEvent) {
 		fallthrough
 	case "cec/message/hex/tx":
 		command := strings.ToUpper(string(ev.Payload.([]byte)))
-		slog.Debug("CEC command", "command", command)
+		slog.Info("CEC command", "command", command)
 		switch command {
 		case "01:90:00":
 			fallthrough
@@ -256,7 +256,7 @@ func (l *MasterController) detectCECState(ev MQTTEvent) {
 		case "1F:82:40:00:00:00":
 			fallthrough
 		case "1F:82:40:00":
-			slog.Debug("Mediaflix active source")
+			slog.Info("Mediaflix active source")
 			l.stateValueMap.setState("tvSourceTvActive", false)
 			l.stateValueMap.setState("tvSourceMediaflixActive", true)
 			l.stateValueMap.setState("tvSourceChromecastActive", false)
@@ -264,7 +264,7 @@ func (l *MasterController) detectCECState(ev MQTTEvent) {
 		case "8F:82:30:00:00:00":
 			fallthrough
 		case "8F:82:30:00":
-			slog.Debug("Chromecast active source")
+			slog.Info("Chromecast active source")
 			l.stateValueMap.setState("tvSourceTvActive", false)
 			l.stateValueMap.setState("tvSourceMediaflixActive", false)
 			l.stateValueMap.setState("tvSourceChromecastActive", true)
@@ -272,7 +272,7 @@ func (l *MasterController) detectCECState(ev MQTTEvent) {
 		case "4F:82:20:00:00:00":
 			fallthrough
 		case "4F:82:20:00":
-			slog.Debug("Bluray active source")
+			slog.Info("Bluray active source")
 			l.stateValueMap.setState("tvSourceTvActive", false)
 			l.stateValueMap.setState("tvSourceMediaflixActive", false)
 			l.stateValueMap.setState("tvSourceChromecastActive", false)

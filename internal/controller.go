@@ -11,11 +11,12 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-type MetricsConfig struct {
-	CollectMetrics      bool
-	CollectDebugMetrics bool
-	MetricsAddress      string
-	MetricsRealm        string
+type Controller interface {
+	sync.Locker
+
+	IsInitialized() bool
+	Initialize(sm *MasterController) []MQTTPublish
+	ProcessEvent(ev MQTTEvent) []MQTTPublish
 }
 
 type MasterController struct {
@@ -25,6 +26,13 @@ type MasterController struct {
 	pushMetrics    bool
 	metricsConfig  MetricsConfig
 	eventCallbacks []func(MQTTEvent)
+}
+
+type MetricsConfig struct {
+	CollectMetrics      bool
+	CollectDebugMetrics bool
+	MetricsAddress      string
+	MetricsRealm        string
 }
 
 func CreateMasterController() MasterController {
@@ -51,14 +59,6 @@ func (l *MasterController) StateValueCallback(key string, value, new, updated bo
 			l.pushMetrics = true
 		}
 	}
-}
-
-type Controller interface {
-	sync.Locker
-
-	IsInitialized() bool
-	Initialize(sm *MasterController) []MQTTPublish
-	ProcessEvent(ev MQTTEvent) []MQTTPublish
 }
 
 func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQTTEvent) {
