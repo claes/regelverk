@@ -32,7 +32,9 @@ func IsInitialized() bool {
 	return false
 }
 
-func (l *WebController) Initialize(sm *MasterController) []MQTTPublish {
+func (l *WebController) Initialize(masterController *MasterController) []MQTTPublish {
+	l.name = "web"
+	l.masterController = masterController
 
 	slog.Info("Setting up HTTP handlers")
 	http.HandleFunc("/", l.mainHandler)
@@ -59,13 +61,13 @@ func (l *WebController) Initialize(sm *MasterController) []MQTTPublish {
 	slog.Info("Finished setting up HTTP handlers")
 
 	go func() {
-		slog.Info("Initializing HTTP server", "address", sm.config.WebAddress)
+		slog.Info("Initializing HTTP server", "address", masterController.config.WebAddress)
 
-		err := http.ListenAndServe(sm.config.WebAddress, nil)
+		err := http.ListenAndServe(masterController.config.WebAddress, nil)
 
 		if err != nil {
 			slog.Error("Error initializing HTTP server",
-				"listenAddr", sm.config.WebAddress, "error", err)
+				"listenAddr", masterController.config.WebAddress, "error", err)
 			os.Exit(1)
 		}
 	}()
