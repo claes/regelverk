@@ -261,9 +261,9 @@ func (l *MasterController) detectCECState(ev MQTTEvent) {
 			l.stateValueMap.setState("tvSourceMediaflixActive", true)
 			l.stateValueMap.setState("tvSourceChromecastActive", false)
 			l.stateValueMap.setState("tvSourceBlurayActive", false)
-		case "8F:82:30:00:00:00":
+		case "4F:82:30:00:00:00": // 4F:82:30:00
 			fallthrough
-		case "8F:82:30:00":
+		case "4F:82:30:00":
 			slog.Info("Chromecast active source")
 			l.stateValueMap.setState("tvSourceTvActive", false)
 			l.stateValueMap.setState("tvSourceMediaflixActive", false)

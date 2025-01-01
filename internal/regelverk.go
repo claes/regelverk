@@ -215,7 +215,7 @@ func runRegelverk(ctx context.Context, config Config,
 		return err
 	}
 
-	masterController.mqttClient = mqttMessageHandler.masterController.mqttClient
+	masterController.mqttClient = mqttMessageHandler.client
 
 	slog.Info("Initializing bridges")
 	initBridges(ctx, mqttMessageHandler.client, config, bridgeWrappers)
