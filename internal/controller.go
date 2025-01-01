@@ -93,7 +93,6 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 			}
 
 			for _, result := range toPublish {
-				count = count + 1
 				go func(toPublish MQTTPublish) {
 					if toPublish.Wait != 0 {
 						time.Sleep(toPublish.Wait)

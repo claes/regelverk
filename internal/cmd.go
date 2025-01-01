@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-func ParseConfig() (Config, *bool, *bool) {
+func ParseConfig() Config {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	bluetoothAddress := flag.String("bluetoothAddress", "", "Bluetooth MAC address")
@@ -38,7 +38,6 @@ func ParseConfig() (Config, *bool, *bool) {
 
 	help := flag.Bool("help", false, "Print help")
 	debug := flag.Bool("debug", false, "Debug logging")
-	dryRun := flag.Bool("dry_run", false, "Dry run (do not publish)")
 	flag.Parse()
 
 	if *help {
@@ -77,7 +76,7 @@ func ParseConfig() (Config, *bool, *bool) {
 		SnapcastServer:      *snapcastServer,
 		WebAddress:          *httpListenAddress,
 	}
-	return config, debug, dryRun
+	return config
 }
 
 func printHelp() {
@@ -86,8 +85,7 @@ func printHelp() {
 	flag.PrintDefaults()
 }
 
-func StartRegelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller,
-	dryRun *bool, debug *bool) {
+func StartRegelverk(config Config, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller) {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -100,7 +98,7 @@ func StartRegelverk(config Config, loops []ControlLoop, bridgeWrappers *[]Bridge
 	go func() {
 		defer wg.Done()
 		slog.Info("Initializing Regelverk", "config", config)
-		err := runRegelverk(ctx, config, loops, bridgeWrappers, controllers, dryRun, debug)
+		err := runRegelverk(ctx, config, bridgeWrappers, controllers)
 		if err != nil {
 			slog.Error("Error initializing regelverk", "error", err)
 		}

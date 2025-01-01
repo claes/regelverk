@@ -11,6 +11,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 
 	pulsemqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
 	rotelmqtt "github.com/claes/mqtt-bridges/rotel-mqtt/lib"
@@ -316,41 +317,41 @@ func (l *WebController) rotelBalanceRenderer(w io.Writer, currentBalance string)
 	fmt.Fprintf(w, "<input type='range' id='rotel-balance' name='rotel-balance' value='%d' min='-15' max='15' hx-post='/rotel/balance' hx-trigger='change' hx-swap-oob='true' />", balance)
 }
 
-// func balanceToInt(s string) (int, error) {
-// 	switch {
-// 	case strings.HasPrefix(s, "L"):
-// 		val, err := strconv.Atoi(s[1:])
-// 		if err != nil {
-// 			return 0, err
-// 		}
-// 		return -val, nil
-// 	case strings.HasPrefix(s, "R"):
-// 		val, err := strconv.Atoi(s[1:])
-// 		if err != nil {
-// 			return 0, err
-// 		}
-// 		return val, nil
-// 	case s == "000":
-// 		return 0, nil
-// 	default:
-// 		return 0, fmt.Errorf("invalid string format, %s", s)
-// 	}
-// }
+func balanceToInt(s string) (int, error) {
+	switch {
+	case strings.HasPrefix(s, "L"):
+		val, err := strconv.Atoi(s[1:])
+		if err != nil {
+			return 0, err
+		}
+		return -val, nil
+	case strings.HasPrefix(s, "R"):
+		val, err := strconv.Atoi(s[1:])
+		if err != nil {
+			return 0, err
+		}
+		return val, nil
+	case s == "000":
+		return 0, nil
+	default:
+		return 0, fmt.Errorf("invalid string format, %s", s)
+	}
+}
 
-// func intToBalance(n int) (string, error) {
-// 	if n < -15 || n > 15 {
-// 		return "", fmt.Errorf("number out of range")
-// 	}
-// 	switch {
-// 	case n < 0:
-// 		return fmt.Sprintf("L%02d", -n), nil
-// 	case n > 0:
-// 		return fmt.Sprintf("R%02d", n), nil
-// 	case n == 0:
-// 		return "000", nil
-// 	}
-// 	return "", fmt.Errorf("Unexpected number value: %d", n)
-// }
+func intToBalance(n int) (string, error) {
+	if n < -15 || n > 15 {
+		return "", fmt.Errorf("number out of range")
+	}
+	switch {
+	case n < 0:
+		return fmt.Sprintf("L%02d", -n), nil
+	case n > 0:
+		return fmt.Sprintf("R%02d", n), nil
+	case n == 0:
+		return "000", nil
+	}
+	return "", fmt.Errorf("Unexpected number value: %d", n)
+}
 
 // treble
 
@@ -379,41 +380,41 @@ func (l *WebController) rotelTrebleRenderer(w io.Writer, currentTreble string) {
 	fmt.Fprintf(w, "<input type='range' id='rotel-treble' name='rotel-treble' value='%d' min='-10' max='10' hx-post='/rotel/treble' hx-trigger='change' hx-swap-oob='true' />", treble)
 }
 
-// func bassOrTrebleToInt(s string) (int, error) {
-// 	switch {
-// 	case strings.HasPrefix(s, "-"):
-// 		val, err := strconv.Atoi(s[1:])
-// 		if err != nil {
-// 			return 0, err
-// 		}
-// 		return -val, nil
-// 	case strings.HasPrefix(s, "+"):
-// 		val, err := strconv.Atoi(s[1:])
-// 		if err != nil {
-// 			return 0, err
-// 		}
-// 		return val, nil
-// 	case s == "000":
-// 		return 0, nil
-// 	default:
-// 		return 0, fmt.Errorf("invalid string format, %s", s)
-// 	}
-// }
+func bassOrTrebleToInt(s string) (int, error) {
+	switch {
+	case strings.HasPrefix(s, "-"):
+		val, err := strconv.Atoi(s[1:])
+		if err != nil {
+			return 0, err
+		}
+		return -val, nil
+	case strings.HasPrefix(s, "+"):
+		val, err := strconv.Atoi(s[1:])
+		if err != nil {
+			return 0, err
+		}
+		return val, nil
+	case s == "000":
+		return 0, nil
+	default:
+		return 0, fmt.Errorf("invalid string format, %s", s)
+	}
+}
 
-// func intToBassOrTreble(n int) (string, error) {
-// 	if n < -10 || n > 10 {
-// 		return "", fmt.Errorf("number out of range")
-// 	}
-// 	switch {
-// 	case n < 0:
-// 		return fmt.Sprintf("-%02d", -n), nil
-// 	case n > 0:
-// 		return fmt.Sprintf("+%02d", n), nil
-// 	case n == 0:
-// 		return "000", nil
-// 	}
-// 	return "", fmt.Errorf("Unexpected number value: %d", n)
-// }
+func intToBassOrTreble(n int) (string, error) {
+	if n < -10 || n > 10 {
+		return "", fmt.Errorf("number out of range")
+	}
+	switch {
+	case n < 0:
+		return fmt.Sprintf("-%02d", -n), nil
+	case n > 0:
+		return fmt.Sprintf("+%02d", n), nil
+	case n == 0:
+		return "000", nil
+	}
+	return "", fmt.Errorf("Unexpected number value: %d", n)
+}
 
 // bass
 

@@ -6,9 +6,7 @@ import (
 
 func main() {
 
-	config, debug, dryRun := internal.ParseConfig()
-
-	loops := []internal.ControlLoop{}
+	config := internal.ParseConfig()
 
 	bridgeWrappers := []internal.BridgeWrapper{
 		&internal.SnapcastBridgeWrapper{},
@@ -19,5 +17,5 @@ func main() {
 		&internal.SnapcastController{},
 	}
 
-	internal.StartRegelverk(config, loops, &bridgeWrappers, controllers, dryRun, debug)
+	internal.StartRegelverk(config, &bridgeWrappers, controllers)
 }

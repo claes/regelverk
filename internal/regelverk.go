@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
@@ -55,89 +54,27 @@ type MQTTPublish struct {
 	Wait     time.Duration
 }
 
-type ControlLoop interface {
-	sync.Locker
-
-	Init(*MQTTMessageHandler, Config)
-
-	ProcessEvent(MQTTEvent) []MQTTPublish
-}
-
-type StatusLoop struct {
-	mu sync.Mutex
-	m  *MQTTMessageHandler
-}
-
-func (l *StatusLoop) Lock() { l.mu.Lock() }
-
-func (l *StatusLoop) Unlock() { l.mu.Unlock() }
-
-type MQTTMessageHandler struct {
-	dryRun           bool
-	client           mqtt.Client
-	loops            []ControlLoop
-	masterController *MasterController
-}
-
-func (h *MQTTMessageHandler) handle(_ mqtt.Client, m mqtt.Message) {
+func (h *MasterController) handle(_ mqtt.Client, m mqtt.Message) {
 	slog.Debug("MQTT handle", "topic", m.Topic(), "payload", m.Payload())
 	ev := MQTTEvent{
-		Timestamp: time.Now(), // consistent for all loops
+		Timestamp: time.Now(),
 		Topic:     m.Topic(),
 		Payload:   m.Payload(),
 	}
 
-	h.handleEvent(ev)
-	if h.masterController.metricsConfig.CollectDebugMetrics {
+	h.ProcessEvent(h.mqttClient, ev)
+
+	if h.metricsConfig.CollectDebugMetrics {
 		counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_handled{topic="%s",realm="%s"}`,
-			m.Topic(), h.masterController.metricsConfig.MetricsRealm))
+			m.Topic(), h.metricsConfig.MetricsRealm))
 		counter.Inc()
 	}
 }
 
-var count int64 = 0
-
-func (h *MQTTMessageHandler) handleEvent(ev MQTTEvent) {
-
-	h.masterController.ProcessEvent(h.client, ev)
-
-	for _, l := range h.loops {
-		loop := l // copy
-		go func() {
-			// For reliability, we call each loop in its own goroutine (yes, one
-			// per message), so that one loop can be stuck while others still
-			// make progress.
-			loop.Lock()
-			results := loop.ProcessEvent(ev)
-			loop.Unlock()
-			if len(results) == 0 {
-				return
-			}
-			for _, result := range results {
-				count = count + 1
-				if !h.dryRun {
-					go func(toPublish MQTTPublish) {
-						if toPublish.Wait != 0 {
-							time.Sleep(toPublish.Wait)
-						}
-						h.client.Publish(toPublish.Topic, toPublish.Qos, toPublish.Retained, toPublish.Payload)
-
-						if h.masterController.metricsConfig.CollectDebugMetrics {
-							counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_published{topic="%s",realm="%s"}`,
-								toPublish.Topic, h.masterController.metricsConfig.MetricsRealm))
-							counter.Inc()
-						}
-					}(result)
-				}
-			}
-		}()
-	}
-}
-
-func createMQTTMessageHandler(config Config, loops []ControlLoop, masterController *MasterController, dryRun, debug *bool) (*MQTTMessageHandler, error) {
+func setupMQTTClient(config Config, masterController *MasterController) error {
 	host, err := os.Hostname()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	mqttPassword := ""
@@ -150,26 +87,17 @@ func createMQTTMessageHandler(config Config, loops []ControlLoop, masterControll
 		slog.Debug("MQTT password", "password", mqttPassword)
 	}
 
-	mqttMessageHandler := &MQTTMessageHandler{
-		dryRun:           *dryRun,
-		loops:            loops,
-		masterController: masterController,
-	}
-
 	opts := mqtt.NewClientOptions().
 		AddBroker(config.MQTTBroker).
 		SetUsername(config.MQTTUserName).
 		SetPassword(mqttPassword).
 		SetClientID("regelverk-" + host).
 		SetOnConnectHandler(func(client mqtt.Client) {
-			// TODO: add MQTTTopics() []string to controlLoop interface and
-			// subscribe to the union of topics, with the same handler that
-			// feeds to the source control loops
 			const topic = "#"
 			token := client.Subscribe(
 				topic,
 				1, /* minimal QoS level zero: at most once, best-effort delivery */
-				mqttMessageHandler.handle)
+				masterController.handle)
 			if token.Wait() && token.Error() != nil {
 				slog.Error("Error creating MQTT client", "error", token.Error())
 				os.Exit(1)
@@ -183,17 +111,15 @@ func createMQTTMessageHandler(config Config, loops []ControlLoop, masterControll
 
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		// This can indeed fail, e.g. if the broker DNS is not resolvable.
-		return nil, fmt.Errorf("MQTT connection failed: %v", token.Error())
+		return fmt.Errorf("MQTT connection failed: %v", token.Error())
 	}
 	slog.Info("Connected to MQTT broker", "broker", config.MQTTBroker)
 
-	mqttMessageHandler.client = client
-	return mqttMessageHandler, nil
+	masterController.mqttClient = client
+	return nil
 }
 
-func runRegelverk(ctx context.Context, config Config,
-	loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller,
-	dryRun, debug *bool) error {
+func runRegelverk(ctx context.Context, config Config, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller) error {
 
 	metricsConfig := MetricsConfig{CollectMetrics: config.CollectMetrics, CollectDebugMetrics: config.CollectDebugMetrics,
 		MetricsAddress: config.MetricsAddress, MetricsRealm: config.MetricsRealm}
@@ -210,23 +136,14 @@ func runRegelverk(ctx context.Context, config Config,
 	masterController.Init()
 	masterController.controllers = controllers
 
-	mqttMessageHandler, err := createMQTTMessageHandler(config, loops, &masterController, dryRun, debug)
+	err := setupMQTTClient(config, &masterController)
 	if err != nil {
+		slog.Error("Error initializing MQTT Client", "error", err)
 		return err
 	}
 
-	masterController.mqttClient = mqttMessageHandler.client
-
 	slog.Info("Initializing bridges")
-	initBridges(ctx, mqttMessageHandler.client, config, bridgeWrappers)
-
-	slog.Info("Initializing loops")
-	for _, l := range loops {
-		l.Init(mqttMessageHandler, config)
-	}
-
-	// Init web after handlers are established
-	// createWebServer(config)
+	initBridges(ctx, masterController.mqttClient, config, bridgeWrappers)
 
 	go func() {
 		for tick := range time.Tick(1 * time.Minute) {
@@ -236,7 +153,7 @@ func runRegelverk(ctx context.Context, config Config,
 				Topic:     "regelverk/ticker/timeofday",
 				Payload:   timeOfDay,
 			}
-			mqttMessageHandler.handleEvent(ev)
+			masterController.ProcessEvent(masterController.mqttClient, ev)
 		}
 	}()
 

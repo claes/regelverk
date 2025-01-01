@@ -6,11 +6,7 @@ import (
 
 func main() {
 
-	config, debug, dryRun := internal.ParseConfig()
-
-	loops := []internal.ControlLoop{
-		// &internal.WebLoop{},
-	}
+	config := internal.ParseConfig()
 
 	bridgeWrappers := &[]internal.BridgeWrapper{
 		&internal.CecBridgeWrapper{},
@@ -32,5 +28,5 @@ func main() {
 		&internal.WebController{},
 	}
 
-	internal.StartRegelverk(config, loops, bridgeWrappers, controllers, dryRun, debug)
+	internal.StartRegelverk(config, bridgeWrappers, controllers)
 }
