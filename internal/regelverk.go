@@ -54,7 +54,7 @@ type MQTTPublish struct {
 	Wait     time.Duration
 }
 
-func (h *MasterController) handle(_ mqtt.Client, m mqtt.Message) {
+func (masterController *MasterController) handle(_ mqtt.Client, m mqtt.Message) {
 	slog.Debug("MQTT handle", "topic", m.Topic(), "payload", m.Payload())
 	ev := MQTTEvent{
 		Timestamp: time.Now(),
@@ -62,11 +62,11 @@ func (h *MasterController) handle(_ mqtt.Client, m mqtt.Message) {
 		Payload:   m.Payload(),
 	}
 
-	h.ProcessEvent(h.mqttClient, ev)
+	masterController.ProcessEvent(masterController.mqttClient, ev)
 
-	if h.metricsConfig.CollectDebugMetrics {
+	if masterController.metricsConfig.CollectDebugMetrics {
 		counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_handled{topic="%s",realm="%s"}`,
-			m.Topic(), h.metricsConfig.MetricsRealm))
+			m.Topic(), masterController.metricsConfig.MetricsRealm))
 		counter.Inc()
 	}
 }
