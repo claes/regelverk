@@ -37,28 +37,8 @@ func (c *KitchenAudioController) Initialize(masterController *MasterController) 
 	c.name = "kitchenaudio"
 	c.masterController = masterController
 
-	// var initialState snapcastState
-	// if masterController.stateValueMap.requireTrue("tvPower") {
-	// 	initialState = stateSnapcastOff
-	// } else if masterController.stateValueMap.requireFalse("tvPower") {
-	// 	initialState = stateSnapcastOn
-	// } else {
-	// 	return nil
-	// }
-
-	currentSink := ""
-	for _, sinkInput := range c.pulseAudioState.SinkInputs {
-		if sinkInput.Properties["media.icon_name"] == "audio-card-bluetooth" {
-			for _, sink := range c.pulseAudioState.Sinks {
-				if sinkInput.SinkIndex == sink.SinkIndex {
-					currentSink = sink.Id
-					break
-				}
-			}
-		}
-	}
-
-	var initialState kitchenAudioState = stateKitchenAudioLocal
+	var initialState kitchenAudioState
+	currentSink := c.getCurrentSink()
 	if currentSink == localSink {
 		initialState = stateKitchenAudioLocal
 	} else if currentSink == remoteSink {
@@ -89,6 +69,27 @@ func (c *KitchenAudioController) Initialize(masterController *MasterController) 
 
 	c.SetInitialized()
 	return nil
+}
+
+func (c *KitchenAudioController) getCurrentSink() string {
+	currentSink := ""
+	if c.pulseAudioState.SinkInputs != nil && c.pulseAudioState.Sinks != nil {
+		for _, sinkInput := range c.pulseAudioState.SinkInputs {
+			if sinkInput.Properties != nil {
+				if iconName, exists := sinkInput.Properties["media.icon_name"]; exists && iconName == "audio-card-bluetooth" {
+					for _, sink := range c.pulseAudioState.Sinks {
+						if sinkInput.SinkIndex == sink.SinkIndex {
+							if sink.Id != "" {
+								currentSink = sink.Id
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return currentSink
 }
 
 func (c *KitchenAudioController) customProcessEvent(ev MQTTEvent) []MQTTPublish {
