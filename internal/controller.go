@@ -205,7 +205,16 @@ func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 	}
 	return MQTTPublish{
 		Topic:    topic,
-		Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+		Payload:  fmt.Sprintf(`{"state": "%s"}`, state),
+		Qos:      2,
+		Retained: true,
+	}
+}
+
+func requestIkeaTretaktPower(topic string) MQTTPublish {
+	return MQTTPublish{
+		Topic:    topic,
+		Payload:  `{"state": ""}`,
 		Qos:      2,
 		Retained: true,
 	}
