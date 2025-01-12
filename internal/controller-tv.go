@@ -76,7 +76,7 @@ func tvPowerOffOutput() []MQTTPublish {
 	return []MQTTPublish{
 		{
 			Topic:    "zigbee2mqtt/ikea_uttag/set",
-			Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
+			Payload:  `{"state": "OFF", "power_on_behavior": "ON"}`,
 			Qos:      2,
 			Retained: false,
 			Wait:     0 * time.Second,
@@ -100,7 +100,7 @@ func tvPowerOnOutput() []MQTTPublish {
 	result := []MQTTPublish{
 		{
 			Topic:    "zigbee2mqtt/ikea_uttag/set",
-			Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
+			Payload:  `{"state": "ON", "power_on_behavior": "ON"}`,
 			Qos:      2,
 			Retained: false,
 			Wait:     0 * time.Second,

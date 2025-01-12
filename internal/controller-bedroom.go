@@ -99,7 +99,7 @@ func bedroomBlindsRefreshOutput() []MQTTPublish {
 	return []MQTTPublish{
 		{
 			Topic:    "zigbee2mqtt/blinds-bedroom/get",
-			Payload:  "{\"state\": \"\"}",
+			Payload:  `{"state": ""}`,
 			Qos:      2,
 			Retained: false,
 		},
@@ -114,13 +114,13 @@ func bedroomBlindsOutput(open bool) []MQTTPublish {
 	return []MQTTPublish{
 		{
 			Topic:    "zigbee2mqtt/blinds-bedroom/set",
-			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+			Payload:  fmt.Sprintf(`{"state": "%s"}`, state),
 			Qos:      2,
 			Retained: true,
 		},
 		{
 			Topic:    "zigbee2mqtt/blinds-bedroom/get",
-			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+			Payload:  fmt.Sprintf(`{"state": "%s"}`, state),
 			Qos:      2,
 			Wait:     60 * time.Second,
 			Retained: true,
