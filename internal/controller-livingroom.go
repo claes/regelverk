@@ -26,16 +26,16 @@ func (c *LivingroomController) Initialize(masterController *MasterController) []
 	c.name = "livingroom"
 	c.masterController = masterController
 
-	// var initialState tvState
-	// if masterController.stateValueMap.requireTrue("tvPower") {
-	// 	initialState = stateTvOn
-	// } else if masterController.stateValueMap.requireFalse("tvPower") {
-	// 	initialState = stateTvOff
-	// } else {
-	// 	return nil
-	// }
+	var initialState livingroomLamp
+	if masterController.stateValueMap.requireTrue("livingroomFloorlamp") {
+		initialState = stateLivingroomFloorlampOn
+	} else if masterController.stateValueMap.requireFalse("livingroomFloorlamp") {
+		initialState = stateLivingroomFloorlampOff
+	} else {
+		return []MQTTPublish{requestIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/get")}
+	}
 
-	c.stateMachine = stateless.NewStateMachine(stateLivingroomFloorlampOff) // can this be reliable determined early on? probably not
+	c.stateMachine = stateless.NewStateMachine(initialState)
 	c.stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
 	c.stateMachine.Configure(stateLivingroomFloorlampOn).

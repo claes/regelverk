@@ -8,14 +8,14 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
-type ampState int
+type kitchenAmpState int
 
 const (
-	ampStateOff ampState = iota
-	ampStateOn
+	kitchenAmpStateOff kitchenAmpState = iota
+	kitchenAmpStateOn
 )
 
-func (t ampState) ToInt() int {
+func (t kitchenAmpState) ToInt() int {
 	return int(t)
 }
 
@@ -27,25 +27,25 @@ func (c *KitchenController) Initialize(masterController *MasterController) []MQT
 	c.name = "kitchen"
 	c.masterController = masterController
 
-	// var initialState tvState
-	// if masterController.stateValueMap.requireTrue("tvPower") {
-	// 	initialState = stateTvOn
-	// } else if masterController.stateValueMap.requireFalse("tvPower") {
-	// 	initialState = stateTvOff
-	// } else {
-	// 	return nil
-	// }
+	var initialState kitchenAmpState
+	if masterController.stateValueMap.requireTrue("kitchenAmpPower") {
+		initialState = kitchenAmpStateOn
+	} else if masterController.stateValueMap.requireFalse("kitchenAmpPower") {
+		initialState = kitchenAmpStateOff
+	} else {
+		return []MQTTPublish{requestIkeaTretaktPower("zigbee2mqtt/kitchen-amp/get")}
+	}
 
-	c.stateMachine = stateless.NewStateMachine(ampStateOff)
+	c.stateMachine = stateless.NewStateMachine(initialState)
 	c.stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
-	c.stateMachine.Configure(ampStateOn).
+	c.stateMachine.Configure(kitchenAmpStateOn).
 		OnEntry(c.turnOnKitchenAmp).
-		Permit("mqttEvent", ampStateOff, c.masterController.guardStateKitchenAmpOff)
+		Permit("mqttEvent", kitchenAmpStateOff, c.masterController.guardStateKitchenAmpOff)
 
-	c.stateMachine.Configure(ampStateOff).
+	c.stateMachine.Configure(kitchenAmpStateOff).
 		OnEntry(c.turnOffKitchenAmp).
-		Permit("mqttEvent", ampStateOn, c.masterController.guardStateKitchenAmpOn)
+		Permit("mqttEvent", kitchenAmpStateOn, c.masterController.guardStateKitchenAmpOn)
 
 	c.eventHandlers = append(c.eventHandlers, c.handleMediaRemoteEvents)
 
