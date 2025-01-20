@@ -226,6 +226,20 @@ func (s *StateValueMap) requireFalse(key string) bool {
 	}
 }
 
+// Require it has consistently been true
+func (s *StateValueMap) requireTrueSince(key string, duration time.Duration) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
+	if !exists {
+		return false
+	} else {
+		return stateValue.value && time.Since(stateValue.lastSetTrue) > duration
+	}
+}
+
+// Require it has been true at some point during duration
 func (s *StateValueMap) requireTrueRecently(key string, duration time.Duration) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -238,6 +252,7 @@ func (s *StateValueMap) requireTrueRecently(key string, duration time.Duration) 
 	}
 }
 
+// Require that it must not have been true at any point during duration
 func (s *StateValueMap) requireTrueNotRecently(key string, duration time.Duration) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
