@@ -196,6 +196,16 @@ func (l *MasterController) guardStateBedroomBlindsClosed(_ context.Context, _ ..
 	return check
 }
 
+func (l *MasterController) guardStateFreezerDoorClosed(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireFalse("freezerDoorOpen")
+	return check
+}
+
+func (l *MasterController) guardStateFreezerDoorOpen(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireTrueSince("freezerDoorOpen", 20*time.Second)
+	return check
+}
+
 // Detections
 
 func setIkeaTretaktPower(topic string, on bool) MQTTPublish {

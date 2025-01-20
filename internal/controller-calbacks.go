@@ -204,6 +204,22 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(val any) (string, float64) { return "balconyDoorBattery", val.(float64) },
 	))
 
+	// Freezer door
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/freezer-door", "contact")
+		},
+		func(val any) (string, bool) { return "freezerDoorOpen", !val.(bool) },
+		nil,
+	))
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/freezer-door", "battery")
+		},
+		func(val any) (string, bool) { return "freezerDoorBatteryLow", val.(float64) < 20 },
+		func(val any) (string, float64) { return "freezerDoorBattery", val.(float64) },
+	))
+
 	// MPD
 	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
