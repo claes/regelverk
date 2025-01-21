@@ -22,6 +22,7 @@ func main() {
 	controllers := &[]internal.Controller{
 		&internal.TVController{},
 		&internal.KitchenController{},
+		&internal.KitchenFreezerDoorController{},
 		&internal.LivingroomController{},
 		&internal.BedroomController{},
 		&internal.SnapcastController{},
