@@ -2,7 +2,7 @@
   description = "Regelverk";
 
   # Nixpkgs / NixOS version to use.
-  inputs.nixpkgs.url = "nixpkgs/nixos-24.11";
+  inputs.nixpkgs.url = "nixpkgs/nixos-25.05";
 
   outputs = {
     self,
