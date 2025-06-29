@@ -3,6 +3,7 @@ package regelverk
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"github.com/qmuntal/stateless"
 )
@@ -32,9 +33,13 @@ func (c *LivingroomController) Initialize(masterController *MasterController) []
 	} else if masterController.stateValueMap.requireFalse("livingroomFloorlamp") {
 		initialState = stateLivingroomFloorlampOff
 	} else {
-		// NOTE NOTE NOTE
-		// This seems to have created an avalaunch
-		return []MQTTPublish{requestIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/get")}
+		const maxBackoff = 128 * time.Second
+		if c.checkBackoff() {
+			c.extendBackoff(maxBackoff)
+			return []MQTTPublish{requestIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/get")}
+		} else {
+			return nil
+		}
 	}
 
 	c.stateMachine = stateless.NewStateMachine(initialState)

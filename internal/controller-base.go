@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/VictoriaMetrics/metrics"
 	"github.com/qmuntal/stateless"
@@ -17,6 +18,9 @@ type BaseController struct {
 	isInitialized    bool
 	eventHandlers    []func(ev MQTTEvent) []MQTTPublish
 	mu               sync.Mutex
+
+	backoffUntil        time.Time
+	lastBackoffDuration time.Duration
 }
 
 func (c *BaseController) String() string {
@@ -47,6 +51,22 @@ func (c *BaseController) SetInitialized() {
 
 func (c *BaseController) IsInitialized() bool {
 	return c.isInitialized
+}
+
+func (c *BaseController) checkBackoff() bool {
+	return time.Now().After(c.backoffUntil)
+}
+
+func (c *BaseController) extendBackoff(maxBackoff time.Duration) {
+	if c.lastBackoffDuration <= 0 {
+		c.lastBackoffDuration = 1 * time.Second
+	} else if c.lastBackoffDuration < maxBackoff {
+		c.lastBackoffDuration *= 2
+		if c.lastBackoffDuration > maxBackoff {
+			c.lastBackoffDuration = maxBackoff
+		}
+	}
+	c.backoffUntil = time.Now().Add(c.lastBackoffDuration)
 }
 
 func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {

@@ -44,13 +44,19 @@ func (c *KitchenAudioController) Initialize(masterController *MasterController) 
 	} else if currentSink == remoteSink {
 		initialState = stateKitchenAudioRemote
 	} else {
-		return []MQTTPublish{
-			{
-				Topic:    "kitchen/pulseaudio/initialize",
-				Payload:  `init`,
-				Qos:      2,
-				Retained: false,
-			},
+		const maxBackoff = 128 * time.Second
+		if c.checkBackoff() {
+			c.extendBackoff(maxBackoff)
+			return []MQTTPublish{
+				{
+					Topic:    "kitchen/pulseaudio/initialize",
+					Payload:  `init`,
+					Qos:      2,
+					Retained: false,
+				},
+			}
+		} else {
+			return nil
 		}
 	}
 

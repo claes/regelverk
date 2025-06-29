@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/qmuntal/stateless"
 )
@@ -33,9 +34,13 @@ func (c *KitchenController) Initialize(masterController *MasterController) []MQT
 	} else if masterController.stateValueMap.requireFalse("kitchenAmpPower") {
 		initialState = kitchenAmpStateOff
 	} else {
-		// NOTE NOTE NOTE
-		// This seems to have created an avalaunch
-		return []MQTTPublish{requestIkeaTretaktPower("zigbee2mqtt/kitchen-amp/get")}
+		const maxBackoff = 128 * time.Second
+		if c.checkBackoff() {
+			c.extendBackoff(maxBackoff)
+			return []MQTTPublish{requestIkeaTretaktPower("zigbee2mqtt/kitchen-amp/get")}
+		} else {
+			return nil
+		}
 	}
 
 	c.stateMachine = stateless.NewStateMachine(initialState)
