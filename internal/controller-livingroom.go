@@ -32,6 +32,8 @@ func (c *LivingroomController) Initialize(masterController *MasterController) []
 	} else if masterController.stateValueMap.requireFalse("livingroomFloorlamp") {
 		initialState = stateLivingroomFloorlampOff
 	} else {
+		// NOTE NOTE NOTE
+		// This seems to have created an avalaunch
 		return []MQTTPublish{requestIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/get")}
 	}
 

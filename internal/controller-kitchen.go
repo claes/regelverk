@@ -33,6 +33,8 @@ func (c *KitchenController) Initialize(masterController *MasterController) []MQT
 	} else if masterController.stateValueMap.requireFalse("kitchenAmpPower") {
 		initialState = kitchenAmpStateOff
 	} else {
+		// NOTE NOTE NOTE
+		// This seems to have created an avalaunch
 		return []MQTTPublish{requestIkeaTretaktPower("zigbee2mqtt/kitchen-amp/get")}
 	}
 
