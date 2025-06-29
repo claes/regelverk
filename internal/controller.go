@@ -226,6 +226,6 @@ func requestIkeaTretaktPower(topic string) MQTTPublish {
 		Topic:    topic,
 		Payload:  `{"state": ""}`,
 		Qos:      2,
-		Retained: true,
+		Retained: false,
 	}
 }
