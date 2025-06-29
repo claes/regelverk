@@ -21,9 +21,11 @@ func main() {
 
 	controllers := &[]internal.Controller{
 		&internal.TVController{},
-		&internal.KitchenController{},
+		// Disable the controllers with avalaunches
+		// Add some exponential backoff
+		// &internal.KitchenController{},
 		&internal.KitchenFreezerDoorController{},
-		&internal.LivingroomController{},
+		// &internal.LivingroomController{},
 		&internal.BedroomController{},
 		&internal.SnapcastController{},
 		&internal.WebController{},
