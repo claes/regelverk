@@ -9,6 +9,7 @@ func main() {
 	config := internal.ParseConfig()
 
 	bridgeWrappers := []internal.BridgeWrapper{
+		&internal.AudioBridgeWrapper{},
 		&internal.PulseaudioBridgeWrapper{},
 		&internal.BluezBridgeWrapper{},
 	}

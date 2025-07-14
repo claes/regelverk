@@ -202,6 +202,11 @@ func (l *MasterController) guardStateFreezerDoorClosed(_ context.Context, _ ...a
 }
 
 func (l *MasterController) guardStateFreezerDoorOpen(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.requireTrue("freezerDoorOpen")
+	return check
+}
+
+func (l *MasterController) guardStateFreezerDoorOpenLong(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.requireTrueSince("freezerDoorOpen", 20*time.Second)
 	return check
 }
