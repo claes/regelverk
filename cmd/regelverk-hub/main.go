@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	internal "github.com/claes/regelverk/internal"
 )
 
@@ -22,7 +24,15 @@ func main() {
 	controllers := &[]internal.Controller{
 		&internal.TVController{},
 		&internal.KitchenController{},
-		&internal.KitchenFreezerDoorController{},
+		//&internal.KitchenFreezerDoorController{},
+		&internal.DoorController{
+			Name:            "kitchenfreezerdoor",
+			StateOpenKey:    "freezerDoorOpen",
+			OpenLongLimit:   10 * time.Second,
+			ReminderTopic:   "kitchen/audio/play",
+			ReminderPayload: `embed://assets/ping.wav`,
+			ReminderPeriod:  10 * time.Second,
+			MaxReminders:    20},
 		&internal.LivingroomController{},
 		&internal.BedroomController{},
 		&internal.SnapcastController{},

@@ -207,8 +207,29 @@ func (l *MasterController) guardStateFreezerDoorOpen(_ context.Context, _ ...any
 }
 
 func (l *MasterController) guardStateFreezerDoorOpenLong(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrueSince("freezerDoorOpen", 20*time.Second)
+	check := l.stateValueMap.requireTrueSince("freezerDoorOpen", 10*time.Second)
 	return check
+}
+
+func (l *MasterController) requireTrueByKey(key string) func(context.Context, ...any) bool {
+	return func(_ context.Context, _ ...any) bool {
+		check := l.stateValueMap.requireTrue(key)
+		return check
+	}
+}
+
+func (l *MasterController) requireTrueSinceByKey(key string, duration time.Duration) func(context.Context, ...any) bool {
+	return func(_ context.Context, _ ...any) bool {
+		check := l.stateValueMap.requireTrueSince(key, duration)
+		return check
+	}
+}
+
+func (l *MasterController) requireFalseByKey(key string) func(context.Context, ...any) bool {
+	return func(_ context.Context, _ ...any) bool {
+		check := l.stateValueMap.requireFalse(key)
+		return check
+	}
 }
 
 // Detections

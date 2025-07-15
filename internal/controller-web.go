@@ -42,7 +42,7 @@ func IsInitialized() bool {
 }
 
 func (l *WebController) Initialize(masterController *MasterController) []MQTTPublish {
-	l.name = "web"
+	l.Name = "web"
 	l.masterController = masterController
 
 	// Define a dummy state machine as the basecontroller assumes that

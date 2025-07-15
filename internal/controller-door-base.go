@@ -1,0 +1,101 @@
+package regelverk
+
+import (
+	"context"
+	"reflect"
+	"time"
+
+	"github.com/qmuntal/stateless"
+)
+
+type doorState int
+
+const (
+	doorClosed doorState = iota
+	doorOpen
+	doorOpenLong
+)
+
+func (t doorState) ToInt() int {
+	return int(t)
+}
+
+type DoorController struct {
+	BaseController
+	cancelFunc      context.CancelFunc
+	Name            string
+	StateOpenKey    string // "freezerDoorOpen"
+	OpenLongLimit   time.Duration
+	ReminderPeriod  time.Duration
+	MaxReminders    int
+	ReminderTopic   string
+	ReminderPayload string
+}
+
+func (c *DoorController) Initialize(masterController *MasterController) []MQTTPublish {
+	c.Name = "kitchenfreezerdoor"
+	c.masterController = masterController
+
+	var initialState doorState = doorClosed
+
+	c.stateMachine = stateless.NewStateMachine(initialState)
+	c.stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
+
+	c.stateMachine.Configure(doorClosed).
+		Permit("mqttEvent", doorOpen, c.masterController.requireTrueByKey(c.StateOpenKey))
+
+	c.stateMachine.Configure(doorOpen).
+		Permit("mqttEvent", doorClosed, c.masterController.requireFalseByKey(c.StateOpenKey)).
+		Permit("mqttEvent", doorOpenLong, c.masterController.requireTrueSinceByKey(c.StateOpenKey, c.OpenLongLimit))
+
+	c.stateMachine.Configure(doorOpenLong).
+		OnEntry(c.startNotifyDoorOpen).
+		OnExit(c.stopNotifyDoorOpen).
+		Permit("mqttEvent", doorClosed, c.masterController.requireFalseByKey(c.StateOpenKey))
+
+	c.SetInitialized()
+	return nil
+}
+
+func (c *DoorController) startNotifyDoorOpen(parentContext context.Context, _ ...any) error {
+	if c.cancelFunc != nil {
+		c.cancelFunc()
+	}
+
+	var ctx context.Context
+	ctx, c.cancelFunc = context.WithCancel(parentContext)
+
+	go func() {
+		ticker := time.NewTicker(c.ReminderPeriod)
+		defer ticker.Stop()
+		for i := 0; i < c.MaxReminders; i++ {
+			select {
+			case <-ticker.C:
+
+				events := []MQTTPublish{
+					{
+						Topic:    c.ReminderTopic,
+						Payload:  c.ReminderPayload,
+						Qos:      2,
+						Retained: false,
+						Wait:     0 * time.Second,
+					},
+				}
+				c.addEventsToPublish(events)
+				i = i + 1
+			case <-ctx.Done():
+				return
+			}
+		}
+		c.cancelFunc()
+	}()
+	return nil
+}
+
+func (c *DoorController) stopNotifyDoorOpen(_ context.Context, _ ...any) error {
+	if c.cancelFunc != nil {
+		c.cancelFunc()
+		c.cancelFunc = nil
+	}
+	return nil
+}

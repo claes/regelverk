@@ -11,7 +11,7 @@ import (
 )
 
 type BaseController struct {
-	name             string
+	Name             string
 	masterController *MasterController
 	stateMachine     *stateless.StateMachine
 	eventsToPublish  []MQTTPublish
@@ -24,7 +24,7 @@ type BaseController struct {
 }
 
 func (c *BaseController) String() string {
-	return c.name
+	return c.Name
 }
 
 func (c *BaseController) Lock() {
@@ -42,7 +42,7 @@ func (c *BaseController) SetInitialized() {
 		stateInt, ok := c.stateMachine.MustState().(int)
 		if ok {
 			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s",realm="%s"}`,
-				c.name, c.masterController.metricsConfig.MetricsRealm), nil)
+				c.Name, c.masterController.metricsConfig.MetricsRealm), nil)
 			gauge.Set(float64(stateInt))
 			c.masterController.pushMetrics = true
 		}
@@ -70,7 +70,7 @@ func (c *BaseController) extendBackoff(maxBackoff time.Duration) {
 }
 
 func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	slog.Debug("Process event", "name", c.name)
+	slog.Debug("Process event", "name", c.Name)
 
 	// In case special handling is needed that is not part of base processing
 	// Under normal circumstances, state machine should be able to handle most
@@ -83,7 +83,7 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 	eventsToPublish := c.getAndResetEventsToPublish()
 	afterState := c.stateMachine.MustState()
-	slog.Debug("Event fired", "fsm", c.name, "topic", ev.Topic,
+	slog.Debug("Event fired", "fsm", c.Name, "topic", ev.Topic,
 		"beforeState", beforeState,
 		"afterState", afterState,
 		"stateDiff", (beforeState != afterState),
@@ -95,7 +95,7 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		if afterState != beforeState {
 			if intState, ok := beforeState.(interface{ ToInt() int }); ok {
 				beforeStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_change{controller="%s",trigger="%s",realm="%s"}`,
-					c.name, triggerStr, c.masterController.metricsConfig.MetricsRealm), nil)
+					c.Name, triggerStr, c.masterController.metricsConfig.MetricsRealm), nil)
 				beforeStateGauge.Set(float64(intState.ToInt()))
 			} else {
 				slog.Error("State does not implement ToInt", "state", afterState)
@@ -103,19 +103,19 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		}
 		if len(eventsToPublish) > 0 {
 			counter := metrics.GetOrCreateCounter(fmt.Sprintf(`fsm_state_events{controller="%s",trigger="%s",realm="%s"}`,
-				c.name, triggerStr, c.masterController.metricsConfig.MetricsRealm))
+				c.Name, triggerStr, c.masterController.metricsConfig.MetricsRealm))
 			counter.Add(len(eventsToPublish))
 		}
 		if intState, ok := beforeState.(interface{ ToInt() int }); ok {
 			beforeStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_before{controller="%s",realm="%s"}`,
-				c.name, c.masterController.metricsConfig.MetricsRealm), nil)
+				c.Name, c.masterController.metricsConfig.MetricsRealm), nil)
 			beforeStateGauge.Set(float64(intState.ToInt()))
 		} else {
 			slog.Error("State does not implement ToInt", "state", afterState)
 		}
 		if intState, ok := afterState.(interface{ ToInt() int }); ok {
 			afterStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_after{controller="%s",realm="%s"}`,
-				c.name, c.masterController.metricsConfig.MetricsRealm), nil)
+				c.Name, c.masterController.metricsConfig.MetricsRealm), nil)
 			afterStateGauge.Set(float64(intState.ToInt()))
 		} else {
 			slog.Error("State does not implement ToInt", "state", afterState)
@@ -141,7 +141,7 @@ func (c *BaseController) StateMachineFire(trigger stateless.Trigger, args ...any
 
 	if c.masterController.metricsConfig.CollectDebugMetrics {
 		counter := metrics.GetOrCreateCounter(fmt.Sprintf(`fsm_fire{controller="%s",realm="%s"}`,
-			c.name, c.masterController.metricsConfig.MetricsRealm))
+			c.Name, c.masterController.metricsConfig.MetricsRealm))
 		counter.Inc()
 	}
 	return c.stateMachine.Fire(trigger, args...)

@@ -24,7 +24,7 @@ type MPDController struct {
 }
 
 func (c *MPDController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.name = "mpd"
+	c.Name = "mpd"
 	c.masterController = masterController
 
 	var initialState mpdState
