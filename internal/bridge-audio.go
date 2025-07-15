@@ -9,7 +9,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-//go:embed assets/raven.mp3
+//go:embed assets/ping.wav
 var audioFiles embed.FS
 
 type AudioBridgeWrapper struct {
