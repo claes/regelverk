@@ -20,7 +20,7 @@ func (t doorState) ToInt() int {
 	return int(t)
 }
 
-type DoorController struct {
+type DoorReminderController struct {
 	BaseController
 	cancelFunc      context.CancelFunc
 	Name            string
@@ -32,7 +32,7 @@ type DoorController struct {
 	ReminderPayload string
 }
 
-func (c *DoorController) Initialize(masterController *MasterController) []MQTTPublish {
+func (c *DoorReminderController) Initialize(masterController *MasterController) []MQTTPublish {
 	c.Name = "kitchenfreezerdoor"
 	c.masterController = masterController
 
@@ -57,7 +57,7 @@ func (c *DoorController) Initialize(masterController *MasterController) []MQTTPu
 	return nil
 }
 
-func (c *DoorController) startNotifyDoorOpen(parentContext context.Context, _ ...any) error {
+func (c *DoorReminderController) startNotifyDoorOpen(parentContext context.Context, _ ...any) error {
 	if c.cancelFunc != nil {
 		c.cancelFunc()
 	}
@@ -92,7 +92,7 @@ func (c *DoorController) startNotifyDoorOpen(parentContext context.Context, _ ..
 	return nil
 }
 
-func (c *DoorController) stopNotifyDoorOpen(_ context.Context, _ ...any) error {
+func (c *DoorReminderController) stopNotifyDoorOpen(_ context.Context, _ ...any) error {
 	if c.cancelFunc != nil {
 		c.cancelFunc()
 		c.cancelFunc = nil

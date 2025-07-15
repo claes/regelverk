@@ -25,14 +25,15 @@ func main() {
 		&internal.TVController{},
 		&internal.KitchenController{},
 		//&internal.KitchenFreezerDoorController{},
-		&internal.DoorController{
+		&internal.DoorReminderController{
 			Name:            "kitchenfreezerdoor",
 			StateOpenKey:    "freezerDoorOpen",
 			OpenLongLimit:   10 * time.Second,
+			ReminderPeriod:  10 * time.Second,
+			MaxReminders:    20,
 			ReminderTopic:   "kitchen/audio/play",
 			ReminderPayload: `embed://assets/ping.wav`,
-			ReminderPeriod:  10 * time.Second,
-			MaxReminders:    20},
+		},
 		&internal.LivingroomController{},
 		&internal.BedroomController{},
 		&internal.SnapcastController{},
