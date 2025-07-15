@@ -64,8 +64,8 @@ func (c *KitchenFreezerDoorController) startNotifyDoorOpen(parentContext context
 
 				events := []MQTTPublish{
 					{
-						Topic:    "/audio/play",
-						Payload:  `embed://raven.mp3`,
+						Topic:    "kitchen/audio/play",
+						Payload:  `embed://assets/ping.wav`,
 						Qos:      2,
 						Retained: false,
 						Wait:     0 * time.Second,
