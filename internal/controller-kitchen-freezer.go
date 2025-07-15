@@ -22,6 +22,7 @@ func (t kitchenFreezerDoorState) ToInt() int {
 
 type KitchenFreezerDoorController struct {
 	BaseController
+	cancelFunc context.CancelFunc
 }
 
 func (c *KitchenFreezerDoorController) Initialize(masterController *MasterController) []MQTTPublish {
@@ -49,16 +50,18 @@ func (c *KitchenFreezerDoorController) Initialize(masterController *MasterContro
 	return nil
 }
 
-var cancelFunc context.CancelFunc
-
 func (c *KitchenFreezerDoorController) startNotifyDoorOpen(parentContext context.Context, _ ...any) error {
+	if c.cancelFunc != nil {
+		c.cancelFunc()
+	}
+
 	var ctx context.Context
-	ctx, cancelFunc = context.WithCancel(parentContext)
+	ctx, c.cancelFunc = context.WithCancel(parentContext)
 
 	go func() {
 		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
-		for {
+		for i := 0; i < 20; i++ {
 			select {
 			case <-ticker.C:
 
@@ -72,19 +75,20 @@ func (c *KitchenFreezerDoorController) startNotifyDoorOpen(parentContext context
 					},
 				}
 				c.addEventsToPublish(events)
-
+				i = i + 1
 			case <-ctx.Done():
 				return
 			}
 		}
+		c.cancelFunc()
 	}()
 	return nil
 }
 
 func (c *KitchenFreezerDoorController) stopNotifyDoorOpen(_ context.Context, _ ...any) error {
-	if cancelFunc != nil {
-		cancelFunc()
-		cancelFunc = nil
+	if c.cancelFunc != nil {
+		c.cancelFunc()
+		c.cancelFunc = nil
 	}
 	return nil
 }
