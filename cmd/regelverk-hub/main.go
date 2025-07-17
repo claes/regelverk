@@ -27,6 +27,7 @@ func main() {
 		//&internal.KitchenFreezerDoorController{},
 		&internal.DoorReminderController{
 			Name:            "kitchenfreezerdoor",
+			SensorName:      "freezer-door",
 			StateOpenKey:    "freezerDoorOpen",
 			OpenLongLimit:   10 * time.Second,
 			ReminderPeriod:  10 * time.Second,
@@ -36,6 +37,7 @@ func main() {
 		},
 		&internal.DoorReminderController{
 			Name:            "kitchenfridgedoor",
+			SensorName:      "fridge-door",
 			StateOpenKey:    "fridgeDoorOpen",
 			OpenLongLimit:   10 * time.Second,
 			ReminderPeriod:  10 * time.Second,
