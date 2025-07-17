@@ -37,6 +37,7 @@ type Config struct {
 	RouterUsername      string
 	SamsungTvAddress    string
 	SnapcastServer      string
+	TelegramTokenFile   string
 	WebAddress          string
 }
 

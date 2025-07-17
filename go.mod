@@ -8,16 +8,16 @@ require (
 	github.com/VictoriaMetrics/metrics v1.38.0
 	github.com/bendahl/uinput v1.7.0
 	github.com/claes/cec v0.0.0-20240820185959-6db0712de894
-	github.com/claes/mqtt-bridges/audio-mqtt v0.0.0-20250714200529-e91d7bbeb9ee
-	github.com/claes/mqtt-bridges/bluez-mqtt v0.0.0-20250714200529-e91d7bbeb9ee
-	github.com/claes/mqtt-bridges/cec-mqtt v0.0.0-20250714200529-e91d7bbeb9ee
-	github.com/claes/mqtt-bridges/hid-mqtt v0.0.0-20250714200529-e91d7bbeb9ee
-	github.com/claes/mqtt-bridges/mpd-mqtt v0.0.0-20250714200529-e91d7bbeb9ee
-	github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20250714200529-e91d7bbeb9ee
-	github.com/claes/mqtt-bridges/rotel-mqtt v0.0.0-20250714200529-e91d7bbeb9ee
-	github.com/claes/mqtt-bridges/routeros-mqtt v0.0.0-20250714200529-e91d7bbeb9ee
-	github.com/claes/mqtt-bridges/samsungtv-mqtt v0.0.0-20250714200529-e91d7bbeb9ee
-	github.com/claes/mqtt-bridges/snapcast-mqtt v0.0.0-20250714200529-e91d7bbeb9ee
+	github.com/claes/mqtt-bridges/audio-mqtt v0.0.0-20250717183228-4e7e958f9d50
+	github.com/claes/mqtt-bridges/bluez-mqtt v0.0.0-20250717183228-4e7e958f9d50
+	github.com/claes/mqtt-bridges/cec-mqtt v0.0.0-20250717183228-4e7e958f9d50
+	github.com/claes/mqtt-bridges/hid-mqtt v0.0.0-20250717183228-4e7e958f9d50
+	github.com/claes/mqtt-bridges/mpd-mqtt v0.0.0-20250717183228-4e7e958f9d50
+	github.com/claes/mqtt-bridges/pulseaudio-mqtt v0.0.0-20250717183228-4e7e958f9d50
+	github.com/claes/mqtt-bridges/rotel-mqtt v0.0.0-20250717183228-4e7e958f9d50
+	github.com/claes/mqtt-bridges/routeros-mqtt v0.0.0-20250717183228-4e7e958f9d50
+	github.com/claes/mqtt-bridges/samsungtv-mqtt v0.0.0-20250717183228-4e7e958f9d50
+	github.com/claes/mqtt-bridges/snapcast-mqtt v0.0.0-20250717183228-4e7e958f9d50
 	github.com/eclipse/paho.mqtt.golang v1.5.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/qmuntal/stateless v1.7.2
@@ -27,7 +27,8 @@ require (
 require (
 	github.com/ConnorsApps/snapcast-go v0.2.0 // indirect
 	github.com/Defacto2/magicnumber v1.0.8 // indirect
-	github.com/claes/mqtt-bridges/common v0.0.0-20250714200529-e91d7bbeb9ee // indirect
+	github.com/claes/mqtt-bridges/common v0.0.0-20250717183228-4e7e958f9d50 // indirect
+	github.com/claes/mqtt-bridges/telegram-mqtt v0.0.0-20250717183228-4e7e958f9d50 // indirect
 	github.com/ebitengine/oto/v3 v3.3.3 // indirect
 	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/fhs/gompd/v2 v2.3.0 // indirect

@@ -35,6 +35,7 @@ func ParseConfig() Config {
 	routerUsername := flag.String("routerUsername", "", "Mikrotik router username")
 	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
 	snapcastServer := flag.String("snapcastServer", "", "Snapcast server address")
+	telegramTokenFile := flag.String("telegramTokenFile", "", "Telegram bot token file")
 
 	help := flag.Bool("help", false, "Print help")
 	debug := flag.Bool("debug", false, "Debug logging")
@@ -74,6 +75,7 @@ func ParseConfig() Config {
 		RouterUsername:      *routerUsername,
 		SamsungTvAddress:    *samsungTVAddress,
 		SnapcastServer:      *snapcastServer,
+		TelegramTokenFile:   *telegramTokenFile,
 		WebAddress:          *httpListenAddress,
 	}
 	return config

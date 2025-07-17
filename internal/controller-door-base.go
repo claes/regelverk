@@ -96,6 +96,13 @@ func (c *DoorReminderController) startNotifyDoorOpen(parentContext context.Conte
 						Retained: false,
 						Wait:     0 * time.Second,
 					},
+					{
+						Topic:    "telegram/regelverkgeneral/send",
+						Payload:  "test battery reminder",
+						Qos:      2,
+						Retained: false,
+						Wait:     0 * time.Second,
+					},
 				}
 				c.addEventsToPublish(events)
 				i = i + 1
