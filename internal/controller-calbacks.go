@@ -51,6 +51,7 @@ func (l *MasterController) createProcessEventFunc(extractValueFunc func(MQTTEven
 
 			if metricsGaugeFunc != nil {
 				key, v := metricsGaugeFunc(val)
+				// Log to VictoriaMetrics
 				if l.metricsConfig.CollectMetrics {
 					gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`eventvalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
 					gauge.Set(v)
@@ -220,6 +221,22 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(val any) (string, float64) { return "freezerDoorBattery", val.(float64) },
 	))
 
+	// Fridge door
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/fridge-door", "contact")
+		},
+		func(val any) (string, bool) { return "fridgeDoorOpen", !val.(bool) },
+		nil,
+	))
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/fridge-door", "battery")
+		},
+		func(val any) (string, bool) { return "fridgeDoorBatteryLow", val.(float64) < 20 },
+		func(val any) (string, float64) { return "fridgeDoorBattery", val.(float64) },
+	))
+
 	// MPD
 	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
@@ -249,7 +266,7 @@ func (l *MasterController) detectCECState(ev MQTTEvent) {
 		fallthrough
 	case "cec/message/hex/tx":
 		command := strings.ToUpper(string(ev.Payload.([]byte)))
-		slog.Info("CEC command", "command", command)
+		slog.Debug("CEC command", "command", command)
 		switch command {
 		case "01:90:00":
 			fallthrough
