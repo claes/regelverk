@@ -24,6 +24,7 @@ type DoorReminderController struct {
 	BaseController
 	cancelFunc      context.CancelFunc
 	Name            string
+	SensorName      string
 	StateOpenKey    string // "freezerDoorOpen"
 	OpenLongLimit   time.Duration
 	ReminderPeriod  time.Duration
@@ -59,6 +60,7 @@ func (c *DoorReminderController) Initialize(masterController *MasterController) 
 		Permit("mqttEvent", doorOpen, c.masterController.requireTrueByKey(c.StateOpenKey))
 
 	c.stateMachine.Configure(doorOpen).
+		OnEntry(c.requestBatteryStatus).
 		Permit("mqttEvent", doorClosed, c.masterController.requireFalseByKey(c.StateOpenKey)).
 		Permit("mqttEvent", doorOpenLong, c.masterController.requireTrueSinceByKey(c.StateOpenKey, c.OpenLongLimit))
 
@@ -112,4 +114,21 @@ func (c *DoorReminderController) stopNotifyDoorOpen(_ context.Context, _ ...any)
 		c.cancelFunc = nil
 	}
 	return nil
+}
+
+func (c *DoorReminderController) requestBatteryStatus(_ context.Context, _ ...any) error {
+	c.addEventsToPublish(c.requestBatteryStatusOutput())
+	return nil
+}
+
+func (c *DoorReminderController) requestBatteryStatusOutput() []MQTTPublish {
+	return []MQTTPublish{
+		{
+			Topic:    `zigbee2mqtt/` + c.SensorName + `/get`,
+			Payload:  `{"battery":""}`,
+			Qos:      2,
+			Retained: false,
+			Wait:     0 * time.Second,
+		},
+	}
 }
