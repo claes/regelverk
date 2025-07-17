@@ -33,8 +33,22 @@ type DoorReminderController struct {
 }
 
 func (c *DoorReminderController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.Name = "kitchenfreezerdoor"
 	c.masterController = masterController
+
+	// var initialState doorState
+	// if masterController.stateValueMap.requireTrue(c.StateOpenKey) {
+	// 	initialState = doorOpen
+	// } else if masterController.stateValueMap.requireFalse(c.StateOpenKey) {
+	// 	initialState = doorClosed
+	// } else {
+	// 	const maxBackoff = 128 * time.Second
+	// 	if c.checkBackoff() {
+	// 		c.extendBackoff(maxBackoff)
+	// 		return []MQTTPublish{requestIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/get")}
+	// 	} else {
+	// 		return nil
+	// 	}
+	// }
 
 	var initialState doorState = doorClosed
 

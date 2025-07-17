@@ -196,21 +196,6 @@ func (l *MasterController) guardStateBedroomBlindsClosed(_ context.Context, _ ..
 	return check
 }
 
-func (l *MasterController) guardStateFreezerDoorClosed(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireFalse("freezerDoorOpen")
-	return check
-}
-
-func (l *MasterController) guardStateFreezerDoorOpen(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrue("freezerDoorOpen")
-	return check
-}
-
-func (l *MasterController) guardStateFreezerDoorOpenLong(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrueSince("freezerDoorOpen", 10*time.Second)
-	return check
-}
-
 func (l *MasterController) requireTrueByKey(key string) func(context.Context, ...any) bool {
 	return func(_ context.Context, _ ...any) bool {
 		check := l.stateValueMap.requireTrue(key)
