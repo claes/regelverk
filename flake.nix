@@ -38,7 +38,7 @@
         src = ./.;
         nativeBuildInputs = [pkgs.pkg-config];
         buildInputs = [pkgs.alsa-lib pkgs.alsa-plugins pkgs.libcec pkgs.libcec_platform];
-        vendorHash = "sha256-p0fj43bPKmacDx1qFHX2EVBsthyyiEXwk9oRKHkj2Sg=";
+        vendorHash = "sha256-GODWViOgvYDPpRiOANqGBLQO4ba1lcOfZ7bOB2isQn4=";
       };
     });
 
