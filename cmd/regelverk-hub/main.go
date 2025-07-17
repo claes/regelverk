@@ -19,6 +19,7 @@ func main() {
 		&internal.RouterOSBridgeWrapper{},
 		&internal.SamsungBridgeWrapper{},
 		&internal.SnapcastBridgeWrapper{},
+		&internal.TelegramBridgeWrapper{},
 	}
 
 	controllers := &[]internal.Controller{
