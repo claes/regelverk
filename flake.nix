@@ -58,6 +58,8 @@
           libcec
           libcec_platform
           pkg-config
+          alsa-lib
+          alsa-plugins
         ];
       };
     });

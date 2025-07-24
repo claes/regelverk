@@ -6,7 +6,13 @@ import (
 	"time"
 )
 
-type BayesianRule struct {
+type BayesianModel struct {
+	Prior       float64
+	Threshold   float64
+	Likelihoods map[string]LikelihoodModel
+}
+
+type LikelihoodModel struct {
 	Name string
 
 	// ProbGivenTrue = P(E | H):
@@ -65,7 +71,7 @@ func ApplyTimeDecay(p float64, age time.Duration, halfLife time.Duration) float6
 }
 
 // Performs one Bayesian update in log-odds space, applying a weight to control the influence of this observation.
-func ApplyWeightedBayes(prior float64, rule BayesianRule, matched bool, age time.Duration) float64 {
+func ApplyWeightedBayes(prior float64, rule LikelihoodModel, matched bool, age time.Duration) float64 {
 	// Invert probabilities if the observation was NOT matched (absence of event)
 	pTrue := rule.ProbGivenTrue
 	pFalse := rule.ProbGivenFalse
@@ -93,17 +99,15 @@ func ApplyWeightedBayes(prior float64, rule BayesianRule, matched bool, age time
 
 // Applies all observations in sequence, updating belief each time.
 func ApplyBayesianInference(
-	prior float64,
-	rules map[string]BayesianRule,
+	bayesianModel BayesianModel,
 	observations []Observation,
-	threshold float64,
 	verbose bool,
 ) (float64, bool) {
 	now := time.Now()
-	p := prior
+	p := bayesianModel.Prior
 
 	for _, obs := range observations {
-		rule, ok := rules[obs.Name]
+		rule, ok := bayesianModel.Likelihoods[obs.Name]
 		if !ok {
 			if verbose {
 				fmt.Printf("⚠️ No rule for '%s' — skipping\n", obs.Name)
@@ -124,15 +128,15 @@ func ApplyBayesianInference(
 		p = updated
 	}
 
-	return p, p >= threshold
+	return p, p >= bayesianModel.Threshold
 }
 
 func main() {
+
 	prior := 0.6
 	threshold := 0.9
-	now := time.Now()
 
-	rules := map[string]BayesianRule{
+	rules := map[string]LikelihoodModel{
 		"phone": {
 			Name:           "phone",
 			ProbGivenTrue:  0.9,              // If home, phone detected 90% of the time
@@ -156,13 +160,21 @@ func main() {
 		},
 	}
 
+	bayesianModel := BayesianModel{
+		Prior:       prior,
+		Threshold:   threshold,
+		Likelihoods: rules,
+	}
+
+	now := time.Now()
+
 	observations := []Observation{
 		{Name: "phone", Matched: true, Timestamp: now.Add(-5 * time.Minute)},
 		{Name: "motion", Matched: false, Timestamp: now.Add(-20 * time.Minute)}, // No motion
 		{Name: "door", Matched: true, Timestamp: now.Add(-2 * time.Minute)},
 	}
 
-	posterior, decision := ApplyBayesianInference(prior, rules, observations, threshold, true)
+	posterior, decision := ApplyBayesianInference(bayesianModel, observations, true)
 
 	fmt.Printf("🧠 Final probability: %.4f\n", posterior)
 	if decision {
