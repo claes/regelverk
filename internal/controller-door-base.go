@@ -25,7 +25,7 @@ type DoorReminderController struct {
 	cancelFunc      context.CancelFunc
 	Name            string
 	SensorName      string
-	StateOpenKey    string // "freezerDoorOpen"
+	StateOpenKey    StateKey // "freezerDoorOpen"
 	OpenLongLimit   time.Duration
 	ReminderPeriod  time.Duration
 	MaxReminders    int

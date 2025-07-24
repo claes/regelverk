@@ -23,7 +23,7 @@ type BatteryReminderController struct {
 	BaseController
 	cancelFunc          context.CancelFunc
 	Name                string
-	StateBatteryPoorKey string
+	StateBatteryPoorKey StateKey
 	ReminderPeriod      time.Duration
 	MaxReminders        int
 	ReminderTopic       string

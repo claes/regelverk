@@ -49,7 +49,7 @@ func (l *MasterController) Init() {
 	}
 }
 
-func (l *MasterController) StateValueCallback(key string, value, new, updated bool) {
+func (l *MasterController) StateValueCallback(key StateKey, value, new, updated bool) {
 	if l.metricsConfig.CollectMetrics {
 		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`statevalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
 		if value {
@@ -196,21 +196,21 @@ func (l *MasterController) guardStateBedroomBlindsClosed(_ context.Context, _ ..
 	return check
 }
 
-func (l *MasterController) requireTrueByKey(key string) func(context.Context, ...any) bool {
+func (l *MasterController) requireTrueByKey(key StateKey) func(context.Context, ...any) bool {
 	return func(_ context.Context, _ ...any) bool {
 		check := l.stateValueMap.requireTrue(key)
 		return check
 	}
 }
 
-func (l *MasterController) requireTrueSinceByKey(key string, duration time.Duration) func(context.Context, ...any) bool {
+func (l *MasterController) requireTrueSinceByKey(key StateKey, duration time.Duration) func(context.Context, ...any) bool {
 	return func(_ context.Context, _ ...any) bool {
 		check := l.stateValueMap.requireTrueSince(key, duration)
 		return check
 	}
 }
 
-func (l *MasterController) requireFalseByKey(key string) func(context.Context, ...any) bool {
+func (l *MasterController) requireFalseByKey(key StateKey) func(context.Context, ...any) bool {
 	return func(_ context.Context, _ ...any) bool {
 		check := l.stateValueMap.requireFalse(key)
 		return check

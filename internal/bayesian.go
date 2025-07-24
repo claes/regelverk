@@ -1,7 +1,7 @@
 package regelverk
 
 import (
-	"fmt"
+	"log/slog"
 	"math"
 	"time"
 )
@@ -9,7 +9,7 @@ import (
 type BayesianModel struct {
 	Prior       float64
 	Threshold   float64
-	Likelihoods map[string]LikelihoodModel
+	Likelihoods map[StateKey]LikelihoodModel
 }
 
 type LikelihoodModel struct {
@@ -46,20 +46,20 @@ type Observation struct {
 
 // Converts a probability to log-odds (logit):
 // logit(p) = ln(p / (1 - p))
-func LogOdds(p float64) float64 {
+func logOdds(p float64) float64 {
 	return math.Log(p / (1 - p))
 }
 
 // Converts log-odds back to a probability using the sigmoid function:
 // sigmoid(x) = 1 / (1 + e^(-x))
-func Sigmoid(logit float64) float64 {
+func sigmoid(logit float64) float64 {
 	return 1 / (1 + math.Exp(-logit))
 }
 
 // Applies exponential decay to a probability based on how old the observation is.
 // Converts half-life to minutes internally for exponential math.
 // This reduces the influence of stale evidence over time.
-func ApplyTimeDecay(p float64, age time.Duration, halfLife time.Duration) float64 {
+func applyTimeDecay(p float64, age time.Duration, halfLife time.Duration) float64 {
 	if halfLife <= 0 {
 		return p // No decay applied
 	}
@@ -80,11 +80,11 @@ func applyWeightedBayes(prior float64, likelihood LikelihoodModel, matched bool,
 	}
 
 	// Apply decay to both likelihoods
-	pTrue = ApplyTimeDecay(pTrue, age, likelihood.HalfLife)
-	pFalse = ApplyTimeDecay(pFalse, age, likelihood.HalfLife)
+	pTrue = applyTimeDecay(pTrue, age, likelihood.HalfLife)
+	pFalse = applyTimeDecay(pFalse, age, likelihood.HalfLife)
 
 	// Convert prior belief to log-odds
-	priorLogOdds := LogOdds(prior)
+	priorLogOdds := logOdds(prior)
 
 	// Likelihood ratio in log form
 	likelihoodLog := math.Log(pTrue / pFalse)
@@ -93,84 +93,32 @@ func applyWeightedBayes(prior float64, likelihood LikelihoodModel, matched bool,
 	weightedLogOdds := priorLogOdds + likelihood.Weight*likelihoodLog
 
 	// Convert back to a probability (posterior)
-	return Sigmoid(weightedLogOdds)
+	return sigmoid(weightedLogOdds)
 }
 
-// Applies all observations in sequence, updating belief each time.
-func applyBayesianInference(
-	bayesianModel BayesianModel,
-	observations []Observation,
-	verbose bool,
-) (float64, bool) {
+func inferPosterior(bayesianModel BayesianModel, stateValueMap *StateValueMap) (float64, bool) {
+
 	now := time.Now()
 	p := bayesianModel.Prior
 
-	for _, obs := range observations {
-		likelihood, ok := bayesianModel.Likelihoods[obs.Name]
-		if !ok {
-			if verbose {
-				fmt.Printf("⚠️ No likelihood for '%s' — skipping\n", obs.Name)
-			}
-			continue
-		}
+	for key, likelihood := range bayesianModel.Likelihoods {
+		state := stateValueMap.getState(key)
+		age := now.Sub(state.lastUpdate)
+		updated := applyWeightedBayes(p, likelihood, state.value, age)
 
-		age := now.Sub(obs.Timestamp)
-		updated := applyWeightedBayes(p, likelihood, obs.Matched, age)
-
-		if verbose {
-			fmt.Printf("🔎 Observation: %s\n", obs.Name)
-			fmt.Printf("  Matched: %v, Age: %.1f min, Weight: %.2f\n", obs.Matched, age.Minutes(), likelihood.Weight)
-			fmt.Printf("  Decayed P(E|H): %.3f, P(E|~H): %.3f\n", likelihood.ProbGivenTrue, likelihood.ProbGivenFalse)
-			fmt.Printf("  Posterior: %.4f → %.4f\n\n", p, updated)
-		}
+		slog.Debug("Observation update",
+			"observation", key,
+			"value", state.value,
+			"age_minutes", age.Minutes(),
+			"weight", likelihood.Weight,
+			"decayed_P(E|H)", likelihood.ProbGivenTrue,
+			"decayed_P(E|~H)", likelihood.ProbGivenFalse,
+			"posterior_before", p,
+			"posterior_after", updated,
+		)
 
 		p = updated
 	}
 
 	return p, p >= bayesianModel.Threshold
-}
-
-func main() {
-
-	bayesianModel := BayesianModel{
-		Prior:     0.6,
-		Threshold: 0.9,
-		Likelihoods: map[string]LikelihoodModel{
-			"phone": {
-				ProbGivenTrue:  0.9,              // If home, phone detected 90% of the time
-				ProbGivenFalse: 0.2,              // If not home, phone still shows up 20% of the time
-				HalfLife:       60 * time.Minute, // Evidence fades slowly
-				Weight:         1.0,              // Highly trusted
-			},
-			"motion": {
-				ProbGivenTrue:  0.8, // If home, motion detected 80% of the time
-				ProbGivenFalse: 0.3, // If not home, motion falsely triggered 30% of the time
-				HalfLife:       15 * time.Minute,
-				Weight:         0.5, // Less trusted
-			},
-			"door": {
-				ProbGivenTrue:  0.6, // If home, door open 60% of the time
-				ProbGivenFalse: 0.4, // Even if not home, 40% chance door is open
-				HalfLife:       30 * time.Minute,
-				Weight:         0.8,
-			},
-		},
-	}
-
-	now := time.Now()
-
-	observations := []Observation{
-		{Name: "phone", Matched: true, Timestamp: now.Add(-5 * time.Minute)},
-		{Name: "motion", Matched: false, Timestamp: now.Add(-20 * time.Minute)}, // No motion
-		{Name: "door", Matched: true, Timestamp: now.Add(-2 * time.Minute)},
-	}
-
-	posterior, decision := applyBayesianInference(bayesianModel, observations, true)
-
-	fmt.Printf("🧠 Final probability: %.4f\n", posterior)
-	if decision {
-		fmt.Println("✅ Decision: Someone is home.")
-	} else {
-		fmt.Println("❌ Decision: No one is home.")
-	}
 }
