@@ -25,7 +25,7 @@ func TestApplyTimeDecay(t *testing.T) {
 
 func TestApplyWeightedBayes(t *testing.T) {
 	prior := 0.5
-	rule := LikelihoodModel{
+	likelihood := LikelihoodModel{
 		ProbGivenTrue:  0.9,
 		ProbGivenFalse: 0.1,
 		HalfLife:       60 * time.Minute, // Using time.Duration
@@ -33,7 +33,7 @@ func TestApplyWeightedBayes(t *testing.T) {
 	}
 	age := 0 * time.Minute
 
-	posterior := ApplyWeightedBayes(prior, rule, true, age)
+	posterior := applyWeightedBayes(prior, likelihood, true, age)
 	//expected := 0.9 // Should be close given likelihood ratio is strong
 
 	if posterior <= prior {
@@ -43,7 +43,7 @@ func TestApplyWeightedBayes(t *testing.T) {
 
 func TestApplyBayesianInferenceWithDuration(t *testing.T) {
 	now := time.Now()
-	rules := map[string]LikelihoodModel{
+	likelihoods := map[string]LikelihoodModel{
 		"motion": {
 			ProbGivenTrue:  0.9,
 			ProbGivenFalse: 0.1,
@@ -66,9 +66,9 @@ func TestApplyBayesianInferenceWithDuration(t *testing.T) {
 	bayesianModel := BayesianModel{
 		Prior:       prior,
 		Threshold:   threshold,
-		Likelihoods: rules,
+		Likelihoods: likelihoods,
 	}
-	posterior, decision := ApplyBayesianInference(bayesianModel, observations, false)
+	posterior, decision := applyBayesianInference(bayesianModel, observations, false)
 
 	if !decision {
 		t.Errorf("Expected decision to be true with posterior %.4f", posterior)

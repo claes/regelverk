@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/VictoriaMetrics/metrics"
 	pulseaudiomqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
@@ -201,7 +202,7 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/balcony-door", "battery")
 		},
-		func(val any) (string, bool) { return "balconyDoorBatteryLow", val.(float64) < 20 },
+		func(val any) (string, bool) { return "balconyDoorBatteryLow", val.(float64) < 30 },
 		func(val any) (string, float64) { return "balconyDoorBattery", val.(float64) },
 	))
 
@@ -217,7 +218,7 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/freezer-door", "battery")
 		},
-		func(val any) (string, bool) { return "freezerDoorBatteryLow", val.(float64) < 20 },
+		func(val any) (string, bool) { return "freezerDoorBatteryLow", val.(float64) < 30 },
 		func(val any) (string, float64) { return "freezerDoorBattery", val.(float64) },
 	))
 
@@ -233,7 +234,7 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/fridge-door", "battery")
 		},
-		func(val any) (string, bool) { return "fridgeDoorBatteryLow", val.(float64) < 20 },
+		func(val any) (string, bool) { return "fridgeDoorBatteryLow", val.(float64) < 30 },
 		func(val any) (string, float64) { return "fridgeDoorBattery", val.(float64) },
 	))
 
@@ -245,8 +246,54 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(val any) (string, bool) { return "mpdPlay", val.(string) == "play" },
 		nil,
 	))
-
 }
+
+func (masterController *MasterController) inferPosterior(bayesianModel BayesianModel) (float64, bool) {
+
+	now := time.Now()
+	p := bayesianModel.Prior
+
+	for key, likelihood := range bayesianModel.Likelihoods {
+		state := masterController.stateValueMap.getState(key)
+		age := now.Sub(state.lastUpdate)
+		updated := applyWeightedBayes(p, likelihood, state.value, age)
+
+		fmt.Printf(" Observation: %s\n", key)
+		fmt.Printf(" Matched: %v, Age: %.1f min, Weight: %.2f\n", state.value, age.Minutes(), likelihood.Weight)
+		fmt.Printf(" Decayed P(E|H): %.3f, P(E|~H): %.3f\n", likelihood.ProbGivenTrue, likelihood.ProbGivenFalse)
+		fmt.Printf(" Posterior: %.4f → %.4f\n\n", p, updated)
+
+		p = updated
+	}
+
+	return p, p >= bayesianModel.Threshold
+}
+
+// Approach
+// Define a bayesian model.
+// set the names in the map to what state key they refer to
+// register the model to update its own state keyval when there are updates to any of the keys registered for likelihoods
+
+/*
+	atHomeModel := BayesianModel{
+		Prior:     0.6,
+		Threshold: 0.9,
+		Likelihoods: map[string]LikelihoodModel{
+			"freezerDoorOpen": {
+				ProbGivenTrue:  0.9,              // If home, phone detected 90% of the time
+				ProbGivenFalse: 0.01,              // If not home, phone still shows up 20% of the time
+				HalfLife:       60 * time.Minute, // Evidence fades slowly
+				Weight:         1.0,              // Highly trusted
+			},
+			"fridgeDoorOpen": {
+				ProbGivenTrue:  0.8, // If home, motion detected 80% of the time
+				ProbGivenFalse: 0.01, // If not home, motion falsely triggered 30% of the time
+				HalfLife:       15 * time.Minute,
+				Weight:         1.0, // Less trusted
+			},
+		},
+	}
+*/
 
 // func (l *MasterController) detectTVPower(ev MQTTEvent) {
 // 	if ev.Topic == "regelverk/state/tvpower" {
