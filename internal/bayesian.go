@@ -13,7 +13,6 @@ type BayesianModel struct {
 }
 
 type LikelihoodModel struct {
-	Name string
 
 	// ProbGivenTrue = P(E | H):
 	//   The probability of seeing this evidence (E)
@@ -138,21 +137,18 @@ func main() {
 
 	rules := map[string]LikelihoodModel{
 		"phone": {
-			Name:           "phone",
 			ProbGivenTrue:  0.9,              // If home, phone detected 90% of the time
 			ProbGivenFalse: 0.2,              // If not home, phone still shows up 20% of the time
 			HalfLife:       60 * time.Minute, // Evidence fades slowly
 			Weight:         1.0,              // Highly trusted
 		},
 		"motion": {
-			Name:           "motion",
 			ProbGivenTrue:  0.8, // If home, motion detected 80% of the time
 			ProbGivenFalse: 0.3, // If not home, motion falsely triggered 30% of the time
 			HalfLife:       15 * time.Minute,
 			Weight:         0.5, // Less trusted
 		},
 		"door": {
-			Name:           "door",
 			ProbGivenTrue:  0.6, // If home, door open 60% of the time
 			ProbGivenFalse: 0.4, // Even if not home, 40% chance door is open
 			HalfLife:       30 * time.Minute,

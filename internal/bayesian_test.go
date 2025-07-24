@@ -26,7 +26,6 @@ func TestApplyTimeDecay(t *testing.T) {
 func TestApplyWeightedBayes(t *testing.T) {
 	prior := 0.5
 	rule := LikelihoodModel{
-		Name:           "motion",
 		ProbGivenTrue:  0.9,
 		ProbGivenFalse: 0.1,
 		HalfLife:       60 * time.Minute, // Using time.Duration
@@ -46,7 +45,6 @@ func TestApplyBayesianInferenceWithDuration(t *testing.T) {
 	now := time.Now()
 	rules := map[string]LikelihoodModel{
 		"motion": {
-			Name:           "motion",
 			ProbGivenTrue:  0.9,
 			ProbGivenFalse: 0.1,
 			HalfLife:       60 * time.Minute,
