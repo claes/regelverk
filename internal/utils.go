@@ -130,14 +130,10 @@ const (
 type StateValue struct {
 	value        bool
 	isDefined    bool
-	lastUpdate   time.Time
-	lastChange   time.Time
+	lastUpdate   time.Time // Last time this state was updated (incl refreshed even if value was not changed)
+	lastChange   time.Time // Last time the state was changed (value was changed differently than before)
 	lastSetTrue  time.Time
 	lastSetFalse time.Time
-}
-
-func (f StateValue) Age() time.Duration {
-	return time.Since(f.lastUpdate)
 }
 
 type StateValueMap struct {
@@ -200,6 +196,7 @@ func (s *StateValueMap) updateStateUnsafe(key StateKey, value bool) {
 			existingState.lastChange = now
 			stateUpdate = true
 		}
+		existingState.lastUpdate = now
 		updatedState = existingState
 	} else {
 		// Not exists
