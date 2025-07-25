@@ -45,7 +45,7 @@ func (l *MasterController) Init() {
 	l.registerEventCallbacks()
 	if l.metricsConfig.CollectMetrics {
 		slog.Info("Registering state value callback in master controller")
-		l.stateValueMap.registerCallback(l.StateValueCallback)
+		l.stateValueMap.registerObserverCallback(l.StateValueCallback)
 	}
 }
 

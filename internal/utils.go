@@ -121,6 +121,12 @@ func foo() {
 	}
 }
 
+type StateKey string
+
+const (
+	NoKey StateKey = ""
+)
+
 type StateValue struct {
 	value        bool
 	isDefined    bool
@@ -135,24 +141,50 @@ func (f StateValue) Age() time.Duration {
 }
 
 type StateValueMap struct {
-	svMap     map[string]StateValue
-	mu        sync.RWMutex
-	callbacks []func(key string, value, new, updated bool)
+	svMap             map[StateKey]StateValue
+	mu                sync.RWMutex
+	observerCallbacks []func(key StateKey, value, new, updated bool)
+	mutatorCallbacks  []func(key StateKey) (StateKey, bool)
 }
 
 func NewStateValueMap() StateValueMap {
 	return StateValueMap{
-		svMap: make(map[string]StateValue),
+		svMap: make(map[StateKey]StateValue),
 	}
 }
 
-func (s *StateValueMap) registerCallback(callback func(key string, value, new, updated bool)) {
-	s.callbacks = append(s.callbacks, callback)
+func (s *StateValueMap) registerObserverCallback(callback func(key StateKey, value, new, updated bool)) {
+	s.observerCallbacks = append(s.observerCallbacks, callback)
 }
 
-func (s *StateValueMap) setState(key string, value bool) {
+func (s *StateValueMap) registerMutatorCallback(callback func(key StateKey) (StateKey, bool)) {
+	s.mutatorCallbacks = append(s.mutatorCallbacks, callback)
+}
+
+func (s *StateValueMap) setStateValue(key StateKey, value StateValue) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	s.svMap[key] = value
+}
+
+func (s *StateValueMap) setState(key StateKey, value bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	s.updateStateUnsafe(key, value)
+
+	for _, callback := range s.mutatorCallbacks {
+		dependentKey, associatedValue := callback(key)
+		s.updateStateUnsafe(dependentKey, associatedValue)
+	}
+}
+
+// Don't call this from outside, use setState instead
+func (s *StateValueMap) updateStateUnsafe(key StateKey, value bool) {
+
+	if key == NoKey {
+		return
+	}
 
 	existingState, exists := s.svMap[key]
 
@@ -186,23 +218,23 @@ func (s *StateValueMap) setState(key string, value bool) {
 		updatedState.lastSetFalse = now
 	}
 
-	for _, callback := range s.callbacks {
+	for _, callback := range s.observerCallbacks {
 		callback(key, value, stateNew, stateUpdate)
 	}
 
 	s.svMap[key] = updatedState
 }
 
-func (s *StateValueMap) getState(key string) StateValue {
+func (s *StateValueMap) getState(key StateKey) (StateValue, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	stateValue, exists := s.svMap[key]
 	stateValue.isDefined = exists
-	return stateValue
+	return stateValue, exists
 }
 
-func (s *StateValueMap) requireTrue(key string) bool {
+func (s *StateValueMap) requireTrue(key StateKey) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -214,7 +246,7 @@ func (s *StateValueMap) requireTrue(key string) bool {
 	}
 }
 
-func (s *StateValueMap) requireFalse(key string) bool {
+func (s *StateValueMap) requireFalse(key StateKey) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -227,7 +259,7 @@ func (s *StateValueMap) requireFalse(key string) bool {
 }
 
 // Require it has consistently been true
-func (s *StateValueMap) requireTrueSince(key string, duration time.Duration) bool {
+func (s *StateValueMap) requireTrueSince(key StateKey, duration time.Duration) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -240,7 +272,7 @@ func (s *StateValueMap) requireTrueSince(key string, duration time.Duration) boo
 }
 
 // Require it has been true at some point during duration
-func (s *StateValueMap) requireTrueRecently(key string, duration time.Duration) bool {
+func (s *StateValueMap) requireTrueRecently(key StateKey, duration time.Duration) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -253,7 +285,7 @@ func (s *StateValueMap) requireTrueRecently(key string, duration time.Duration) 
 }
 
 // Require that it must not have been true at any point during duration
-func (s *StateValueMap) requireTrueNotRecently(key string, duration time.Duration) bool {
+func (s *StateValueMap) requireTrueNotRecently(key StateKey, duration time.Duration) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

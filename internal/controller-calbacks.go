@@ -247,29 +247,23 @@ func (masterController *MasterController) registerEventCallbacks() {
 	))
 }
 
-func (masterController *MasterController) createBayesianCallback(bayesianStateKey StateKey, bayesianModel BayesianModel) func(key StateKey, value, new, updated bool) {
-	return func(key StateKey, value, new, updated bool) {
-		if updated {
-			// If the updated state value is a dependency,
-			// it is valid to re-infer the bayesian model's state
-			_, found := bayesianModel.Likelihoods[key]
-			if found {
-				posterior, decision := inferPosterior(bayesianModel, &masterController.stateValueMap)
-				slog.Debug("Bayesian inference", "bayesianStateKey", bayesianStateKey, "updatedKey", key, "posterior", posterior, "decision", decision)
-				// TODO: thread safety problem?
-				// How to avoid infinite recursion?
-				// Idea - have a separate set of callbacks for Bayesian models?
-				// Or avoid calling the callback if the bayesianStateKey
-				// is determined to be a dependent?
-				// Perhaps the state keys should be more typed to make this distinction?
-				masterController.stateValueMap.setState(bayesianStateKey, decision)
-			}
+func (masterController *MasterController) createBayesianCallback(bayesianStateKey StateKey, bayesianModel BayesianModel) func(key StateKey) (StateKey, bool) {
+	return func(key StateKey) (StateKey, bool) {
+		// If the updated state value is a likelihood dependency,
+		// it is valid to re-infer the bayesian model's state
+		_, found := bayesianModel.Likelihoods[key]
+		if found {
+			posterior, decision := inferPosterior(bayesianModel, &masterController.stateValueMap)
+			slog.Debug("Bayesian inference", "bayesianStateKey", bayesianStateKey, "updatedKey", key, "posterior", posterior, "decision", decision)
+			return bayesianStateKey, decision
+		} else {
+			return NoKey, false
 		}
 	}
 }
 
 func (masterController *MasterController) registerBayesianModel(bayesianStateKey StateKey, bayesianModel BayesianModel) {
-	masterController.stateValueMap.registerCallback(masterController.createBayesianCallback(bayesianStateKey, bayesianModel))
+	masterController.stateValueMap.registerMutatorCallback(masterController.createBayesianCallback(bayesianStateKey, bayesianModel))
 }
 
 // func (l *MasterController) detectTVPower(ev MQTTEvent) {

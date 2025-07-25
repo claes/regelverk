@@ -102,23 +102,27 @@ func inferPosterior(bayesianModel BayesianModel, stateValueMap *StateValueMap) (
 	p := bayesianModel.Prior
 
 	for key, likelihood := range bayesianModel.Likelihoods {
-		state := stateValueMap.getState(key)
-		age := now.Sub(state.lastUpdate)
-		updated := applyWeightedBayes(p, likelihood, state.value, age)
+		state, found := stateValueMap.getState(key)
+		if found {
+			age := now.Sub(state.lastUpdate)
+			updated := applyWeightedBayes(p, likelihood, state.value, age)
 
-		slog.Debug("Observation update",
-			"observation", key,
-			"value", state.value,
-			"age_minutes", age.Minutes(),
-			"weight", likelihood.Weight,
-			"decayed_P(E|H)", likelihood.ProbGivenTrue,
-			"decayed_P(E|~H)", likelihood.ProbGivenFalse,
-			"posterior_before", p,
-			"posterior_after", updated,
-		)
-
-		p = updated
+			slog.Debug("Observation update",
+				"observation", key,
+				"value", state.value,
+				"age_minutes", age.Minutes(),
+				"weight", likelihood.Weight,
+				"decayed_P(E|H)", likelihood.ProbGivenTrue,
+				"decayed_P(E|~H)", likelihood.ProbGivenFalse,
+				"posterior_before", p,
+				"posterior_after", updated,
+			)
+			p = updated
+		} else {
+			slog.Debug("Observation update, state not found",
+				"observation", key,
+			)
+		}
 	}
-
 	return p, p >= bayesianModel.Threshold
 }
