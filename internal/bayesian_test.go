@@ -46,12 +46,14 @@ func TestApplyWeightedBayes(t *testing.T) {
 }
 
 func TestApplyBayesianInferenceWithDuration(t *testing.T) {
-	likelihoods := map[StateKey]LikelihoodModel{
+	likelihoods := map[StateKey][]LikelihoodModel{
 		"motion": {
-			ProbGivenTrue:  0.9,
-			ProbGivenFalse: 0.1,
-			HalfLife:       60 * time.Minute,
-			Weight:         1.0,
+			{
+				ProbGivenTrue:  0.9,
+				ProbGivenFalse: 0.1,
+				HalfLife:       60 * time.Minute,
+				Weight:         1.0,
+			},
 		},
 	}
 
