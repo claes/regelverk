@@ -31,21 +31,35 @@ func (c *PresenceController) Initialize(masterController *MasterController) []MQ
 	atHomeModel := BayesianModel{
 		Prior:     0.6,
 		Threshold: 0.9,
-		Likelihoods: map[StateKey]LikelihoodModel{
+		Likelihoods: map[StateKey][]LikelihoodModel{
 			"freezerDoorOpen": {
-				ProbGivenTrue:  0.9,              // If home, phone detected 90% of the time
-				ProbGivenFalse: 0.01,             // If not home, phone still shows up 20% of the time
-				HalfLife:       60 * time.Minute, // Evidence fades slowly
-				Weight:         1.0,              // Highly trusted
+				{
+					ProbGivenTrue:  0.9,              // If home, phone detected 90% of the time
+					ProbGivenFalse: 0.01,             // If not home, phone still shows up 20% of the time
+					HalfLife:       60 * time.Minute, // Evidence fades slowly
+					Weight:         1.0,              // Highly trusted
+				},
 			},
 			"fridgeDoorOpen": {
-				ProbGivenTrue:  0.8,  // If home, motion detected 80% of the time
-				ProbGivenFalse: 0.01, // If not home, motion falsely triggered 30% of the time
-				HalfLife:       15 * time.Minute,
-				Weight:         1.0, // Less trusted
+				{
+					ProbGivenTrue:  0.8,  // If home, motion detected 80% of the time
+					ProbGivenFalse: 0.01, // If not home, motion falsely triggered 30% of the time
+					HalfLife:       15 * time.Minute,
+					Weight:         1.0, // Less trusted
+				},
+				{
+					ProbGivenTrue:  0.8,
+					ProbGivenFalse: 0.01,
+					HalfLife:       0,
+					Weight:         1.0,
+					StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
+						return value.requireTrueRecently(10 * time.Minute), 10 * time.Minute
+					},
+				},
 			},
 		},
 	}
+
 	masterController.registerBayesianModel(HomePresenceStateKey, atHomeModel)
 
 	c.stateMachine = stateless.NewStateMachine(presenceInitial)

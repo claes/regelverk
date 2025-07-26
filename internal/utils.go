@@ -243,6 +243,10 @@ func (s *StateValueMap) requireTrue(key StateKey) bool {
 	}
 }
 
+func (stateValue *StateValue) requireTrue() bool {
+	return stateValue.value
+}
+
 func (s *StateValueMap) requireFalse(key StateKey) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -251,8 +255,12 @@ func (s *StateValueMap) requireFalse(key StateKey) bool {
 	if !exists {
 		return false
 	} else {
-		return !stateValue.value
+		return stateValue.requireFalse()
 	}
+}
+
+func (stateValue *StateValue) requireFalse() bool {
+	return !stateValue.value
 }
 
 // Require it has consistently been true
@@ -264,8 +272,12 @@ func (s *StateValueMap) requireTrueSince(key StateKey, duration time.Duration) b
 	if !exists {
 		return false
 	} else {
-		return stateValue.value && time.Since(stateValue.lastSetTrue) > duration
+		return stateValue.requireTrueSince(duration)
 	}
+}
+
+func (stateValue *StateValue) requireTrueSince(duration time.Duration) bool {
+	return stateValue.value && time.Since(stateValue.lastSetTrue) > duration
 }
 
 // Require it has been true at some point during duration
@@ -277,8 +289,12 @@ func (s *StateValueMap) requireTrueRecently(key StateKey, duration time.Duration
 	if !exists {
 		return false
 	} else {
-		return stateValue.value || time.Since(stateValue.lastSetTrue) < duration
+		return stateValue.requireTrueRecently(duration)
 	}
+}
+
+func (stateValue *StateValue) requireTrueRecently(duration time.Duration) bool {
+	return stateValue.value || time.Since(stateValue.lastSetTrue) < duration
 }
 
 // Require that it must not have been true at any point during duration
@@ -290,8 +306,12 @@ func (s *StateValueMap) requireTrueNotRecently(key StateKey, duration time.Durat
 	if !exists {
 		return false
 	} else {
-		return !stateValue.value && time.Since(stateValue.lastSetTrue) > duration
+		return stateValue.requireTrueNotRecently(duration)
 	}
+}
+
+func (stateValue *StateValue) requireTrueNotRecently(duration time.Duration) bool {
+	return !stateValue.value && time.Since(stateValue.lastSetTrue) > duration
 }
 
 func (s *StateValueMap) LogState() {

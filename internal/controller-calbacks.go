@@ -247,8 +247,28 @@ func (masterController *MasterController) registerEventCallbacks() {
 	))
 }
 
-func (masterController *MasterController) createBayesianCallback(bayesianStateKey StateKey, bayesianModel BayesianModel) func(key StateKey) (StateKey, bool) {
-	return func(key StateKey) (StateKey, bool) {
+// func (masterController *MasterController) createBayesianCallback(bayesianStateKey StateKey, bayesianModel BayesianModel) func(key StateKey) (StateKey, bool) {
+// 	return func(key StateKey) (StateKey, bool) {
+// 		// If the updated state value is a likelihood dependency,
+// 		// it is valid to re-infer the bayesian model's state
+// 		_, found := bayesianModel.Likelihoods[key]
+// 		if found {
+// 			posterior, decision := inferPosterior(bayesianModel, &masterController.stateValueMap)
+// 			slog.Debug("Bayesian inference", "bayesianStateKey", bayesianStateKey, "updatedKey", key, "posterior", posterior, "decision", decision)
+// 			return bayesianStateKey, decision
+// 		} else {
+// 			return NoKey, false
+// 		}
+// 	}
+// }
+
+// func (masterController *MasterController) registerBayesianModel(bayesianStateKey StateKey, bayesianModel BayesianModel) {
+// 	masterController.stateValueMap.registerMutatorCallback(masterController.createBayesianCallback(bayesianStateKey, bayesianModel))
+// }
+
+func (masterController *MasterController) registerBayesianModel(bayesianStateKey StateKey, bayesianModel BayesianModel) {
+
+	masterController.stateValueMap.registerMutatorCallback(func(key StateKey) (StateKey, bool) {
 		// If the updated state value is a likelihood dependency,
 		// it is valid to re-infer the bayesian model's state
 		_, found := bayesianModel.Likelihoods[key]
@@ -259,11 +279,7 @@ func (masterController *MasterController) createBayesianCallback(bayesianStateKe
 		} else {
 			return NoKey, false
 		}
-	}
-}
-
-func (masterController *MasterController) registerBayesianModel(bayesianStateKey StateKey, bayesianModel BayesianModel) {
-	masterController.stateValueMap.registerMutatorCallback(masterController.createBayesianCallback(bayesianStateKey, bayesianModel))
+	})
 }
 
 // func (l *MasterController) detectTVPower(ev MQTTEvent) {

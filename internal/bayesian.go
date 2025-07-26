@@ -9,7 +9,7 @@ import (
 type BayesianModel struct {
 	Prior       float64
 	Threshold   float64
-	Likelihoods map[StateKey]LikelihoodModel
+	Likelihoods map[StateKey][]LikelihoodModel
 }
 
 type LikelihoodModel struct {
@@ -36,6 +36,11 @@ type LikelihoodModel struct {
 	// Weight controls how strongly this observation influences the final result.
 	// A weight > 1.0 increases its impact, and a weight < 1.0 reduces it.
 	Weight float64
+
+	// Compute the value to use for the given StateValue
+	// Returns the value and the age of the value.
+	// The age will be used to apply decay. If <= 0 then no decay is applied.
+	StateValueEvaluator func(StateValue) (bool, time.Duration)
 }
 
 type Observation struct {
@@ -101,23 +106,34 @@ func inferPosterior(bayesianModel BayesianModel, stateValueMap *StateValueMap) (
 	now := time.Now()
 	p := bayesianModel.Prior
 
-	for key, likelihood := range bayesianModel.Likelihoods {
+	for key, likelihoods := range bayesianModel.Likelihoods {
+
 		state, found := stateValueMap.getState(key)
 		if found {
-			age := now.Sub(state.lastUpdate)
-			updated := applyWeightedBayes(p, likelihood, state.value, age)
+			for _, likelihood := range likelihoods {
+				var value bool
+				var age time.Duration
+				if likelihood.StateValueEvaluator != nil {
+					value, age = likelihood.StateValueEvaluator(state)
+				} else {
+					value = state.value
+					age = now.Sub(state.lastUpdate)
+				}
 
-			slog.Debug("Observation update",
-				"observation", key,
-				"value", state.value,
-				"age_minutes", age.Minutes(),
-				"weight", likelihood.Weight,
-				"decayed_P(E|H)", likelihood.ProbGivenTrue,
-				"decayed_P(E|~H)", likelihood.ProbGivenFalse,
-				"posterior_before", p,
-				"posterior_after", updated,
-			)
-			p = updated
+				updated := applyWeightedBayes(p, likelihood, value, age)
+
+				slog.Debug("Observation update",
+					"observation", key,
+					"value", value,
+					"age_minutes", age.Minutes(),
+					"weight", likelihood.Weight,
+					"decayed_P(E|H)", likelihood.ProbGivenTrue,
+					"decayed_P(E|~H)", likelihood.ProbGivenFalse,
+					"posterior_before", p,
+					"posterior_after", updated,
+				)
+				p = updated
+			}
 		} else {
 			slog.Debug("Observation update, state not found",
 				"observation", key,
