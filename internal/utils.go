@@ -314,6 +314,14 @@ func (stateValue *StateValue) requireTrueNotRecently(duration time.Duration) boo
 	return !stateValue.value && time.Since(stateValue.lastSetTrue) > duration
 }
 
+func (stateValue *StateValue) requireFalseNotRecently(duration time.Duration) bool {
+	return stateValue.value && time.Since(stateValue.lastSetFalse) > duration
+}
+
+func (stateValue *StateValue) requireFalseRecently(duration time.Duration) bool {
+	return !stateValue.value || time.Since(stateValue.lastSetFalse) < duration
+}
+
 func (s *StateValueMap) LogState() {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

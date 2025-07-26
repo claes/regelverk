@@ -152,7 +152,6 @@ func TestRequireTrueRecently(t *testing.T) {
 	if result := stateMap.requireTrueRecently("key1", 1*time.Second); result != false {
 		t.Errorf("Expected false for key1 , got %v", result)
 	}
-
 }
 
 func TestRequireTrueRecentlyEdgeCases(t *testing.T) {
@@ -213,4 +212,216 @@ func TestRequireTrueNotRecently(t *testing.T) {
 		t.Errorf("Expected true for key1 , got %v", result)
 	}
 
+}
+
+//
+
+// TestRequireTrueRecently tests the requireTrueRecently method.
+func TestRequireTrueRecentlyStateValue(t *testing.T) {
+	base := time.Now()
+	tests := []struct {
+		name     string
+		state    StateValue
+		duration time.Duration
+		want     bool
+	}{
+		{
+			name:     "Currently true",
+			state:    StateValue{value: true, lastSetTrue: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     true,
+		},
+		{
+			name:     "Was true recently, now false",
+			state:    StateValue{value: false, lastSetTrue: base.Add(-3 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     true,
+		},
+		{
+			name:     "Was true long ago, now false",
+			state:    StateValue{value: false, lastSetTrue: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.state.requireTrueRecently(tt.duration); got != tt.want {
+				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestRequireFalseRecently tests the requireFalseRecently method.
+func TestRequireFalseRecentlyStateValue(t *testing.T) {
+	base := time.Now()
+	tests := []struct {
+		name     string
+		state    StateValue
+		duration time.Duration
+		want     bool
+	}{
+		{
+			name:     "Currently false",
+			state:    StateValue{value: false, lastSetFalse: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     true,
+		},
+		{
+			name:     "Was false recently, now true",
+			state:    StateValue{value: true, lastSetFalse: base.Add(-3 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     true,
+		},
+		{
+			name:     "Was false long ago, now true",
+			state:    StateValue{value: true, lastSetFalse: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.state.requireFalseRecently(tt.duration); got != tt.want {
+				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestRequireTrueNotRecently tests the requireTrueNotRecently method.
+func TestRequireTrueNotRecentlyStateValue(t *testing.T) {
+	base := time.Now()
+	tests := []struct {
+		name     string
+		state    StateValue
+		duration time.Duration
+		want     bool
+	}{
+		{
+			name:     "Currently false, set true long ago",
+			state:    StateValue{value: false, lastSetTrue: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     true,
+		},
+		{
+			name:     "Currently false, set true recently",
+			state:    StateValue{value: false, lastSetTrue: base.Add(-3 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     false,
+		},
+		{
+			name:     "Currently true",
+			state:    StateValue{value: true, lastSetTrue: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.state.requireTrueNotRecently(tt.duration); got != tt.want {
+				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestRequireFalseNotRecently tests the requireFalseNotRecently method.
+func TestRequireFalseNotRecentlyStateValue(t *testing.T) {
+	base := time.Now()
+	tests := []struct {
+		name     string
+		state    StateValue
+		duration time.Duration
+		want     bool
+	}{
+		{
+			name:     "Currently true, set false long ago",
+			state:    StateValue{value: true, lastSetFalse: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     true,
+		},
+		{
+			name:     "Currently true, set false recently",
+			state:    StateValue{value: true, lastSetFalse: base.Add(-3 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     false,
+		},
+		{
+			name:     "Currently false",
+			state:    StateValue{value: false, lastSetFalse: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.state.requireFalseNotRecently(tt.duration); got != tt.want {
+				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestRequireTrueSince tests the requireTrueSince method.
+func TestRequireTrueSinceStateValue(t *testing.T) {
+	base := time.Now()
+	tests := []struct {
+		name     string
+		state    StateValue
+		duration time.Duration
+		want     bool
+	}{
+		{
+			name:     "Currently true, set true long ago",
+			state:    StateValue{value: true, lastSetTrue: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     true,
+		},
+		{
+			name:     "Currently true, set true recently",
+			state:    StateValue{value: true, lastSetTrue: base.Add(-3 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     false,
+		},
+		{
+			name:     "Currently false",
+			state:    StateValue{value: false, lastSetTrue: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.state.requireTrueSince(tt.duration); got != tt.want {
+				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestRequireTrueAndRequireFalse tests the requireTrue and requireFalse methods.
+func TestRequireTrueAndRequireFalse(t *testing.T) {
+	tests := []struct {
+		name      string
+		state     StateValue
+		wantTrue  bool
+		wantFalse bool
+	}{
+		{"Value true", StateValue{value: true}, true, false},
+		{"Value false", StateValue{value: false}, false, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name+"/True", func(t *testing.T) {
+			if got := tt.state.requireTrue(); got != tt.wantTrue {
+				t.Errorf("%s: requireTrue got %v, want %v", tt.name, got, tt.wantTrue)
+			}
+		})
+		t.Run(tt.name+"/False", func(t *testing.T) {
+			if got := tt.state.requireFalse(); got != tt.wantFalse {
+				t.Errorf("%s: requireFalse got %v, want %v", tt.name, got, tt.wantFalse)
+			}
+		})
+	}
 }
