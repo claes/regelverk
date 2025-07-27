@@ -53,7 +53,7 @@ func (c *PresenceController) Initialize(masterController *MasterController) []MQ
 					HalfLife:       0,
 					Weight:         1.0,
 					StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
-						return value.requireTrueRecently(10 * time.Minute), 10 * time.Minute
+						return value.recentlyTrue(10 * time.Minute), 10 * time.Minute
 					},
 				},
 			},

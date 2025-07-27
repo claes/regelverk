@@ -105,12 +105,12 @@ func (c *KitchenAudioController) customProcessEvent(ev MQTTEvent) []MQTTPublish 
 }
 
 func (l *MasterController) guardKitchenAudioLocal(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrue("kitchenaudiolocal")
+	check := l.stateValueMap.requireCurrentlyTrue("kitchenaudiolocal")
 	return check
 }
 
 func (l *MasterController) guardKitchenAudioRemote(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireFalse("kitchenaudiolocal")
+	check := l.stateValueMap.requireCurrentlyFalse("kitchenaudiolocal")
 	return check
 }
 

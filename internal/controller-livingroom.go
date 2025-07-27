@@ -28,9 +28,9 @@ func (c *LivingroomController) Initialize(masterController *MasterController) []
 	c.masterController = masterController
 
 	var initialState livingroomLamp
-	if masterController.stateValueMap.requireTrue("livingroomFloorlamp") {
+	if masterController.stateValueMap.requireCurrentlyTrue("livingroomFloorlamp") {
 		initialState = stateLivingroomFloorlampOn
-	} else if masterController.stateValueMap.requireFalse("livingroomFloorlamp") {
+	} else if masterController.stateValueMap.requireCurrentlyFalse("livingroomFloorlamp") {
 		initialState = stateLivingroomFloorlampOff
 	} else {
 		const maxBackoff = 128 * time.Second

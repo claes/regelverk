@@ -1,574 +1,260 @@
 package regelverk
 
 import (
+	"os"
 	"testing"
 	"time"
 )
 
-// TestRequireTrue verifies the behavior of requireTrue
-func TestRequireTrue(t *testing.T) {
-	// Initialize StateValueMap
-	stateMap := NewStateValueMap()
+func TestMain(m *testing.M) {
+	// fix nowFunc to a constant instant
+	fixed := time.Date(2025, 7, 27, 12, 0, 0, 0, time.UTC)
+	nowFunc = func() time.Time { return fixed }
+	os.Exit(m.Run())
+}
 
-	// Test with no keys set
-	if result := stateMap.requireTrue("nonexistent"); result != false {
-		t.Errorf("Expected false for nonexistent key, got %v", result)
+// makeStateValue sets only the timestamp matching the current value.
+// Useful for continuously*/edge tests.
+func makeStateValue(val bool, ago time.Duration) StateValue {
+	sv := StateValue{value: val, isDefined: true}
+	t0 := nowFunc().Add(-ago)
+	if val {
+		sv.lastSetTrue = t0
+	} else {
+		sv.lastSetFalse = t0
+	}
+	return sv
+}
+
+// makeStateValueTrue always sets lastSetTrue, regardless of val.
+// Useful for recentlyTrue scenarios.
+func makeStateValueTrue(val bool, lastSetTrue time.Duration) StateValue {
+	sv := StateValue{value: val, isDefined: true}
+	sv.lastSetTrue = nowFunc().Add(-lastSetTrue)
+	return sv
+}
+
+// makeStateValueFalse always sets lastSetFalse, regardless of val.
+// Useful for recentlyFalse scenarios.
+func makeStateValueFalse(val bool, lastSetFalse time.Duration) StateValue {
+	sv := StateValue{value: val, isDefined: true}
+	sv.lastSetFalse = nowFunc().Add(-lastSetFalse)
+	return sv
+}
+
+/*----------------------------------------------------------------------*/
+/* 2.  “Currently true/false”                                            */
+
+func TestStateValue_Currently(t *testing.T) {
+
+	sv := StateValue{value: true}
+	if got := sv.requireCurrentlyTrue(); got != true {
+		t.Errorf("CurrentlyTrue = %v, want %v", got, true)
+	}
+	if got := sv.requireCurrentlyFalse(); got != false {
+		t.Errorf("CurrentlyTrue = %v, want %v", got, false)
 	}
 
-	// Test with a key set to true
-	stateMap.setState("key1", true)
-	if result := stateMap.requireTrue("key1"); result != true {
-		t.Errorf("Expected true for key1, got %v", result)
+	sv = StateValue{value: false}
+	if got := sv.requireCurrentlyTrue(); got != false {
+		t.Errorf("CurrentlyTrue = %v, want %v", got, false)
 	}
-
-	// Test with a key set to false
-	stateMap.setState("key2", false)
-	if result := stateMap.requireTrue("key2"); result != false {
-		t.Errorf("Expected false for key2, got %v", result)
+	if got := sv.requireCurrentlyFalse(); got != true {
+		t.Errorf("CurrentlyTrue = %v, want %v", got, true)
 	}
 }
 
-func TestRequireFalse_Concurrency(t *testing.T) {
-	stateMap := NewStateValueMap()
-	go func() {
-		stateMap.setState("k1", false)
-		stateMap.setState("k2", true)
-	}()
-	time.Sleep(10 * time.Millisecond)
-	for i := 0; i < 10; i++ {
-		go func() {
-			if got := stateMap.requireFalse("k1"); !got {
-				t.Errorf("concurrent: expected false for k1, got %v", got)
-			}
-			if got := stateMap.requireFalse("k2"); got {
-				t.Errorf("concurrent: expected true for k2, got %v", got)
-			}
-		}()
-	}
-}
+/*----------------------------------------------------------------------*/
+/* 3.  ContinuouslyTrue / ContinuouslyFalse                              */
 
-// TestConcurrency ensures requireTrue works correctly under concurrent access
-func TestRequireTrue_Concurrency(t *testing.T) {
-	stateMap := NewStateValueMap()
-
-	// Initialize keys in a separate goroutine
-	go func() {
-		stateMap.setState("key1", true)
-		stateMap.setState("key2", false)
-	}()
-
-	// Allow goroutine to execute
-	time.Sleep(10 * time.Millisecond)
-
-	// Concurrent reads
-	for i := 0; i < 10; i++ {
-		go func() {
-			if result := stateMap.requireTrue("key1"); !result {
-				t.Errorf("Concurrent access: expected true for key1, got %v", result)
-			}
-			if result := stateMap.requireTrue("key2"); result {
-				t.Errorf("Concurrent access: expected false for key2, got %v", result)
-			}
-		}()
-	}
-}
-
-// TestRequireTrueSince validates the behavior of requireTrueSince
-func TestRequireTrueSince(t *testing.T) {
-	stateMap := NewStateValueMap()
-
-	// Test with no key set
-	if result := stateMap.requireTrueSince("nonexistent", 1*time.Second); result != false {
-		t.Errorf("Expected false for nonexistent key, got %v", result)
-	}
-
-	// Set a key to true and validate immediately
-	stateMap.setState("key1", true)
-	if result := stateMap.requireTrueSince("key1", 1*time.Second); result != false {
-		t.Errorf("Expected false for key1 as not enough time has passed, got %v", result)
-	}
-
-	// Wait for the duration to pass and validate again
-	time.Sleep(2 * time.Second)
-	if result := stateMap.requireTrueSince("key1", 1*time.Second); result != true {
-		t.Errorf("Expected true for key1 after sufficient time has passed, got %v", result)
-	}
-
-	// Change key1 to false and validate
-	stateMap.setState("key1", false)
-	if result := stateMap.requireTrueSince("key1", 1*time.Second); result != false {
-		t.Errorf("Expected false for key1 after being set to false, got %v", result)
-	}
-
-	// Set a key to false initially and validate
-	stateMap.setState("key2", false)
-	if result := stateMap.requireTrueSince("key2", 1*time.Second); result != false {
-		t.Errorf("Expected false for key2 initially set to false, got %v", result)
-	}
-
-	// Set key2 to true and validate after some delay
-	stateMap.setState("key2", true)
-	time.Sleep(500 * time.Millisecond)
-	if result := stateMap.requireTrueSince("key2", 1*time.Second); result != false {
-		t.Errorf("Expected false for key2 as not enough time has passed, got %v", result)
-	}
-
-	time.Sleep(1 * time.Second)
-	if result := stateMap.requireTrueSince("key2", 1*time.Second); result != true {
-		t.Errorf("Expected true for key2 after sufficient time has passed, got %v", result)
-	}
-}
-
-// TestRequireTrueSinceEdgeCases tests edge cases for requireTrueSince
-func TestRequireTrueSinceEdgeCases(t *testing.T) {
-	stateMap := NewStateValueMap()
-
-	// Set key to true and check at the exact threshold
-	stateMap.setState("key3", true)
-	time.Sleep(1 * time.Second)
-	if result := stateMap.requireTrueSince("key3", 1*time.Second); result != true {
-		t.Errorf("Expected true for key3 at the exact threshold, got %v", result)
-	}
-
-	// Check with zero duration
-	if result := stateMap.requireTrueSince("key3", 0*time.Second); result != true {
-		t.Errorf("Expected true for key3 with zero duration, got %v", result)
-	}
-
-	// Check with negative duration
-	if result := stateMap.requireTrueSince("key3", -1*time.Second); result != true {
-		t.Errorf("Expected true for key3 with negative duration, got %v", result)
-	}
-}
-
-func TestRequireTrueRecently(t *testing.T) {
-	stateMap := NewStateValueMap()
-
-	// Test with no key set
-	if result := stateMap.requireTrueRecently("nonexistent", 1*time.Second); result != false {
-		t.Errorf("Expected false for nonexistent key, got %v", result)
-	}
-
-	stateMap.setState("key1", true)
-	if result := stateMap.requireTrueRecently("key1", 1*time.Second); result != true {
-		t.Errorf("Expected true for key1 immediately after being set, got %v", result)
-	}
-
-	time.Sleep(2 * time.Second)
-	stateMap.setState("key1", false)
-	stateMap.setState("key1", true)
-	time.Sleep(1 * time.Second)
-	stateMap.setState("key1", false)
-	if result := stateMap.requireTrueRecently("key1", 2*time.Second); result != true {
-		t.Errorf("Expected true for key1 , got %v", result)
-	}
-
-	stateMap.setState("key1", false)
-	stateMap.setState("key1", true)
-	time.Sleep(1 * time.Second)
-	stateMap.setState("key1", false)
-	time.Sleep(2 * time.Second)
-	if result := stateMap.requireTrueRecently("key1", 1*time.Second); result != false {
-		t.Errorf("Expected false for key1 , got %v", result)
-	}
-}
-
-func TestRequireTrueRecentlyEdgeCases(t *testing.T) {
-	stateMap := NewStateValueMap()
-
-	// Set a key to true and validate at the exact threshold
-	stateMap.setState("key3", true)
-	time.Sleep(1 * time.Second)
-	if result := stateMap.requireTrueRecently("key3", 1*time.Second); result != true {
-		t.Errorf("Expected true for key3 at the exact threshold, got %v", result)
-	}
-
-	// Check behavior with zero duration
-	if result := stateMap.requireTrueRecently("key3", 0*time.Second); result != true {
-		t.Errorf("Expected true for key3 with zero duration, got %v", result)
-	}
-
-	// Check behavior with a negative duration
-	if result := stateMap.requireTrueRecently("key3", -1*time.Second); result != true {
-		t.Errorf("Expected true for key3 with negative duration, got %v", result)
-	}
-
-	// Reset the key to false and validate
-	stateMap.setState("key3", false)
-	if result := stateMap.requireTrueRecently("key3", 1*time.Second); result != false {
-		t.Errorf("Expected false for key3 after being reset to false, got %v", result)
-	}
-}
-
-func TestRequireTrueNotRecently(t *testing.T) {
-	stateMap := NewStateValueMap()
-
-	// Test with no key set
-	if result := stateMap.requireTrueRecently("nonexistent", 1*time.Second); result != false {
-		t.Errorf("Expected false for nonexistent key, got %v", result)
-	}
-
-	stateMap.setState("key1", true)
-	if result := stateMap.requireTrueNotRecently("key1", 1*time.Second); result != false {
-		t.Errorf("Expected false for key1 immediately after being set, got %v", result)
-	}
-
-	time.Sleep(2 * time.Second)
-	stateMap.setState("key1", false)
-	stateMap.setState("key1", true)
-	time.Sleep(1 * time.Second)
-	stateMap.setState("key1", false)
-	if result := stateMap.requireTrueNotRecently("key1", 2*time.Second); result != false {
-		t.Errorf("Expected false for key1 , got %v", result)
-	}
-
-	stateMap.setState("key1", false)
-	stateMap.setState("key1", true)
-	time.Sleep(1 * time.Second)
-	stateMap.setState("key1", false)
-	time.Sleep(2 * time.Second)
-	if result := stateMap.requireTrueNotRecently("key1", 1*time.Second); result != true {
-		t.Errorf("Expected true for key1 , got %v", result)
-	}
-
-}
-
-// TestRequireFalseSince verifies the behavior of requireFalseSince on StateValueMap
-func TestRequireFalseSince(t *testing.T) {
-	stateMap := NewStateValueMap()
-
-	// nonexistent key should return false
-	if got := stateMap.requireFalseSince("nonexistent", 1*time.Second); got {
-		t.Errorf("Expected false for nonexistent key, got %v", got)
-	}
-
-	// set key to false and verify duration logic
-	stateMap.setState("k1", false)
-	// immediately after setting, duration not passed => false
-	if got := stateMap.requireFalseSince("k1", 1*time.Second); got {
-		t.Errorf("Expected false immediately after set false, got %v", got)
-	}
-	// after duration passes
-	time.Sleep(2 * time.Second)
-	if got := stateMap.requireFalseSince("k1", 1*time.Second); !got {
-		t.Errorf("Expected true after duration passed, got %v", got)
-	}
-
-	// change to true and verify resets
-	stateMap.setState("k1", true)
-	time.Sleep(500 * time.Millisecond)
-	if got := stateMap.requireFalseSince("k1", 1*time.Second); got {
-		t.Errorf("Expected false after set true, got %v", got)
-	}
-}
-
-// TestRequireFalseRecently verifies the behavior of requireFalseRecently on StateValueMap
-func TestRequireFalseRecently(t *testing.T) {
-	stateMap := NewStateValueMap()
-
-	// nonexistent key should return false
-	if got := stateMap.requireFalseRecently("nonexistent", 1*time.Second); got {
-		t.Errorf("Expected false for nonexistent key, got %v", got)
-	}
-
-	// set key to false and verify immediate recent => true
-	stateMap.setState("k2", false)
-	if got := stateMap.requireFalseRecently("k2", 1*time.Second); !got {
-		t.Errorf("Expected true immediately after set false, got %v", got)
-	}
-
-	// after duration passes, it is still false
-	time.Sleep(2 * time.Second)
-	if got := stateMap.requireFalseRecently("k2", 1*time.Second); !got {
-		t.Errorf("Expected true after duration passed, got %v", got)
-	}
-
-	// change to true and verify recent false within window
-	stateMap.setState("k2", true)
-	if got := stateMap.requireFalseRecently("k2", 3*time.Second); !got {
-		t.Errorf("Expected true for recently false before 2s, got %v", got)
-	}
-
-	// after window
-	time.Sleep(2 * time.Second)
-	if got := stateMap.requireFalseRecently("k2", 2*time.Second); got {
-		t.Errorf("Expected false for old false beyond 2s, got %v", got)
-	}
-}
-
-// TestRequireFalseNotRecently verifies the behavior of requireFalseNotRecently on StateValueMap
-func TestRequireFalseNotRecently(t *testing.T) {
-	stateMap := NewStateValueMap()
-
-	// nonexistent key should return false
-	if got := stateMap.requireFalseNotRecently("nonexistent", 1*time.Second); got {
-		t.Errorf("Expected false for nonexistent key, got %v", got)
-	}
-
-	// set key to false, then true, then after duration verify not recently false
-	stateMap.setState("k3", false)
-	stateMap.setState("k3", true)
-	// immediately after true, last false is recent => false
-	if got := stateMap.requireFalseNotRecently("k3", 1*time.Second); got {
-		t.Errorf("Expected false immediately after set true, got %v", got)
-	}
-	// after duration passes since last false
-	time.Sleep(2 * time.Second)
-	if got := stateMap.requireFalseNotRecently("k3", 1*time.Second); !got {
-		t.Errorf("Expected true after duration passed since last false, got %v", got)
-	}
-
-	// set back to false resets window
-	stateMap.setState("k3", false)
-	if got := stateMap.requireFalseNotRecently("k3", 1*time.Second); got {
-		t.Errorf("Expected false immediately after reset to false, got %v", got)
-	}
-}
-
-//
-
-// TestRequireTrueRecently tests the requireTrueRecently method.
-func TestRequireTrueRecentlyStateValue(t *testing.T) {
-	base := time.Now()
-	tests := []struct {
-		name     string
-		state    StateValue
-		duration time.Duration
-		want     bool
+func TestStateValue_ContinuouslyTrue(t *testing.T) {
+	d := 5 * time.Second
+	cases := []struct {
+		name string
+		sv   StateValue
+		want bool
 	}{
-		{
-			name:     "Currently true",
-			state:    StateValue{value: true, lastSetTrue: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     true,
-		},
-		{
-			name:     "Was true recently, now false",
-			state:    StateValue{value: false, lastSetTrue: base.Add(-3 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     true,
-		},
-		{
-			name:     "Was true long ago, now false",
-			state:    StateValue{value: false, lastSetTrue: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     false,
-		},
+		{"long enough", makeStateValue(true, d+time.Millisecond), true},
+		{"change too recent", makeStateValue(true, d-time.Millisecond), false},
+		{"wrong current", makeStateValue(false, d+time.Millisecond), false},
+		{"never true", StateValue{}, false},
+		{"exact boundary (strict <)", makeStateValue(true, d), false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.state.requireTrueRecently(tt.duration); got != tt.want {
-				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.sv.continuouslyTrue(d); got != tc.want {
+				t.Errorf("continuouslyTrue = %v, want %v", got, tc.want)
 			}
 		})
 	}
 }
 
-// TestRequireFalseRecently tests the requireFalseRecently method.
-func TestRequireFalseRecentlyStateValue(t *testing.T) {
-	base := time.Now()
-	tests := []struct {
-		name     string
-		state    StateValue
-		duration time.Duration
-		want     bool
+func TestStateValue_ContinuouslyFalse(t *testing.T) {
+	d := 5 * time.Second
+	cases := []struct {
+		name string
+		sv   StateValue
+		want bool
 	}{
-		{
-			name:     "Currently false",
-			state:    StateValue{value: false, lastSetFalse: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     true,
-		},
-		{
-			name:     "Was false recently, now true",
-			state:    StateValue{value: true, lastSetFalse: base.Add(-3 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     true,
-		},
-		{
-			name:     "Was false long ago, now true",
-			state:    StateValue{value: true, lastSetFalse: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     false,
-		},
+		{"long enough", makeStateValue(false, d+time.Millisecond), true},
+		{"too recent", makeStateValue(false, d-time.Millisecond), false},
+		{"wrong current", makeStateValue(true, d+time.Millisecond), false},
+		{"never false", StateValue{value: false}, false},
+		{"exact boundary (strict <)", makeStateValue(false, d), false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.state.requireFalseRecently(tt.duration); got != tt.want {
-				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.sv.continuouslyFalse(d); got != tc.want {
+				t.Errorf("continuouslyFalse = %v, want %v", got, tc.want)
 			}
 		})
 	}
 }
 
-// TestRequireTrueNotRecently tests the requireTrueNotRecently method.
-func TestRequireTrueNotRecentlyStateValue(t *testing.T) {
-	base := time.Now()
-	tests := []struct {
-		name     string
-		state    StateValue
-		duration time.Duration
-		want     bool
+/*----------------------------------------------------------------------*/
+/* 4.  RecentlyTrue / RecentlyFalse                                      */
+
+func TestStateValue_RecentlyTrue(t *testing.T) {
+	d := 5 * time.Second
+	cases := []struct {
+		name string
+		sv   StateValue
+		want bool
 	}{
-		{
-			name:     "Currently false, set true long ago",
-			state:    StateValue{value: false, lastSetTrue: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     true,
-		},
-		{
-			name:     "Currently false, set true recently",
-			state:    StateValue{value: false, lastSetTrue: base.Add(-3 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     false,
-		},
-		{
-			name:     "Currently true",
-			state:    StateValue{value: true, lastSetTrue: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     false,
-		},
+		{"shortcut true now", makeStateValueTrue(true, 10*time.Minute), true},
+		{"inside window", makeStateValueTrue(false, d-time.Millisecond), true},
+		{"outside window", makeStateValueTrue(false, d+time.Millisecond), false},
+		{"never true", StateValue{}, false},
+		{"exact boundary (inclusive ≥)", makeStateValueTrue(false, d), true},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.state.requireTrueNotRecently(tt.duration); got != tt.want {
-				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.sv.recentlyTrue(d); got != tc.want {
+				t.Errorf("recentlyTrue = %v, want %v", got, tc.want)
 			}
 		})
 	}
 }
 
-// TestRequireFalseNotRecently tests the requireFalseNotRecently method.
-func TestRequireFalseNotRecentlyStateValue(t *testing.T) {
-	base := time.Now()
-	tests := []struct {
-		name     string
-		state    StateValue
-		duration time.Duration
-		want     bool
+func TestStateValue_RecentlyFalse(t *testing.T) {
+	d := 5 * time.Second
+	cases := []struct {
+		name string
+		sv   StateValue
+		want bool
 	}{
-		{
-			name:     "Currently true, set false long ago",
-			state:    StateValue{value: true, lastSetFalse: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     true,
-		},
-		{
-			name:     "Currently true, set false recently",
-			state:    StateValue{value: true, lastSetFalse: base.Add(-3 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     false,
-		},
-		{
-			name:     "Currently false",
-			state:    StateValue{value: false, lastSetFalse: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     false,
-		},
+		{"shortcut false now", makeStateValueFalse(false, 10*time.Minute), true},
+		{"inside window", makeStateValueFalse(true, d-time.Millisecond), true},
+		{"outside window", makeStateValueFalse(true, d+time.Millisecond), false},
+		{"never false", StateValue{}, false},
+		{"exact boundary (inclusive ≥)", makeStateValueFalse(true, d), true},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.state.requireFalseNotRecently(tt.duration); got != tt.want {
-				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.sv.recentlyFalse(d); got != tc.want {
+				t.Errorf("recentlyFalse = %v, want %v", got, tc.want)
 			}
 		})
 	}
 }
 
-// TestRequireTrueSince tests the requireTrueSince method.
-func TestRequireTrueSinceStateValue(t *testing.T) {
-	base := time.Now()
-	tests := []struct {
-		name     string
-		state    StateValue
-		duration time.Duration
-		want     bool
+/*----------------------------------------------------------------------*/
+/* 5.  Edge‑case durations: zero & negative                              */
+
+func TestEdgeDurations(t *testing.T) {
+	zero := 0 * time.Second
+	neg := -3 * time.Second
+
+	stateValueTrue := makeStateValue(true, 2*time.Second)
+	stateValueFalse := makeStateValue(false, 2*time.Second)
+
+	cases := []struct {
+		name string
+		got  bool
+		want bool
 	}{
-		{
-			name:     "Currently true, set true long ago",
-			state:    StateValue{value: true, lastSetTrue: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     true,
-		},
-		{
-			name:     "Currently true, set true recently",
-			state:    StateValue{value: true, lastSetTrue: base.Add(-3 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     false,
-		},
-		{
-			name:     "Currently false",
-			state:    StateValue{value: false, lastSetTrue: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     false,
-		},
+		// d==0 → continuously* true, recently* false
+		{"contTrue d0", stateValueTrue.continuouslyTrue(zero), true},
+		{"contFalse d0", stateValueFalse.continuouslyFalse(zero), true},
+		{"recentTrue d0", stateValueTrue.recentlyTrue(zero), true},
+		{"recentFalse d0", stateValueFalse.recentlyFalse(zero), true},
+
+		{"contTrue reverse d0", stateValueTrue.continuouslyFalse(zero), false},
+		{"contFalse reverse d0", stateValueFalse.continuouslyTrue(zero), false},
+		{"recentTrue reverse d0", stateValueTrue.recentlyFalse(zero), false},
+		{"recentFalse reverse d0", stateValueFalse.recentlyTrue(zero), false},
+
+		// d<0 → cut in future: continuously* true, recently* false
+		{"contTrue neg", stateValueTrue.continuouslyTrue(neg), true},
+		{"contFalse neg", stateValueFalse.continuouslyFalse(neg), true},
+		{"recentTrue neg", stateValueTrue.recentlyTrue(neg), true},
+		{"recentFalse neg", stateValueFalse.recentlyFalse(neg), true},
+
+		{"contTrue reverse neg", stateValueTrue.continuouslyFalse(neg), false},
+		{"contFalse reverse neg", stateValueFalse.continuouslyTrue(neg), false},
+		{"recentTrue reverse neg", stateValueTrue.recentlyFalse(neg), false},
+		{"recentFalse reverse neg", stateValueFalse.recentlyTrue(neg), false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.state.requireTrueSince(tt.duration); got != tt.want {
-				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.got != tc.want {
+				t.Errorf("%s: got %v, want %v", tc.name, tc.got, tc.want)
 			}
 		})
 	}
 }
 
-func TestRequireFalseSinceStateValue(t *testing.T) {
-	base := time.Now()
-	tests := []struct {
-		name     string
-		state    StateValue
-		duration time.Duration
-		want     bool
-	}{
-		{
-			name:     "Currently false, set false long ago",
-			state:    StateValue{value: false, lastSetFalse: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     true,
-		},
-		{
-			name:     "Currently false, set false recently",
-			state:    StateValue{value: false, lastSetFalse: base.Add(-3 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     false,
-		},
-		{
-			name:     "Currently true",
-			state:    StateValue{value: true, lastSetFalse: base.Add(-10 * time.Minute)},
-			duration: 5 * time.Minute,
-			want:     false,
-		},
+/*----------------------------------------------------------------------*/
+/* 6.  StateValueMap adapter                                             */
+
+func TestStateValueMap(t *testing.T) {
+	key := StateKey("k")
+
+	// empty map → all require… return false
+	m := StateValueMap{svMap: map[StateKey]StateValue{}}
+	if m.requireCurrentlyTrue(key) {
+		t.Error("missing key → true")
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.state.requireFalseSince(tt.duration); got != tt.want {
-				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
-			}
-		})
+	if m.requireContinuouslyTrue(key, time.Second) {
+		t.Error("missing key → true")
+	}
+	if m.requireRecentlyTrue(key, time.Second) {
+		t.Error("missing key → true")
+	}
+
+	// now put a value
+	m.svMap[key] = makeStateValueTrue(true, 10*time.Second)
+	if !m.requireCurrentlyTrue(key) {
+		t.Error("should be true now")
+	}
+	if !m.requireContinuouslyTrue(key, 5*time.Second) {
+		t.Error("should be continuous true")
+	}
+	if m.requireContinuouslyFalse(key, 5*time.Second) {
+		t.Error("should not be continuous false")
+	}
+	if !m.requireRecentlyTrue(key, 5*time.Second) {
+		t.Error("should be recently true")
 	}
 }
 
-// TestRequireTrueAndRequireFalse tests the requireTrue and requireFalse methods.
-func TestRequireTrueAndRequireFalse(t *testing.T) {
-	tests := []struct {
-		name      string
-		state     StateValue
-		wantTrue  bool
-		wantFalse bool
-	}{
-		{"Value true", StateValue{value: true}, true, false},
-		{"Value false", StateValue{value: false}, false, true},
+/*----------------------------------------------------------------------*/
+/* 7.  Symmetry                                                          */
+
+func TestSymmetry(t *testing.T) {
+	d := 3 * time.Second
+	stateValue := makeStateValue(false, d+time.Second) // last false long ago
+
+	if stateValue.continuouslyTrue(d) {
+		t.Error("continuouslyTrue should be false")
 	}
-	for _, tt := range tests {
-		t.Run(tt.name+"/True", func(t *testing.T) {
-			if got := tt.state.requireTrue(); got != tt.wantTrue {
-				t.Errorf("%s: requireTrue got %v, want %v", tt.name, got, tt.wantTrue)
-			}
-		})
-		t.Run(tt.name+"/False", func(t *testing.T) {
-			if got := tt.state.requireFalse(); got != tt.wantFalse {
-				t.Errorf("%s: requireFalse got %v, want %v", tt.name, got, tt.wantFalse)
-			}
-		})
+	if !stateValue.continuouslyFalse(d) {
+		t.Error("continuouslyFalse should be true")
+	}
+	if stateValue.recentlyTrue(d) {
+		t.Error("recentlyTrue should be false")
+	}
+	if !stateValue.recentlyFalse(d) {
+		t.Error("recentlyFalse should be true")
 	}
 }
