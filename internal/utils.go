@@ -211,10 +211,12 @@ func (s *StateValueMap) updateStateUnsafe(key StateKey, value bool) {
 		stateNew = true
 	}
 
-	if value {
-		updatedState.lastSetTrue = now
-	} else {
-		updatedState.lastSetFalse = now
+	if stateUpdate || stateNew {
+		if value {
+			updatedState.lastSetTrue = now
+		} else {
+			updatedState.lastSetFalse = now
+		}
 	}
 
 	for _, callback := range s.observerCallbacks {
@@ -321,6 +323,7 @@ func (s *StateValue) continuouslyTrue(d time.Duration) bool {
 	if !s.value || s.lastSetTrue.IsZero() {
 		return false
 	}
+
 	cut := nowFunc().Add(-d)
 	return s.lastSetTrue.Before(cut) // state switched to true strictly before window start
 }
