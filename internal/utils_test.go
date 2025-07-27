@@ -7,254 +7,243 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// fix nowFunc to a constant instant
+	// Freeze nowFunc for deterministic tests
 	fixed := time.Date(2025, 7, 27, 12, 0, 0, 0, time.UTC)
 	nowFunc = func() time.Time { return fixed }
 	os.Exit(m.Run())
 }
 
-// makeStateValue sets only the timestamp matching the current value.
-// Useful for continuously*/edge tests.
-func makeStateValue(val bool, ago time.Duration) StateValue {
-	sv := StateValue{value: val, isDefined: true}
-	t0 := nowFunc().Add(-ago)
-	if val {
-		sv.lastSetTrue = t0
-	} else {
-		sv.lastSetFalse = t0
-	}
-	return sv
+// seedTrue simulates a true update at now-ago using the code's internal method
+func seedTrue(m *StateValueMap, key StateKey, ago time.Duration) {
+	origNowFunc := nowFunc()
+	nowFunc = func() time.Time { return origNowFunc.Add(-ago) }
+	m.updateStateUnsafe(key, true)
+	nowFunc = func() time.Time { return origNowFunc }
 }
 
-// makeStateValueTrue always sets lastSetTrue, regardless of val.
-// Useful for recentlyTrue scenarios.
-func makeStateValueTrue(val bool, lastSetTrue time.Duration) StateValue {
-	sv := StateValue{value: val, isDefined: true}
-	sv.lastSetTrue = nowFunc().Add(-lastSetTrue)
-	return sv
+// seedFalse simulates a false update at now-ago using the code's internal method
+func seedFalse(m *StateValueMap, key StateKey, ago time.Duration) {
+	origNowFunc := nowFunc()
+	nowFunc = func() time.Time { return origNowFunc.Add(-ago) }
+	m.updateStateUnsafe(key, false)
+	nowFunc = func() time.Time { return origNowFunc }
 }
 
-// makeStateValueFalse always sets lastSetFalse, regardless of val.
-// Useful for recentlyFalse scenarios.
-func makeStateValueFalse(val bool, lastSetFalse time.Duration) StateValue {
-	sv := StateValue{value: val, isDefined: true}
-	sv.lastSetFalse = nowFunc().Add(-lastSetFalse)
-	return sv
-}
+func TestRequireCurrently(t *testing.T) {
+	m := &StateValueMap{svMap: make(map[StateKey]StateValue)}
+	key := StateKey("key1")
 
-/*----------------------------------------------------------------------*/
-/* 2.  “Currently true/false”                                            */
-
-func TestStateValue_Currently(t *testing.T) {
-
-	sv := StateValue{value: true}
-	if got := sv.requireCurrentlyTrue(); got != true {
-		t.Errorf("CurrentlyTrue = %v, want %v", got, true)
+	// missing key
+	if m.requireCurrentlyTrue(key) {
+		t.Error("missing key: requireCurrentlyTrue should be false")
 	}
-	if got := sv.requireCurrentlyFalse(); got != false {
-		t.Errorf("CurrentlyTrue = %v, want %v", got, false)
+	if m.requireCurrentlyFalse(key) {
+		t.Error("missing key: requireCurrentlyFalse should be false")
 	}
 
-	sv = StateValue{value: false}
-	if got := sv.requireCurrentlyTrue(); got != false {
-		t.Errorf("CurrentlyTrue = %v, want %v", got, false)
+	// seed true
+	seedTrue(m, key, 10*time.Second)
+	if !m.requireCurrentlyTrue(key) {
+		t.Error("true now: requireCurrentlyTrue should be true")
 	}
-	if got := sv.requireCurrentlyFalse(); got != true {
-		t.Errorf("CurrentlyTrue = %v, want %v", got, true)
+	if m.requireCurrentlyFalse(key) {
+		t.Error("true now: requireCurrentlyFalse should be false")
+	}
+
+	// seed false
+	seedFalse(m, key, 5*time.Second)
+	if m.requireCurrentlyTrue(key) {
+		t.Error("false now: requireCurrentlyTrue should be false")
+	}
+	if !m.requireCurrentlyFalse(key) {
+		t.Error("false now: requireCurrentlyFalse should be true")
 	}
 }
 
-/*----------------------------------------------------------------------*/
-/* 3.  ContinuouslyTrue / ContinuouslyFalse                              */
-
-func TestStateValue_ContinuouslyTrue(t *testing.T) {
+func TestRequireContinuously(t *testing.T) {
+	m := &StateValueMap{svMap: make(map[StateKey]StateValue)}
+	key := StateKey("key2")
 	d := 5 * time.Second
-	cases := []struct {
-		name string
-		sv   StateValue
-		want bool
-	}{
-		{"long enough", makeStateValue(true, d+time.Millisecond), true},
-		{"change too recent", makeStateValue(true, d-time.Millisecond), false},
-		{"wrong current", makeStateValue(false, d+time.Millisecond), false},
-		{"never true", StateValue{}, false},
-		{"exact boundary (strict <)", makeStateValue(true, d), false},
+
+	// missing
+	if m.requireContinuouslyTrue(key, d) || m.requireContinuouslyFalse(key, d) {
+		t.Error("missing key: continuously should be false")
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := tc.sv.continuouslyTrue(d); got != tc.want {
-				t.Errorf("continuouslyTrue = %v, want %v", got, tc.want)
-			}
-		})
+
+	// true long enough
+	seedTrue(m, key, d+time.Millisecond)
+	sv := m.svMap[key]
+	if !m.requireContinuouslyTrue(key, d) || !sv.continuouslyTrue(d) {
+		t.Error("true long enough: continuouslyTrue should be true")
+	}
+	if m.requireContinuouslyFalse(key, d) || sv.continuouslyFalse(d) {
+		t.Error("true long enough: continuouslyFalse should be false")
+	}
+
+	// true too recent
+	seedTrue(m, key, d-time.Millisecond)
+	sv = m.svMap[key]
+	if m.requireContinuouslyTrue(key, d) || sv.continuouslyTrue(d) {
+		t.Error("true too recent: continuouslyTrue should be false")
+	}
+
+	// false long enough
+	seedFalse(m, key, d+time.Millisecond)
+	sv = m.svMap[key]
+	if !m.requireContinuouslyFalse(key, d) || !sv.continuouslyFalse(d) {
+		t.Error("false long enough: continuouslyFalse should be true")
+	}
+	if m.requireContinuouslyTrue(key, d) || sv.continuouslyTrue(d) {
+		t.Error("false long enough: continuouslyTrue should be false")
+	}
+
+	// boundary strict
+	seedTrue(m, key, d)
+	sv = m.svMap[key]
+	if m.requireContinuouslyTrue(key, d) || sv.continuouslyTrue(d) {
+		t.Error("boundary true: continuouslyTrue should be false")
+	}
+	seedFalse(m, key, d)
+	sv = m.svMap[key]
+	if m.requireContinuouslyFalse(key, d) || sv.continuouslyFalse(d) {
+		t.Error("boundary false: continuouslyFalse should be false")
 	}
 }
 
-func TestStateValue_ContinuouslyFalse(t *testing.T) {
+func TestRequireRecently(t *testing.T) {
+	m := &StateValueMap{svMap: make(map[StateKey]StateValue)}
+	key := StateKey("key3")
 	d := 5 * time.Second
-	cases := []struct {
-		name string
-		sv   StateValue
-		want bool
-	}{
-		{"long enough", makeStateValue(false, d+time.Millisecond), true},
-		{"too recent", makeStateValue(false, d-time.Millisecond), false},
-		{"wrong current", makeStateValue(true, d+time.Millisecond), false},
-		{"never false", StateValue{value: false}, false},
-		{"exact boundary (strict <)", makeStateValue(false, d), false},
+
+	// missing
+	if m.requireRecentlyTrue(key, d) || m.requireRecentlyFalse(key, d) {
+		t.Error("missing key: recently should be false")
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := tc.sv.continuouslyFalse(d); got != tc.want {
-				t.Errorf("continuouslyFalse = %v, want %v", got, tc.want)
-			}
-		})
+
+	// true now shortcut
+	seedTrue(m, key, 10*time.Minute)
+	sv := m.svMap[key]
+	if !m.requireRecentlyTrue(key, d) || !sv.recentlyTrue(d) {
+		t.Error("true now: recentlyTrue should be true")
+	}
+	if m.requireRecentlyFalse(key, d) || sv.recentlyFalse(d) {
+		t.Error("true now: recentlyFalse should be false")
+	}
+
+	// inside window
+	seedTrue(m, key, d-time.Millisecond)
+	sv = m.svMap[key]
+	if !m.requireRecentlyTrue(key, d) || !sv.recentlyTrue(d) {
+		t.Error("inside window: recentlyTrue should be true")
+	}
+
+	// boundary inclusive
+	seedTrue(m, key, d)
+	sv = m.svMap[key]
+	if !m.requireRecentlyTrue(key, d) || !sv.recentlyTrue(d) {
+		t.Error("boundary true: recentlyTrue should be true")
+	}
+
+	// outside window (value still true) => should still be true
+	seedTrue(m, key, d+time.Millisecond)
+	sv = m.svMap[key]
+	if !m.requireRecentlyTrue(key, d) || !sv.recentlyTrue(d) {
+		t.Error("too old: recentlyTrue should be true due to current value")
+	}
+
+	// false now shortcut
+	seedFalse(m, key, 10*time.Minute)
+	sv = m.svMap[key]
+	if !m.requireRecentlyFalse(key, d) || !sv.recentlyFalse(d) {
+		t.Error("false now: recentlyFalse should be true")
+	}
+	if m.requireRecentlyTrue(key, d) || sv.recentlyTrue(d) {
+		t.Error("false now: recentlyTrue should be false")
+	}
+
+	// inside window for false
+	seedFalse(m, key, d-time.Millisecond)
+	sv = m.svMap[key]
+	if !m.requireRecentlyFalse(key, d) || !sv.recentlyFalse(d) {
+		t.Error("inside window: recentlyFalse should be true")
+	}
+
+	// boundary inclusive for false
+	seedFalse(m, key, d)
+	sv = m.svMap[key]
+	if !m.requireRecentlyFalse(key, d) || !sv.recentlyFalse(d) {
+		t.Error("boundary false: recentlyFalse should be true")
+	}
+
+	// outside window for false (value still false) => should still be true
+	seedFalse(m, key, d+time.Millisecond)
+	sv = m.svMap[key]
+	if !m.requireRecentlyFalse(key, d) || !sv.recentlyFalse(d) {
+		t.Error("too old: recentlyFalse should be true due to current false")
 	}
 }
 
-/*----------------------------------------------------------------------*/
-/* 4.  RecentlyTrue / RecentlyFalse                                      */
-
-func TestStateValue_RecentlyTrue(t *testing.T) {
-	d := 5 * time.Second
-	cases := []struct {
-		name string
-		sv   StateValue
-		want bool
-	}{
-		{"shortcut true now", makeStateValueTrue(true, 10*time.Minute), true},
-		{"inside window", makeStateValueTrue(false, d-time.Millisecond), true},
-		{"outside window", makeStateValueTrue(false, d+time.Millisecond), false},
-		{"never true", StateValue{}, false},
-		{"exact boundary (inclusive ≥)", makeStateValueTrue(false, d), true},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := tc.sv.recentlyTrue(d); got != tc.want {
-				t.Errorf("recentlyTrue = %v, want %v", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestStateValue_RecentlyFalse(t *testing.T) {
-	d := 5 * time.Second
-	cases := []struct {
-		name string
-		sv   StateValue
-		want bool
-	}{
-		{"shortcut false now", makeStateValueFalse(false, 10*time.Minute), true},
-		{"inside window", makeStateValueFalse(true, d-time.Millisecond), true},
-		{"outside window", makeStateValueFalse(true, d+time.Millisecond), false},
-		{"never false", StateValue{}, false},
-		{"exact boundary (inclusive ≥)", makeStateValueFalse(true, d), true},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := tc.sv.recentlyFalse(d); got != tc.want {
-				t.Errorf("recentlyFalse = %v, want %v", got, tc.want)
-			}
-		})
-	}
-}
-
-/*----------------------------------------------------------------------*/
-/* 5.  Edge‑case durations: zero & negative                              */
-
-func TestEdgeDurations(t *testing.T) {
+func TestRequireEdgeDurations(t *testing.T) {
+	m := &StateValueMap{svMap: make(map[StateKey]StateValue)}
+	key := StateKey("key4")
 	zero := 0 * time.Second
 	neg := -3 * time.Second
 
-	stateValueTrue := makeStateValue(true, 2*time.Second)
-	stateValueFalse := makeStateValue(false, 2*time.Second)
-
-	cases := []struct {
-		name string
-		got  bool
-		want bool
-	}{
-		// d==0 → continuously* true, recently* false
-		{"contTrue d0", stateValueTrue.continuouslyTrue(zero), true},
-		{"contFalse d0", stateValueFalse.continuouslyFalse(zero), true},
-		{"recentTrue d0", stateValueTrue.recentlyTrue(zero), true},
-		{"recentFalse d0", stateValueFalse.recentlyFalse(zero), true},
-
-		{"contTrue reverse d0", stateValueTrue.continuouslyFalse(zero), false},
-		{"contFalse reverse d0", stateValueFalse.continuouslyTrue(zero), false},
-		{"recentTrue reverse d0", stateValueTrue.recentlyFalse(zero), false},
-		{"recentFalse reverse d0", stateValueFalse.recentlyTrue(zero), false},
-
-		// d<0 → cut in future: continuously* true, recently* false
-		{"contTrue neg", stateValueTrue.continuouslyTrue(neg), true},
-		{"contFalse neg", stateValueFalse.continuouslyFalse(neg), true},
-		{"recentTrue neg", stateValueTrue.recentlyTrue(neg), true},
-		{"recentFalse neg", stateValueFalse.recentlyFalse(neg), true},
-
-		{"contTrue reverse neg", stateValueTrue.continuouslyFalse(neg), false},
-		{"contFalse reverse neg", stateValueFalse.continuouslyTrue(neg), false},
-		{"recentTrue reverse neg", stateValueTrue.recentlyFalse(neg), false},
-		{"recentFalse reverse neg", stateValueFalse.recentlyTrue(neg), false},
+	// seed true 2s ago
+	seedTrue(m, key, 2*time.Second)
+	sv := m.svMap[key]
+	// d==0
+	if !m.requireContinuouslyTrue(key, zero) || !sv.continuouslyTrue(zero) {
+		t.Error("edge d0 contTrue")
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if tc.got != tc.want {
-				t.Errorf("%s: got %v, want %v", tc.name, tc.got, tc.want)
-			}
-		})
+	if !m.requireRecentlyTrue(key, zero) || !sv.recentlyTrue(zero) {
+		t.Error("edge d0 recentTrue")
+	}
+	// d<0
+	if !m.requireContinuouslyTrue(key, neg) || !sv.continuouslyTrue(neg) {
+		t.Error("edge neg contTrue")
+	}
+	if !m.requireRecentlyTrue(key, neg) || !sv.recentlyTrue(neg) {
+		t.Error("edge neg recentTrue should be true due to current value")
+	}
+
+	// seed false 2s ago
+	seedFalse(m, key, 2*time.Second)
+	sv = m.svMap[key]
+	if !m.requireContinuouslyFalse(key, zero) || !sv.continuouslyFalse(zero) {
+		t.Error("edge d0 contFalse")
+	}
+	if !m.requireRecentlyFalse(key, zero) || !sv.recentlyFalse(zero) {
+		t.Error("edge d0 recentFalse")
+	}
+	// d<0
+	if !m.requireContinuouslyFalse(key, neg) || !sv.continuouslyFalse(neg) {
+		t.Error("edge neg contFalse")
+	}
+	if !m.requireRecentlyFalse(key, neg) || !sv.recentlyFalse(neg) {
+		t.Error("edge neg recentFalse should be true due to current false")
 	}
 }
 
-/*----------------------------------------------------------------------*/
-/* 6.  StateValueMap adapter                                             */
-
-func TestStateValueMap(t *testing.T) {
-	key := StateKey("k")
-
-	// empty map → all require… return false
-	m := StateValueMap{svMap: map[StateKey]StateValue{}}
-	if m.requireCurrentlyTrue(key) {
-		t.Error("missing key → true")
-	}
-	if m.requireContinuouslyTrue(key, time.Second) {
-		t.Error("missing key → true")
-	}
-	if m.requireRecentlyTrue(key, time.Second) {
-		t.Error("missing key → true")
-	}
-
-	// now put a value
-	m.svMap[key] = makeStateValueTrue(true, 10*time.Second)
-	if !m.requireCurrentlyTrue(key) {
-		t.Error("should be true now")
-	}
-	if !m.requireContinuouslyTrue(key, 5*time.Second) {
-		t.Error("should be continuous true")
-	}
-	if m.requireContinuouslyFalse(key, 5*time.Second) {
-		t.Error("should not be continuous false")
-	}
-	if !m.requireRecentlyTrue(key, 5*time.Second) {
-		t.Error("should be recently true")
-	}
-}
-
-/*----------------------------------------------------------------------*/
-/* 7.  Symmetry                                                          */
-
-func TestSymmetry(t *testing.T) {
+func TestRequireSymmetry(t *testing.T) {
+	m := &StateValueMap{svMap: make(map[StateKey]StateValue)}
+	key := StateKey("key5")
 	d := 3 * time.Second
-	stateValue := makeStateValue(false, d+time.Second) // last false long ago
 
-	if stateValue.continuouslyTrue(d) {
-		t.Error("continuouslyTrue should be false")
+	// seed false long ago
+	seedFalse(m, key, d+time.Second)
+	sv := m.svMap[key]
+	// symmetric expectations
+	if m.requireContinuouslyTrue(key, d) || sv.continuouslyTrue(d) {
+		t.Error("sym contTrue should be false")
 	}
-	if !stateValue.continuouslyFalse(d) {
-		t.Error("continuouslyFalse should be true")
+	if !m.requireContinuouslyFalse(key, d) || !sv.continuouslyFalse(d) {
+		t.Error("sym contFalse should be true")
 	}
-	if stateValue.recentlyTrue(d) {
-		t.Error("recentlyTrue should be false")
+	if m.requireRecentlyTrue(key, d) || sv.recentlyTrue(d) {
+		t.Error("sym recentTrue should be false")
 	}
-	if !stateValue.recentlyFalse(d) {
-		t.Error("recentlyFalse should be true")
+	if !m.requireRecentlyFalse(key, d) || !sv.recentlyFalse(d) {
+		t.Error("sym recentFalse should be true")
 	}
 }
