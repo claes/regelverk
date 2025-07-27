@@ -349,7 +349,13 @@ func (s *StateValue) recentlyTrue(d time.Duration) bool {
 		return false
 	}
 	cut := nowFunc().Add(-d)
-	return !s.lastSetTrue.Before(cut) // ≥ cut
+
+	if s.lastSetTrue.Before(cut) {
+		//lastSetTrue is before cut and lastSetFalse is after cut, thus the switch happened after
+		return s.lastSetFalse.After(cut)
+	} else {
+		return true // lastSetTrue is within window
+	}
 }
 
 func (s *StateValue) recentlyFalse(d time.Duration) bool {
@@ -366,7 +372,14 @@ func (s *StateValue) recentlyFalse(d time.Duration) bool {
 		return false
 	}
 	cut := nowFunc().Add(-d)
-	return !s.lastSetFalse.Before(cut)
+
+	if s.lastSetFalse.Before(cut) {
+		//lastSetFalse is before cut and lastSetTrue is after cut, thus the switch happened after
+		return s.lastSetTrue.After(cut)
+	} else {
+		return true // lastSetFalse is within window
+	}
+
 }
 
 func (s *StateValueMap) LogState() {

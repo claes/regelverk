@@ -182,10 +182,32 @@ func TestRequireRecently(t *testing.T) {
 
 	// inside window
 	seedTrue(&m, key, d-time.Second)
-	//seedFalse(&m, key, d-(2*time.Second))
 	sv, _ = m.getState(key)
 	if !m.requireRecentlyTrue(key, d) || !sv.recentlyTrue(d) {
 		t.Error(stateErrorString("inside window: recentlyTrue should be true", &m, key))
+	}
+	if m.requireRecentlyFalse(key, d) || sv.recentlyFalse(d) {
+		t.Error(stateErrorString("true now: recentlyFalse should be false", &m, key))
+	}
+
+	// Now we set false, but it has been true within window so same test as above should pass
+	seedFalse(&m, key, d-(3*time.Second))
+	sv, _ = m.getState(key)
+	if !m.requireRecentlyTrue(key, d) || !sv.recentlyTrue(d) {
+		t.Error(stateErrorString("inside window: recentlyTrue should be true", &m, key))
+	}
+	// Now it is also recently false
+	if !m.requireRecentlyFalse(key, d) || !sv.recentlyFalse(d) {
+		t.Error(stateErrorString("true now: recentlyFalse should be false", &m, key))
+	}
+
+	// Now test with a shorter window when the cut from true to false happened before, so it should not pass
+	if m.requireRecentlyTrue(key, time.Second) || sv.recentlyTrue(time.Second) {
+		t.Error(stateErrorString("inside window: recentlyTrue should be false", &m, key))
+	}
+	// However recently false should hold
+	if !m.requireRecentlyFalse(key, d) || !sv.recentlyFalse(d) {
+		t.Error(stateErrorString("true now: recentlyFalse should be true", &m, key))
 	}
 
 	// boundary inclusive
@@ -203,6 +225,7 @@ func TestRequireRecently(t *testing.T) {
 	}
 }
 
+// NOTE! Not validated ChatGPT
 func TestRequireEdgeDurations(t *testing.T) {
 	m := NewStateValueMap()
 	key := StateKey("edge")
@@ -242,6 +265,7 @@ func TestRequireEdgeDurations(t *testing.T) {
 	}
 }
 
+// NOTE! Not validated ChatGPT
 func TestRequireSymmetry(t *testing.T) {
 	m := NewStateValueMap()
 	key := StateKey("sym")
