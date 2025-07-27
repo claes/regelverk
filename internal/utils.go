@@ -325,7 +325,7 @@ func (s *StateValue) continuouslyTrue(d time.Duration) bool {
 	}
 
 	cut := nowFunc().Add(-d)
-	return s.lastSetTrue.Before(cut) // state switched to true strictly before window start
+	return s.lastSetTrue.Before(cut) || s.lastSetTrue.Equal(cut)
 }
 
 // continuouslyFalse is the dual of ContinuouslyTrue.
@@ -334,7 +334,7 @@ func (s *StateValue) continuouslyFalse(d time.Duration) bool {
 		return false
 	}
 	cut := nowFunc().Add(-d)
-	return s.lastSetFalse.Before(cut)
+	return s.lastSetFalse.Before(cut) || s.lastSetFalse.Equal(cut)
 }
 
 func (s *StateValue) recentlyTrue(d time.Duration) bool {
