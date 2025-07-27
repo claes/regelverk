@@ -28,6 +28,25 @@ func TestRequireTrue(t *testing.T) {
 	}
 }
 
+func TestRequireFalse_Concurrency(t *testing.T) {
+	stateMap := NewStateValueMap()
+	go func() {
+		stateMap.setState("k1", false)
+		stateMap.setState("k2", true)
+	}()
+	time.Sleep(10 * time.Millisecond)
+	for i := 0; i < 10; i++ {
+		go func() {
+			if got := stateMap.requireFalse("k1"); !got {
+				t.Errorf("concurrent: expected false for k1, got %v", got)
+			}
+			if got := stateMap.requireFalse("k2"); got {
+				t.Errorf("concurrent: expected true for k2, got %v", got)
+			}
+		}()
+	}
+}
+
 // TestConcurrency ensures requireTrue works correctly under concurrent access
 func TestRequireTrue_Concurrency(t *testing.T) {
 	stateMap := NewStateValueMap()
@@ -214,6 +233,98 @@ func TestRequireTrueNotRecently(t *testing.T) {
 
 }
 
+// TestRequireFalseSince verifies the behavior of requireFalseSince on StateValueMap
+func TestRequireFalseSince(t *testing.T) {
+	stateMap := NewStateValueMap()
+
+	// nonexistent key should return false
+	if got := stateMap.requireFalseSince("nonexistent", 1*time.Second); got {
+		t.Errorf("Expected false for nonexistent key, got %v", got)
+	}
+
+	// set key to false and verify duration logic
+	stateMap.setState("k1", false)
+	// immediately after setting, duration not passed => false
+	if got := stateMap.requireFalseSince("k1", 1*time.Second); got {
+		t.Errorf("Expected false immediately after set false, got %v", got)
+	}
+	// after duration passes
+	time.Sleep(2 * time.Second)
+	if got := stateMap.requireFalseSince("k1", 1*time.Second); !got {
+		t.Errorf("Expected true after duration passed, got %v", got)
+	}
+
+	// change to true and verify resets
+	stateMap.setState("k1", true)
+	time.Sleep(500 * time.Millisecond)
+	if got := stateMap.requireFalseSince("k1", 1*time.Second); got {
+		t.Errorf("Expected false after set true, got %v", got)
+	}
+}
+
+// TestRequireFalseRecently verifies the behavior of requireFalseRecently on StateValueMap
+func TestRequireFalseRecently(t *testing.T) {
+	stateMap := NewStateValueMap()
+
+	// nonexistent key should return false
+	if got := stateMap.requireFalseRecently("nonexistent", 1*time.Second); got {
+		t.Errorf("Expected false for nonexistent key, got %v", got)
+	}
+
+	// set key to false and verify immediate recent => true
+	stateMap.setState("k2", false)
+	if got := stateMap.requireFalseRecently("k2", 1*time.Second); !got {
+		t.Errorf("Expected true immediately after set false, got %v", got)
+	}
+
+	// after duration passes, it is still false
+	time.Sleep(2 * time.Second)
+	if got := stateMap.requireFalseRecently("k2", 1*time.Second); !got {
+		t.Errorf("Expected true after duration passed, got %v", got)
+	}
+
+	// change to true and verify recent false within window
+	stateMap.setState("k2", true)
+	if got := stateMap.requireFalseRecently("k2", 3*time.Second); !got {
+		t.Errorf("Expected true for recently false before 2s, got %v", got)
+	}
+
+	// after window
+	time.Sleep(2 * time.Second)
+	if got := stateMap.requireFalseRecently("k2", 2*time.Second); got {
+		t.Errorf("Expected false for old false beyond 2s, got %v", got)
+	}
+}
+
+// TestRequireFalseNotRecently verifies the behavior of requireFalseNotRecently on StateValueMap
+func TestRequireFalseNotRecently(t *testing.T) {
+	stateMap := NewStateValueMap()
+
+	// nonexistent key should return false
+	if got := stateMap.requireFalseNotRecently("nonexistent", 1*time.Second); got {
+		t.Errorf("Expected false for nonexistent key, got %v", got)
+	}
+
+	// set key to false, then true, then after duration verify not recently false
+	stateMap.setState("k3", false)
+	stateMap.setState("k3", true)
+	// immediately after true, last false is recent => false
+	if got := stateMap.requireFalseNotRecently("k3", 1*time.Second); got {
+		t.Errorf("Expected false immediately after set true, got %v", got)
+	}
+	// after duration passes since last false
+	time.Sleep(2 * time.Second)
+	if got := stateMap.requireFalseNotRecently("k3", 1*time.Second); !got {
+		t.Errorf("Expected true after duration passed since last false, got %v", got)
+	}
+
+	// set back to false resets window
+	stateMap.setState("k3", false)
+	if got := stateMap.requireFalseNotRecently("k3", 1*time.Second); got {
+		t.Errorf("Expected false immediately after reset to false, got %v", got)
+	}
+}
+
 //
 
 // TestRequireTrueRecently tests the requireTrueRecently method.
@@ -395,6 +506,42 @@ func TestRequireTrueSinceStateValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.state.requireTrueSince(tt.duration); got != tt.want {
+				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRequireFalseSinceStateValue(t *testing.T) {
+	base := time.Now()
+	tests := []struct {
+		name     string
+		state    StateValue
+		duration time.Duration
+		want     bool
+	}{
+		{
+			name:     "Currently false, set false long ago",
+			state:    StateValue{value: false, lastSetFalse: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     true,
+		},
+		{
+			name:     "Currently false, set false recently",
+			state:    StateValue{value: false, lastSetFalse: base.Add(-3 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     false,
+		},
+		{
+			name:     "Currently true",
+			state:    StateValue{value: true, lastSetFalse: base.Add(-10 * time.Minute)},
+			duration: 5 * time.Minute,
+			want:     false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.state.requireFalseSince(tt.duration); got != tt.want {
 				t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
 			}
 		})

@@ -239,12 +239,8 @@ func (s *StateValueMap) requireTrue(key StateKey) bool {
 	if !exists {
 		return false
 	} else {
-		return stateValue.value
+		return stateValue.requireTrue()
 	}
-}
-
-func (stateValue *StateValue) requireTrue() bool {
-	return stateValue.value
 }
 
 func (s *StateValueMap) requireFalse(key StateKey) bool {
@@ -257,10 +253,6 @@ func (s *StateValueMap) requireFalse(key StateKey) bool {
 	} else {
 		return stateValue.requireFalse()
 	}
-}
-
-func (stateValue *StateValue) requireFalse() bool {
-	return !stateValue.value
 }
 
 // Require it has consistently been true
@@ -276,10 +268,6 @@ func (s *StateValueMap) requireTrueSince(key StateKey, duration time.Duration) b
 	}
 }
 
-func (stateValue *StateValue) requireTrueSince(duration time.Duration) bool {
-	return stateValue.value && time.Since(stateValue.lastSetTrue) > duration
-}
-
 // Require it has been true at some point during duration
 func (s *StateValueMap) requireTrueRecently(key StateKey, duration time.Duration) bool {
 	s.mu.RLock()
@@ -291,10 +279,6 @@ func (s *StateValueMap) requireTrueRecently(key StateKey, duration time.Duration
 	} else {
 		return stateValue.requireTrueRecently(duration)
 	}
-}
-
-func (stateValue *StateValue) requireTrueRecently(duration time.Duration) bool {
-	return stateValue.value || time.Since(stateValue.lastSetTrue) < duration
 }
 
 // Require that it must not have been true at any point during duration
@@ -310,8 +294,64 @@ func (s *StateValueMap) requireTrueNotRecently(key StateKey, duration time.Durat
 	}
 }
 
+// Require it has consistently been false
+func (s *StateValueMap) requireFalseSince(key StateKey, duration time.Duration) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
+	if !exists {
+		return false
+	}
+	return stateValue.requireFalseSince(duration)
+}
+
+// Require it has been false at some point during duration
+func (s *StateValueMap) requireFalseRecently(key StateKey, duration time.Duration) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
+	if !exists {
+		return false
+	}
+	return stateValue.requireFalseRecently(duration)
+}
+
+// Require that it must not have been false at any point during duration
+func (s *StateValueMap) requireFalseNotRecently(key StateKey, duration time.Duration) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
+	if !exists {
+		return false
+	}
+	return stateValue.requireFalseNotRecently(duration)
+}
+
+func (stateValue *StateValue) requireTrue() bool {
+	return stateValue.value
+}
+
+func (stateValue *StateValue) requireFalse() bool {
+	return !stateValue.value
+}
+
+func (stateValue *StateValue) requireTrueSince(duration time.Duration) bool {
+	return stateValue.value && time.Since(stateValue.lastSetTrue) > duration
+}
+
+func (stateValue *StateValue) requireTrueRecently(duration time.Duration) bool {
+	return stateValue.value || time.Since(stateValue.lastSetTrue) < duration
+}
+
 func (stateValue *StateValue) requireTrueNotRecently(duration time.Duration) bool {
 	return !stateValue.value && time.Since(stateValue.lastSetTrue) > duration
+}
+
+func (stateValue *StateValue) requireFalseSince(duration time.Duration) bool {
+	return !stateValue.value && time.Since(stateValue.lastSetFalse) > duration
 }
 
 func (stateValue *StateValue) requireFalseNotRecently(duration time.Duration) bool {
@@ -320,6 +360,52 @@ func (stateValue *StateValue) requireFalseNotRecently(duration time.Duration) bo
 
 func (stateValue *StateValue) requireFalseRecently(duration time.Duration) bool {
 	return !stateValue.value || time.Since(stateValue.lastSetFalse) < duration
+}
+
+// ContinuouslyTrue reports whether the signal has been true
+// for the entire interval (now−d , now].
+func (s *StateValue) ContinuouslyTrue(d time.Duration) bool {
+	if !s.value || s.lastSetTrue.IsZero() {
+		return false
+	}
+	cut := time.Now().Add(-d)
+	return s.lastSetTrue.Before(cut) // state switched to true strictly before window start
+}
+
+// ContinuouslyFalse is the dual of ContinuouslyTrue.
+func (s *StateValue) ContinuouslyFalse(d time.Duration) bool {
+	if s.value || s.lastSetFalse.IsZero() {
+		return false
+	}
+	cut := time.Now().Add(-d)
+	return s.lastSetFalse.Before(cut)
+}
+
+// AnyTrue reports whether the signal was ever true in (now−d , now].
+func (s *StateValue) AnyTrue(d time.Duration) bool {
+	if s.lastSetTrue.IsZero() {
+		return false
+	}
+	cut := time.Now().Add(-d)
+	return !s.lastSetTrue.Before(cut) // lastSetTrue ≥ cut
+}
+
+// AnyFalse is the dual of AnyTrue.
+func (s *StateValue) AnyFalse(d time.Duration) bool {
+	if s.lastSetFalse.IsZero() {
+		return false
+	}
+	cut := time.Now().Add(-d)
+	return !s.lastSetFalse.Before(cut)
+}
+
+// Negations for convenience.
+func (s *StateValue) NoTrue(d time.Duration) bool {
+	return !s.AnyTrue(d)
+}
+
+func (s *StateValue) NoFalse(d time.Duration) bool {
+	return !s.AnyFalse(d)
 }
 
 func (s *StateValueMap) LogState() {
