@@ -264,25 +264,3 @@ func TestRequireEdgeDurations(t *testing.T) {
 		t.Error(stateErrorString("edge neg recentFalse should be true due to current false", &m, key))
 	}
 }
-
-// NOTE! Not validated ChatGPT
-func TestRequireSymmetry(t *testing.T) {
-	m := NewStateValueMap()
-	key := StateKey("sym")
-	d := 3 * time.Second
-
-	seedFalse(&m, key, d+time.Second)
-	sv, _ := m.getState(key)
-	if m.requireContinuouslyTrue(key, d) || sv.continuouslyTrue(d) {
-		t.Error(stateErrorString("sym contTrue should be false", &m, key))
-	}
-	if !m.requireContinuouslyFalse(key, d) || !sv.continuouslyFalse(d) {
-		t.Error(stateErrorString("sym contFalse should be true", &m, key))
-	}
-	if m.requireRecentlyTrue(key, d) || sv.recentlyTrue(d) {
-		t.Error(stateErrorString("sym recentTrue should be false", &m, key))
-	}
-	if !m.requireRecentlyFalse(key, d) || !sv.recentlyFalse(d) {
-		t.Error(stateErrorString("sym recentFalse should be true", &m, key))
-	}
-}
