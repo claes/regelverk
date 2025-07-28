@@ -3,6 +3,7 @@ package regelverk
 import (
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
@@ -261,5 +262,98 @@ func TestRequireEdgeDurations(t *testing.T) {
 	}
 	if !m.recentlyFalse(key, neg) || !sv.recentlyFalse(neg) {
 		t.Error(stateErrorString("edge neg recentFalse should be true due to current false", &m, key))
+	}
+}
+
+// TestObserverCallbacks ensures observer callbacks receive correct new/update flags.
+func TestObserverCallbacks(t *testing.T) {
+	m := NewStateValueMap()
+	key := StateKey("obs")
+
+	type call struct {
+		key     StateKey
+		value   bool
+		isNew   bool
+		updated bool
+	}
+	var (
+		calls []call
+		mu    sync.Mutex
+	)
+
+	m.registerObserverCallback(func(k StateKey, v, isNew, updated bool) {
+		mu.Lock()
+		calls = append(calls, call{k, v, isNew, updated})
+		mu.Unlock()
+	})
+
+	// 1st set: new=true, updated=false
+	m.setState(key, true)
+	if len(calls) != 1 {
+		t.Fatalf("expected 1 observer call, got %d", len(calls))
+	}
+	c := calls[0]
+	if c.key != key || !c.value || !c.isNew || c.updated {
+		t.Errorf("observer call = %+v, want new=true updated=false", c)
+	}
+
+	// 2nd set same value: new=false, updated=false
+	m.setState(key, true)
+	if len(calls) != 2 {
+		t.Fatalf("expected 2 observer calls, got %d", len(calls))
+	}
+	c = calls[1]
+	if c.isNew || c.updated {
+		t.Errorf("observer call = %+v, want new=false updated=false", c)
+	}
+
+	// 3rd set toggled: new=false, updated=true
+	m.setState(key, false)
+	if len(calls) != 3 {
+		t.Fatalf("expected 3 observer calls, got %d", len(calls))
+	}
+	c = calls[2]
+	if c.isNew || !c.updated {
+		t.Errorf("observer call = %+v, want new=false updated=true", c)
+	}
+}
+
+// TestMutatorCallbacks ensures mutator callbacks trigger dependent updates.
+func TestMutatorCallbacks(t *testing.T) {
+	m := NewStateValueMap()
+	primary := StateKey("prim")
+	dependent := StateKey("dep")
+
+	// Register mutator: whenever primary updates, mirror the primary value into dependent
+	var lastVal bool
+	m.registerMutatorCallback(func(k StateKey) (StateKey, bool) {
+		if k == primary {
+			return dependent, lastVal
+		}
+		return NoKey, false
+	})
+
+	// Set primary true and expect dependent to follow
+	lastVal = true
+	m.setState(primary, true)
+	p, _ := m.getState(primary)
+	d, _ := m.getState(dependent)
+	if !p.value {
+		t.Errorf("primary=%v, want true", p.value)
+	}
+	if !d.value {
+		t.Errorf("dependent=%v, want true", d.value)
+	}
+
+	// Set primary false and expect dependent to follow
+	lastVal = false
+	m.setState(primary, false)
+	p, _ = m.getState(primary)
+	d, _ = m.getState(dependent)
+	if p.value {
+		t.Errorf("primary=%v, want false", p.value)
+	}
+	if d.value {
+		t.Errorf("dependent=%v, want false", d.value)
 	}
 }
