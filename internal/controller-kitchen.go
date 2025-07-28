@@ -29,9 +29,9 @@ func (c *KitchenController) Initialize(masterController *MasterController) []MQT
 	c.masterController = masterController
 
 	var initialState kitchenAmpState
-	if masterController.stateValueMap.requireCurrentlyTrue("kitchenAmpPower") {
+	if masterController.stateValueMap.currentlyTrue("kitchenAmpPower") {
 		initialState = kitchenAmpStateOn
-	} else if masterController.stateValueMap.requireCurrentlyFalse("kitchenAmpPower") {
+	} else if masterController.stateValueMap.currentlyFalse("kitchenAmpPower") {
 		initialState = kitchenAmpStateOff
 	} else {
 		const maxBackoff = 128 * time.Second

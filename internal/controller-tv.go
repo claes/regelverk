@@ -29,9 +29,9 @@ func (c *TVController) Initialize(masterController *MasterController) []MQTTPubl
 	c.masterController = masterController
 
 	var initialState tvState
-	if masterController.stateValueMap.requireCurrentlyTrue("tvPower") {
+	if masterController.stateValueMap.currentlyTrue("tvPower") {
 		initialState = stateTvOn
-	} else if masterController.stateValueMap.requireCurrentlyFalse("tvPower") {
+	} else if masterController.stateValueMap.currentlyFalse("tvPower") {
 		initialState = stateTvOff
 	} else {
 		return nil

@@ -235,7 +235,7 @@ func (s *StateValueMap) getState(key StateKey) (StateValue, bool) {
 	return stateValue, exists
 }
 
-func (s *StateValueMap) requireCurrentlyTrue(key StateKey) bool {
+func (s *StateValueMap) currentlyTrue(key StateKey) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -247,7 +247,7 @@ func (s *StateValueMap) requireCurrentlyTrue(key StateKey) bool {
 	}
 }
 
-func (s *StateValueMap) requireCurrentlyFalse(key StateKey) bool {
+func (s *StateValueMap) currentlyFalse(key StateKey) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -260,7 +260,7 @@ func (s *StateValueMap) requireCurrentlyFalse(key StateKey) bool {
 }
 
 // Require it has consistently been true
-func (s *StateValueMap) requireContinuouslyTrue(key StateKey, duration time.Duration) bool {
+func (s *StateValueMap) continuouslyTrue(key StateKey, duration time.Duration) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -273,7 +273,7 @@ func (s *StateValueMap) requireContinuouslyTrue(key StateKey, duration time.Dura
 }
 
 // Require it has been true at some point during duration
-func (s *StateValueMap) requireRecentlyTrue(key StateKey, duration time.Duration) bool {
+func (s *StateValueMap) recentlyTrue(key StateKey, duration time.Duration) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -286,7 +286,7 @@ func (s *StateValueMap) requireRecentlyTrue(key StateKey, duration time.Duration
 }
 
 // Require it has consistently been false
-func (s *StateValueMap) requireContinuouslyFalse(key StateKey, duration time.Duration) bool {
+func (s *StateValueMap) continuouslyFalse(key StateKey, duration time.Duration) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -298,7 +298,7 @@ func (s *StateValueMap) requireContinuouslyFalse(key StateKey, duration time.Dur
 }
 
 // Require it has been false at some point during duration
-func (s *StateValueMap) requireRecentlyFalse(key StateKey, duration time.Duration) bool {
+func (s *StateValueMap) recentlyFalse(key StateKey, duration time.Duration) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -323,7 +323,6 @@ func (s *StateValue) continuouslyTrue(d time.Duration) bool {
 	if !s.value || s.lastSetTrue.IsZero() {
 		return false
 	}
-
 	cut := nowFunc().Add(-d)
 	return s.lastSetTrue.Before(cut) || s.lastSetTrue.Equal(cut)
 }
@@ -338,10 +337,6 @@ func (s *StateValue) continuouslyFalse(d time.Duration) bool {
 }
 
 func (s *StateValue) recentlyTrue(d time.Duration) bool {
-	// if d < 0 {
-	// 	return false
-	// }
-	// shortcut: if it's true now, then at “some time in (now−d, now]”
 	if s.value {
 		return true
 	}
@@ -359,9 +354,6 @@ func (s *StateValue) recentlyTrue(d time.Duration) bool {
 }
 
 func (s *StateValue) recentlyFalse(d time.Duration) bool {
-	// if d < 0 {
-	// 	return false
-	// }
 	if !s.isDefined {
 		return false
 	}

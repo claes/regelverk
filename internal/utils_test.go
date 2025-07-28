@@ -50,28 +50,28 @@ func TestRequireCurrently(t *testing.T) {
 	key := StateKey("cur")
 
 	// missing key
-	if m.requireCurrentlyTrue(key) {
+	if m.currentlyTrue(key) {
 		t.Error(stateErrorString("missing key: requireCurrentlyTrue should be false", &m, key))
 	}
-	if m.requireCurrentlyFalse(key) {
+	if m.currentlyFalse(key) {
 		t.Error(stateErrorString("missing key: requireCurrentlyFalse should be false", &m, key))
 	}
 
 	// seed true
 	seedTrue(&m, key, 10*time.Second)
-	if !m.requireCurrentlyTrue(key) {
+	if !m.currentlyTrue(key) {
 		t.Error(stateErrorString("true now: requireCurrentlyTrue should be true", &m, key))
 	}
-	if m.requireCurrentlyFalse(key) {
+	if m.currentlyFalse(key) {
 		t.Error(stateErrorString("true now: requireCurrentlyFalse should be false", &m, key))
 	}
 
 	// seed false
 	seedFalse(&m, key, 5*time.Second)
-	if m.requireCurrentlyTrue(key) {
+	if m.currentlyTrue(key) {
 		t.Error(stateErrorString("false now: requireCurrentlyTrue should be false", &m, key))
 	}
-	if !m.requireCurrentlyFalse(key) {
+	if !m.currentlyFalse(key) {
 		t.Error(stateErrorString("false now: requireCurrentlyFalse should be true", &m, key))
 	}
 }
@@ -82,17 +82,17 @@ func TestRequireContinuously(t *testing.T) {
 	d := 5 * time.Second
 
 	// missing key
-	if m.requireContinuouslyTrue(key, d) || m.requireContinuouslyFalse(key, d) {
+	if m.continuouslyTrue(key, d) || m.continuouslyFalse(key, d) {
 		t.Error(stateErrorString("missing key: continuously should be false", &m, key))
 	}
 
 	// true long enough
 	seedTrue(&m, key, d+time.Millisecond)
 	sv, _ := m.getState(key)
-	if !m.requireContinuouslyTrue(key, d) || !sv.continuouslyTrue(d) {
+	if !m.continuouslyTrue(key, d) || !sv.continuouslyTrue(d) {
 		t.Error(stateErrorString("true long enough: continuouslyTrue should be true", &m, key))
 	}
-	if m.requireContinuouslyFalse(key, d) || sv.continuouslyFalse(d) {
+	if m.continuouslyFalse(key, d) || sv.continuouslyFalse(d) {
 		t.Error(stateErrorString("true long enough: continuouslyFalse should be false", &m, key))
 	}
 
@@ -100,10 +100,10 @@ func TestRequireContinuously(t *testing.T) {
 	// call is within less time of the duration window, it should pass
 	seedTrue(&m, key, d-time.Millisecond)
 	sv, _ = m.getState(key)
-	if !m.requireContinuouslyTrue(key, d) || !sv.continuouslyTrue(d) {
+	if !m.continuouslyTrue(key, d) || !sv.continuouslyTrue(d) {
 		t.Error(stateErrorString("true too recent: continuouslyTrue should be true", &m, key))
 	}
-	if m.requireContinuouslyFalse(key, d) || sv.continuouslyFalse(d) {
+	if m.continuouslyFalse(key, d) || sv.continuouslyFalse(d) {
 		t.Error(stateErrorString("true long enough: continuouslyFalse should be false", &m, key))
 	}
 
@@ -112,27 +112,27 @@ func TestRequireContinuously(t *testing.T) {
 	seedFalse(&m, key, d-time.Millisecond)
 	seedTrue(&m, key, d-time.Millisecond)
 	sv, _ = m.getState(key)
-	if m.requireContinuouslyTrue(key, d) || sv.continuouslyTrue(d) {
+	if m.continuouslyTrue(key, d) || sv.continuouslyTrue(d) {
 		t.Error(stateErrorString("true too recent: continuouslyTrue should be false", &m, key))
 	}
 
 	// Now set false. First set false long enough to pass the duration window
 	seedFalse(&m, key, d+time.Millisecond)
 	sv, _ = m.getState(key)
-	if !m.requireContinuouslyFalse(key, d) || !sv.continuouslyFalse(d) {
+	if !m.continuouslyFalse(key, d) || !sv.continuouslyFalse(d) {
 		t.Error(stateErrorString("false long enough: continuouslyFalse should be true", &m, key))
 	}
-	if m.requireContinuouslyTrue(key, d) || sv.continuouslyTrue(d) {
+	if m.continuouslyTrue(key, d) || sv.continuouslyTrue(d) {
 		t.Error(stateErrorString("false long enough: continuouslyTrue should be false", &m, key))
 	}
 
 	// Seed false again, but without state change in between. Should work like above since previous state was false
 	seedFalse(&m, key, d-time.Millisecond)
 	sv, _ = m.getState(key)
-	if !m.requireContinuouslyFalse(key, d) || !sv.continuouslyFalse(d) {
+	if !m.continuouslyFalse(key, d) || !sv.continuouslyFalse(d) {
 		t.Error(stateErrorString("false long enough: continuouslyFalse should be true", &m, key))
 	}
-	if m.requireContinuouslyTrue(key, d) || sv.continuouslyTrue(d) {
+	if m.continuouslyTrue(key, d) || sv.continuouslyTrue(d) {
 		t.Error(stateErrorString("false long enough: continuouslyTrue should be false", &m, key))
 	}
 
@@ -140,22 +140,22 @@ func TestRequireContinuously(t *testing.T) {
 	seedTrue(&m, key, d-time.Millisecond)
 	seedFalse(&m, key, d-time.Millisecond)
 	sv, _ = m.getState(key)
-	if m.requireContinuouslyFalse(key, d) || sv.continuouslyFalse(d) {
+	if m.continuouslyFalse(key, d) || sv.continuouslyFalse(d) {
 		t.Error(stateErrorString("false long enough: continuouslyFalse should be false", &m, key))
 	}
-	if m.requireContinuouslyTrue(key, d) || sv.continuouslyTrue(d) {
+	if m.continuouslyTrue(key, d) || sv.continuouslyTrue(d) {
 		t.Error(stateErrorString("false long enough: continuouslyTrue should be false", &m, key))
 	}
 
 	// boundary strict.
 	seedTrue(&m, key, d)
 	sv, _ = m.getState(key)
-	if !m.requireContinuouslyTrue(key, d) || !sv.continuouslyTrue(d) {
+	if !m.continuouslyTrue(key, d) || !sv.continuouslyTrue(d) {
 		t.Error(stateErrorString("boundary true: continuouslyTrue should be true", &m, key))
 	}
 	seedFalse(&m, key, d)
 	sv, _ = m.getState(key)
-	if !m.requireContinuouslyFalse(key, d) || !sv.continuouslyFalse(d) {
+	if !m.continuouslyFalse(key, d) || !sv.continuouslyFalse(d) {
 		t.Error(stateErrorString("boundary false: continuouslyFalse should be true", &m, key))
 	}
 }
@@ -166,66 +166,65 @@ func TestRequireRecently(t *testing.T) {
 	d := 5 * time.Second
 
 	// missing key
-	if m.requireRecentlyTrue(key, d) || m.requireRecentlyFalse(key, d) {
+	if m.recentlyTrue(key, d) || m.recentlyFalse(key, d) {
 		t.Error(stateErrorString("missing key: recently should be false", &m, key))
 	}
 
 	// Set true way back but since it was never false, it should still pass as recently true
 	seedTrue(&m, key, 10*time.Minute)
 	sv, _ := m.getState(key)
-	if !m.requireRecentlyTrue(key, d) || !sv.recentlyTrue(d) {
+	if !m.recentlyTrue(key, d) || !sv.recentlyTrue(d) {
 		t.Error(stateErrorString("true now: recentlyTrue should be true", &m, key))
 	}
-	if m.requireRecentlyFalse(key, d) || sv.recentlyFalse(d) {
+	if m.recentlyFalse(key, d) || sv.recentlyFalse(d) {
 		t.Error(stateErrorString("true now: recentlyFalse should be false", &m, key))
 	}
 
 	// inside window
 	seedTrue(&m, key, d-time.Second)
 	sv, _ = m.getState(key)
-	if !m.requireRecentlyTrue(key, d) || !sv.recentlyTrue(d) {
+	if !m.recentlyTrue(key, d) || !sv.recentlyTrue(d) {
 		t.Error(stateErrorString("inside window: recentlyTrue should be true", &m, key))
 	}
-	if m.requireRecentlyFalse(key, d) || sv.recentlyFalse(d) {
+	if m.recentlyFalse(key, d) || sv.recentlyFalse(d) {
 		t.Error(stateErrorString("true now: recentlyFalse should be false", &m, key))
 	}
 
 	// Now we set false, but it has been true within window so same test as above should pass
 	seedFalse(&m, key, d-(3*time.Second))
 	sv, _ = m.getState(key)
-	if !m.requireRecentlyTrue(key, d) || !sv.recentlyTrue(d) {
+	if !m.recentlyTrue(key, d) || !sv.recentlyTrue(d) {
 		t.Error(stateErrorString("inside window: recentlyTrue should be true", &m, key))
 	}
 	// Now it is also recently false
-	if !m.requireRecentlyFalse(key, d) || !sv.recentlyFalse(d) {
+	if !m.recentlyFalse(key, d) || !sv.recentlyFalse(d) {
 		t.Error(stateErrorString("true now: recentlyFalse should be false", &m, key))
 	}
 
 	// Now test with a shorter window when the cut from true to false happened before, so it should not pass
-	if m.requireRecentlyTrue(key, time.Second) || sv.recentlyTrue(time.Second) {
+	if m.recentlyTrue(key, time.Second) || sv.recentlyTrue(time.Second) {
 		t.Error(stateErrorString("inside window: recentlyTrue should be false", &m, key))
 	}
 	// However recently false should hold
-	if !m.requireRecentlyFalse(key, d) || !sv.recentlyFalse(d) {
+	if !m.recentlyFalse(key, d) || !sv.recentlyFalse(d) {
 		t.Error(stateErrorString("true now: recentlyFalse should be true", &m, key))
 	}
 
 	// boundary inclusive
 	seedTrue(&m, key, d)
 	sv, _ = m.getState(key)
-	if !m.requireRecentlyTrue(key, d) || !sv.recentlyTrue(d) {
+	if !m.recentlyTrue(key, d) || !sv.recentlyTrue(d) {
 		t.Error(stateErrorString("boundary true: recentlyTrue should be true", &m, key))
 	}
 
 	// outside window (value still true)
 	seedTrue(&m, key, d+time.Millisecond)
 	sv, _ = m.getState(key)
-	if !m.requireRecentlyTrue(key, d) || !sv.recentlyTrue(d) {
+	if !m.recentlyTrue(key, d) || !sv.recentlyTrue(d) {
 		t.Error(stateErrorString("too old: recentlyTrue should be true due to current value", &m, key))
 	}
 }
 
-// NOTE! Not validated ChatGPT
 func TestRequireEdgeDurations(t *testing.T) {
 	m := NewStateValueMap()
 	key := StateKey("edge")
@@ -235,32 +234,32 @@ func TestRequireEdgeDurations(t *testing.T) {
 	// seed true 2s ago
 	seedTrue(&m, key, 2*time.Second)
 	sv, _ := m.getState(key)
-	if !m.requireContinuouslyTrue(key, zero) || !sv.continuouslyTrue(zero) {
+	if !m.continuouslyTrue(key, zero) || !sv.continuouslyTrue(zero) {
 		t.Error(stateErrorString("edge d0 contTrue", &m, key))
 	}
-	if !m.requireRecentlyTrue(key, zero) || !sv.recentlyTrue(zero) {
+	if !m.recentlyTrue(key, zero) || !sv.recentlyTrue(zero) {
 		t.Error(stateErrorString("edge d0 recentTrue", &m, key))
 	}
-	if !m.requireContinuouslyTrue(key, neg) || !sv.continuouslyTrue(neg) {
+	if !m.continuouslyTrue(key, neg) || !sv.continuouslyTrue(neg) {
 		t.Error(stateErrorString("edge neg contTrue", &m, key))
 	}
-	if !m.requireRecentlyTrue(key, neg) || !sv.recentlyTrue(neg) {
+	if !m.recentlyTrue(key, neg) || !sv.recentlyTrue(neg) {
 		t.Error(stateErrorString("edge neg recentTrue should be true due to current value", &m, key))
 	}
 
 	// seed false 2s ago
 	seedFalse(&m, key, 2*time.Second)
 	sv, _ = m.getState(key)
-	if !m.requireContinuouslyFalse(key, zero) || !sv.continuouslyFalse(zero) {
+	if !m.continuouslyFalse(key, zero) || !sv.continuouslyFalse(zero) {
 		t.Error(stateErrorString("edge d0 contFalse", &m, key))
 	}
-	if !m.requireRecentlyFalse(key, zero) || !sv.recentlyFalse(zero) {
+	if !m.recentlyFalse(key, zero) || !sv.recentlyFalse(zero) {
 		t.Error(stateErrorString("edge d0 recentFalse", &m, key))
 	}
-	if !m.requireContinuouslyFalse(key, neg) || !sv.continuouslyFalse(neg) {
+	if !m.continuouslyFalse(key, neg) || !sv.continuouslyFalse(neg) {
 		t.Error(stateErrorString("edge neg contFalse", &m, key))
 	}
-	if !m.requireRecentlyFalse(key, neg) || !sv.recentlyFalse(neg) {
+	if !m.recentlyFalse(key, neg) || !sv.recentlyFalse(neg) {
 		t.Error(stateErrorString("edge neg recentFalse should be true due to current false", &m, key))
 	}
 }

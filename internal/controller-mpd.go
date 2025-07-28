@@ -28,9 +28,9 @@ func (c *MPDController) Initialize(masterController *MasterController) []MQTTPub
 	c.masterController = masterController
 
 	var initialState mpdState
-	if masterController.stateValueMap.requireCurrentlyTrue("mpdPlay") {
+	if masterController.stateValueMap.currentlyTrue("mpdPlay") {
 		initialState = mpdStateOn
-	} else if masterController.stateValueMap.requireCurrentlyFalse("mpdPlay") {
+	} else if masterController.stateValueMap.currentlyFalse("mpdPlay") {
 		initialState = mpdStateOff
 	} else {
 		return nil

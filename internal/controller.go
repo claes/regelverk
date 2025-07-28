@@ -128,91 +128,91 @@ func (masterController *MasterController) checkPushMetrics() {
 // Guards
 
 func (l *MasterController) guardStateMPDOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireCurrentlyTrue("mpdPlay")
+	check := l.stateValueMap.currentlyTrue("mpdPlay")
 	return check
 }
 
 func (l *MasterController) guardStateMPDOff(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireCurrentlyFalse("mpdPlay")
+	check := l.stateValueMap.currentlyFalse("mpdPlay")
 	return check
 }
 
 func (l *MasterController) guardStateSnapcastOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireCurrentlyTrue("snapcast")
+	check := l.stateValueMap.currentlyTrue("snapcast")
 	return check
 }
 
 func (l *MasterController) guardStateSnapcastOff(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireCurrentlyFalse("snapcast")
+	check := l.stateValueMap.currentlyFalse("snapcast")
 	return check
 }
 
 func (l *MasterController) guardTurnOnLivingroomLamp(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireCurrentlyTrue("phonePresent") &&
-		l.stateValueMap.requireCurrentlyTrue("nighttime") &&
-		l.stateValueMap.requireRecentlyTrue("livingroomPresence", 10*time.Minute)
+	check := l.stateValueMap.currentlyTrue("phonePresent") &&
+		l.stateValueMap.currentlyTrue("nighttime") &&
+		l.stateValueMap.recentlyTrue("livingroomPresence", 10*time.Minute)
 	return check
 }
 
 func (l *MasterController) guardTurnOffLivingroomLamp(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireCurrentlyFalse("phonePresent") ||
-		l.stateValueMap.requireCurrentlyFalse("nighttime") ||
-		!l.stateValueMap.requireRecentlyTrue("livingroomPresence", 10*time.Minute)
+	check := l.stateValueMap.currentlyFalse("phonePresent") ||
+		l.stateValueMap.currentlyFalse("nighttime") ||
+		!l.stateValueMap.recentlyTrue("livingroomPresence", 10*time.Minute)
 	return check
 }
 
 func (l *MasterController) guardStateTvOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireCurrentlyTrue("tvPower")
+	check := l.stateValueMap.currentlyTrue("tvPower")
 	return check
 }
 
 func (l *MasterController) guardStateTvOff(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireCurrentlyFalse("tvPower")
+	check := l.stateValueMap.currentlyFalse("tvPower")
 	return check
 }
 
 func (l *MasterController) guardStateTvOffLong(_ context.Context, _ ...any) bool {
-	check := !l.stateValueMap.requireRecentlyTrue("tvPower", 30*time.Minute)
+	check := !l.stateValueMap.recentlyTrue("tvPower", 30*time.Minute)
 	return check
 }
 
 func (l *MasterController) guardStateKitchenAmpOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireCurrentlyTrue("kitchenAudioPlaying")
+	check := l.stateValueMap.currentlyTrue("kitchenAudioPlaying")
 	return check
 }
 
 func (l *MasterController) guardStateKitchenAmpOff(_ context.Context, _ ...any) bool {
-	check := !l.stateValueMap.requireRecentlyTrue("kitchenAudioPlaying", 10*time.Minute)
+	check := !l.stateValueMap.recentlyTrue("kitchenAudioPlaying", 10*time.Minute)
 	return check
 }
 
 func (l *MasterController) guardStateBedroomBlindsOpen(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireCurrentlyFalse("nighttime")
+	check := l.stateValueMap.currentlyFalse("nighttime")
 	return check
 }
 
 func (l *MasterController) guardStateBedroomBlindsClosed(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireCurrentlyTrue("nighttime")
+	check := l.stateValueMap.currentlyTrue("nighttime")
 	return check
 }
 
 func (l *MasterController) requireTrueByKey(key StateKey) func(context.Context, ...any) bool {
 	return func(_ context.Context, _ ...any) bool {
-		check := l.stateValueMap.requireCurrentlyTrue(key)
+		check := l.stateValueMap.currentlyTrue(key)
 		return check
 	}
 }
 
 func (l *MasterController) requireTrueSinceByKey(key StateKey, duration time.Duration) func(context.Context, ...any) bool {
 	return func(_ context.Context, _ ...any) bool {
-		check := l.stateValueMap.requireContinuouslyTrue(key, duration)
+		check := l.stateValueMap.continuouslyTrue(key, duration)
 		return check
 	}
 }
 
 func (l *MasterController) requireFalseByKey(key StateKey) func(context.Context, ...any) bool {
 	return func(_ context.Context, _ ...any) bool {
-		check := l.stateValueMap.requireCurrentlyFalse(key)
+		check := l.stateValueMap.currentlyFalse(key)
 		return check
 	}
 }
