@@ -82,32 +82,45 @@ func applyTimeDecay(p float64, age time.Duration, halfLife time.Duration) float6
 	return 1 - (1-p)*decay
 }
 
-func expWeight(p, w float64) float64 {
+func clipProb(p float64) float64 {
 	const eps = 1e-12
 	if p < eps {
-		p = eps
-	} // avoid 0^w
+		return eps
+	}
 	if p > 1-eps {
-		p = 1 - eps
-	} // avoid 1‑prob issues
-	return math.Pow(p, w)
+		return 1 - eps
+	}
+	return p
 }
 
 // Performs one Bayesian update in log-odds space, applying a weight to control the influence of this observation.
 func applyBayes(prior float64, likelihood LikelihoodModel, matched bool, age time.Duration) float64 {
 
-	// Apply decay to both likelihoods
+	// Time‑decay the conditional probabilities.
 	pTrue := applyTimeDecay(likelihood.ProbGivenTrue, age, likelihood.HalfLife)
 	pFalse := applyTimeDecay(likelihood.ProbGivenFalse, age, likelihood.HalfLife)
 
-	wTrue := expWeight(pTrue, likelihood.Weight)
-	wFalse := expWeight(pFalse, likelihood.Weight)
-
-	predicate := wTrue / (wTrue*prior + wFalse*(1-prior))
-
 	var posterior float64
+	// Perform calculation in log-odds space to apply weighting
+	// log likelihood ratio (LR) and weighting:
+	LR := clipProb(pTrue) / clipProb(pFalse)          // LR
+	logLRWeighted := likelihood.Weight * math.Log(LR) // (log LR) * w
+
+	// Prior in log‑odds
+	logOddsPrior := math.Log(prior) - math.Log(1-prior)
+
+	// Posterior in log‑odds + conversion back to probability.
+	// For numerical stability, clamp logOddsPost to interval where Exp will not overflow
+	logOddsPost := logOddsPrior + logLRWeighted
 	if matched {
-		posterior = predicate * prior
+		const expClamp = 700.0
+		if logOddsPost > expClamp {
+			logOddsPost = expClamp
+		}
+		if logOddsPost < -expClamp {
+			logOddsPost = -expClamp
+		}
+		posterior = 1.0 / (1.0 + math.Exp(-logOddsPost))
 	} else {
 		posterior = prior
 	}
@@ -120,7 +133,6 @@ func applyBayes(prior float64, likelihood LikelihoodModel, matched bool, age tim
 		"pFalse", pFalse,
 		"age_minutes", age.Minutes(),
 		"weight", likelihood.Weight,
-		"predicate", predicate,
 		"posterior", posterior)
 
 	return posterior
