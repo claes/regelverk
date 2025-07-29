@@ -243,7 +243,7 @@ func (s *StateValueMap) currentlyTrue(key StateKey) bool {
 	if !exists {
 		return false
 	} else {
-		return stateValue.requireCurrentlyTrue()
+		return stateValue.currentlyTrue()
 	}
 }
 
@@ -255,7 +255,7 @@ func (s *StateValueMap) currentlyFalse(key StateKey) bool {
 	if !exists {
 		return false
 	} else {
-		return stateValue.requireCurrentlyFalse()
+		return stateValue.currentlyFalse()
 	}
 }
 
@@ -309,11 +309,11 @@ func (s *StateValueMap) recentlyFalse(key StateKey, duration time.Duration) bool
 	return stateValue.recentlyFalse(duration)
 }
 
-func (stateValue *StateValue) requireCurrentlyTrue() bool {
+func (stateValue *StateValue) currentlyTrue() bool {
 	return stateValue.value
 }
 
-func (stateValue *StateValue) requireCurrentlyFalse() bool {
+func (stateValue *StateValue) currentlyFalse() bool {
 	return !stateValue.value
 }
 

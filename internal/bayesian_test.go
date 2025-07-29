@@ -1,7 +1,9 @@
 package regelverk
 
 import (
+	"log/slog"
 	"math"
+	"os"
 	"testing"
 	"time"
 )
@@ -66,6 +68,100 @@ func TestApplyBayesianInferenceWithDuration(t *testing.T) {
 	bayesianModel := BayesianModel{
 		Prior:       0.5,
 		Threshold:   0.7,
+		Likelihoods: likelihoods,
+	}
+	posterior, decision := inferPosterior(bayesianModel, &observations)
+
+	if !decision {
+		t.Errorf("Expected decision to be true with posterior %.4f", posterior)
+	}
+
+	if posterior <= bayesianModel.Prior {
+		t.Errorf("Posterior %.4f should be greater than prior %.4f", posterior, bayesianModel.Prior)
+	}
+}
+
+func TestApplyBayesianInferenceWithDuration2(t *testing.T) {
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+	slog.SetDefault(logger)
+
+	// Test case from https://docs.google.com/spreadsheets/d/16u9RVKRUVjTraX7J26rvuaLKQGxwUN-0pbal97TRY5w/edit?gid=0#gid=0
+
+	likelihoods := map[StateKey][]LikelihoodModel{
+		"tv": {
+			{
+				ProbGivenTrue:  4.0 / 14,
+				ProbGivenFalse: 0.1 / 10,
+				HalfLife:       0,
+				Weight:         1.0,
+				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
+					return value.currentlyTrue(), 0
+				},
+			},
+			{
+				ProbGivenTrue:  10.0 / 14,
+				ProbGivenFalse: 9.9 / 10,
+				HalfLife:       0,
+				Weight:         1.0,
+				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
+					return value.currentlyFalse(), 0
+				},
+			},
+		},
+		"lights": {
+			{
+				ProbGivenTrue:  3.0 / 14,
+				ProbGivenFalse: 0.1 / 10,
+				HalfLife:       0,
+				Weight:         1.0,
+				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
+					return value.currentlyTrue(), 0
+				},
+			},
+			{
+				ProbGivenTrue:  10.0 / 14,
+				ProbGivenFalse: 9.9 / 10,
+				HalfLife:       0,
+				Weight:         1.0,
+				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
+					return value.currentlyFalse(), 0
+				},
+			},
+		},
+		"carHome": {
+			{
+				ProbGivenTrue:  10.0 / 14,
+				ProbGivenFalse: 4.0 / 10,
+				HalfLife:       0,
+				Weight:         1.0,
+				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
+					return value.currentlyTrue(), 0
+				},
+			},
+			{
+				ProbGivenTrue:  6.0 / 14,
+				ProbGivenFalse: 6.0 / 10,
+				HalfLife:       0,
+				Weight:         1.0,
+				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
+					return value.currentlyFalse(), 0
+				},
+			},
+		},
+	}
+
+	observations := NewStateValueMap()
+
+	observations.setState(StateKey("tv"), false)
+	observations.setState(StateKey("lights"), true)
+	observations.setState(StateKey("carHome"), true)
+
+	bayesianModel := BayesianModel{
+		Prior:       14.0 / 24,
+		Threshold:   0.8,
 		Likelihoods: likelihoods,
 	}
 	posterior, decision := inferPosterior(bayesianModel, &observations)
