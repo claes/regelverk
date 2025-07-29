@@ -43,6 +43,14 @@ type LikelihoodModel struct {
 	StateValueEvaluator func(StateValue) (bool, time.Duration)
 }
 
+var currentlyTrue = func(value StateValue) (bool, time.Duration) {
+	return value.currentlyTrue(), 0
+}
+
+var currentlyFalse = func(value StateValue) (bool, time.Duration) {
+	return value.currentlyFalse(), 0
+}
+
 type Observation struct {
 	Name      string
 	Matched   bool      // Whether the evidence was observed (true) or absent (false)
@@ -74,31 +82,48 @@ func applyTimeDecay(p float64, age time.Duration, halfLife time.Duration) float6
 	return 1 - (1-p)*decay
 }
 
+func expWeight(p, w float64) float64 {
+	const eps = 1e-12
+	if p < eps {
+		p = eps
+	} // avoid 0^w
+	if p > 1-eps {
+		p = 1 - eps
+	} // avoid 1‑prob issues
+	return math.Pow(p, w)
+}
+
 // Performs one Bayesian update in log-odds space, applying a weight to control the influence of this observation.
-func applyWeightedBayes(prior float64, likelihood LikelihoodModel, matched bool, age time.Duration) float64 {
-	// Invert probabilities if the observation was NOT matched (absence of event)
-	pTrue := likelihood.ProbGivenTrue
-	pFalse := likelihood.ProbGivenFalse
-	if !matched {
-		pTrue = 1 - pTrue
-		pFalse = 1 - pFalse
-	}
+func applyBayes(prior float64, likelihood LikelihoodModel, matched bool, age time.Duration) float64 {
 
 	// Apply decay to both likelihoods
-	pTrue = applyTimeDecay(pTrue, age, likelihood.HalfLife)
-	pFalse = applyTimeDecay(pFalse, age, likelihood.HalfLife)
+	pTrue := applyTimeDecay(likelihood.ProbGivenTrue, age, likelihood.HalfLife)
+	pFalse := applyTimeDecay(likelihood.ProbGivenFalse, age, likelihood.HalfLife)
 
-	// Convert prior belief to log-odds
-	priorLogOdds := logOdds(prior)
+	wTrue := expWeight(pTrue, likelihood.Weight)
+	wFalse := expWeight(pFalse, likelihood.Weight)
 
-	// Likelihood ratio in log form
-	likelihoodLog := math.Log(pTrue / pFalse)
+	predicate := wTrue / (wTrue*prior + wFalse*(1-prior))
 
-	// Apply weight to control this observation's influence
-	weightedLogOdds := priorLogOdds + likelihood.Weight*likelihoodLog
+	var posterior float64
+	if matched {
+		posterior = predicate * prior
+	} else {
+		posterior = prior
+	}
 
-	// Convert back to a probability (posterior)
-	return sigmoid(weightedLogOdds)
+	slog.Debug("Posterior calculation",
+		"matched", matched, "prior", prior,
+		"probGivenTrue", likelihood.ProbGivenTrue,
+		"probGivenFalse", likelihood.ProbGivenFalse,
+		"pTrue", pTrue,
+		"pFalse", pFalse,
+		"age_minutes", age.Minutes(),
+		"weight", likelihood.Weight,
+		"predicate", predicate,
+		"posterior", posterior)
+
+	return posterior
 }
 
 func inferPosterior(bayesianModel BayesianModel, stateValueMap *StateValueMap) (float64, bool) {
@@ -120,19 +145,8 @@ func inferPosterior(bayesianModel BayesianModel, stateValueMap *StateValueMap) (
 					age = now.Sub(state.lastUpdate)
 				}
 
-				updated := applyWeightedBayes(p, likelihood, value, age)
-
-				slog.Debug("Observation update",
-					"observation", key,
-					"value", value,
-					"age_minutes", age.Minutes(),
-					"weight", likelihood.Weight,
-					"decayed_P(E|H)", likelihood.ProbGivenTrue,
-					"decayed_P(E|~H)", likelihood.ProbGivenFalse,
-					"posterior_before", p,
-					"posterior_after", updated,
-				)
-				p = updated
+				updatedPosterior := applyBayes(p, likelihood, value, age)
+				p = updatedPosterior
 			}
 		} else {
 			slog.Debug("Observation update, state not found",

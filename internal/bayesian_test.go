@@ -35,7 +35,7 @@ func TestApplyWeightedBayes(t *testing.T) {
 	}
 	age := 0 * time.Minute
 
-	posterior := applyWeightedBayes(prior, likelihood, true, age)
+	posterior := applyBayes(prior, likelihood, true, age)
 	expected := 0.9 // Should be close given likelihood ratio is strong
 
 	if !floatEquals(posterior, expected, 0.0001) {
@@ -93,62 +93,50 @@ func TestApplyBayesianInferenceWithDuration2(t *testing.T) {
 	likelihoods := map[StateKey][]LikelihoodModel{
 		"tv": {
 			{
-				ProbGivenTrue:  4.0 / 14,
-				ProbGivenFalse: 0.1 / 10,
-				HalfLife:       0,
-				Weight:         1.0,
-				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
-					return value.currentlyTrue(), 0
-				},
+				ProbGivenTrue:       4.0 / 14,
+				ProbGivenFalse:      0.1 / 10,
+				HalfLife:            0,
+				Weight:              1.0,
+				StateValueEvaluator: currentlyTrue,
 			},
 			{
-				ProbGivenTrue:  10.0 / 14,
-				ProbGivenFalse: 9.9 / 10,
-				HalfLife:       0,
-				Weight:         1.0,
-				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
-					return value.currentlyFalse(), 0
-				},
+				ProbGivenTrue:       10.0 / 14,
+				ProbGivenFalse:      9.9 / 10,
+				HalfLife:            0,
+				Weight:              1.0,
+				StateValueEvaluator: currentlyFalse,
 			},
 		},
 		"lights": {
 			{
-				ProbGivenTrue:  3.0 / 14,
-				ProbGivenFalse: 0.1 / 10,
-				HalfLife:       0,
-				Weight:         1.0,
-				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
-					return value.currentlyTrue(), 0
-				},
+				ProbGivenTrue:       3.0 / 14,
+				ProbGivenFalse:      0.1 / 10,
+				HalfLife:            0,
+				Weight:              1.0,
+				StateValueEvaluator: currentlyTrue,
 			},
 			{
-				ProbGivenTrue:  10.0 / 14,
-				ProbGivenFalse: 9.9 / 10,
-				HalfLife:       0,
-				Weight:         1.0,
-				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
-					return value.currentlyFalse(), 0
-				},
+				ProbGivenTrue:       10.0 / 14,
+				ProbGivenFalse:      9.9 / 10,
+				HalfLife:            0,
+				Weight:              1.0,
+				StateValueEvaluator: currentlyFalse,
 			},
 		},
 		"carHome": {
 			{
-				ProbGivenTrue:  10.0 / 14,
-				ProbGivenFalse: 4.0 / 10,
-				HalfLife:       0,
-				Weight:         1.0,
-				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
-					return value.currentlyTrue(), 0
-				},
+				ProbGivenTrue:       10.0 / 14,
+				ProbGivenFalse:      4.0 / 10,
+				HalfLife:            0,
+				Weight:              1.0,
+				StateValueEvaluator: currentlyTrue,
 			},
 			{
-				ProbGivenTrue:  6.0 / 14,
-				ProbGivenFalse: 6.0 / 10,
-				HalfLife:       0,
-				Weight:         1.0,
-				StateValueEvaluator: func(value StateValue) (bool, time.Duration) {
-					return value.currentlyFalse(), 0
-				},
+				ProbGivenTrue:       6.0 / 14,
+				ProbGivenFalse:      6.0 / 10,
+				HalfLife:            0,
+				Weight:              1.0,
+				StateValueEvaluator: currentlyFalse,
 			},
 		},
 	}
@@ -170,7 +158,9 @@ func TestApplyBayesianInferenceWithDuration2(t *testing.T) {
 		t.Errorf("Expected decision to be true with posterior %.4f", posterior)
 	}
 
-	if posterior <= bayesianModel.Prior {
-		t.Errorf("Posterior %.4f should be greater than prior %.4f", posterior, bayesianModel.Prior)
+	// check if posterior is between 0.974 and 0.975
+	if posterior < 0.974 || posterior > 0.975 {
+		t.Errorf("Posterior %.4f should be between 0.974 and 0.975", posterior)
 	}
+
 }
