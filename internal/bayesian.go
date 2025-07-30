@@ -39,7 +39,7 @@ type LikelihoodModel struct {
 
 	// Compute the value to use for the given StateValue
 	// Returns the value and the age of the value.
-	// The age will be used to apply decay. If <= 0 then no decay is applied.
+	// The age will be used to apply decay, in case the model specifies a half-life
 	StateValueEvaluator func(StateValue) (bool, time.Duration)
 }
 
@@ -65,11 +65,12 @@ func (likelihoodModel LikelihoodModel) plusComplement() []LikelihoodModel {
 }
 
 var currentlyTrue = func(value StateValue) (bool, time.Duration) {
-	return value.currentlyTrue(), 0
+	return value.currentlyTrue(), nowFunc().Sub(value.lastUpdate)
+
 }
 
 var currentlyFalse = func(value StateValue) (bool, time.Duration) {
-	return value.currentlyFalse(), 0
+	return value.currentlyFalse(), nowFunc().Sub(value.lastUpdate)
 }
 
 type Observation struct {
@@ -162,8 +163,7 @@ func inferPosterior(bayesianModel BayesianModel, stateValueMap *StateValueMap) (
 				if likelihood.StateValueEvaluator != nil {
 					value, age = likelihood.StateValueEvaluator(state)
 				} else {
-					value = state.value
-					age = now.Sub(state.lastUpdate)
+					value, age = currentlyTrue(state)
 				}
 
 				updatedPosterior := applyBayes(p, likelihood, value, age)
