@@ -88,23 +88,23 @@ func TestApplyBayesianInferenceWithDuration2(t *testing.T) {
 	}))
 	slog.SetDefault(logger)
 
-	// Test case from https://docs.google.com/spreadsheets/d/16u9RVKRUVjTraX7J26rvuaLKQGxwUN-0pbal97TRY5w/edit?gid=0#gid=0
-
-	likelihoods := map[StateKey][]LikelihoodModel{
+	// Test case from  https://docs.google.com/spreadsheets/d/16u9RVKRUVjTraX7J26rvuaLKQGxwUN-0pbal97TRY5w/edit?gid=0#gid=0
+	// Originally from https://docs.google.com/spreadsheets/d/1sV5WHM0GTG9oXGuO7QMOOHZDVdWVY0D9bTVLUmSM4co/edit?gid=0#gid=0
+	houseOccupiedLikelihoods := map[StateKey][]LikelihoodModel{
 		"tv": {
 			{
-				ProbGivenTrue:       4.0 / 14,
-				ProbGivenFalse:      0.1 / 10,
+				ProbGivenTrue:       4.0 / 14, //Probability of measuring TV on when house occupied
+				ProbGivenFalse:      0.1 / 10, //Probability of measuring TV on when house not occupied
 				HalfLife:            0,
 				Weight:              1.0,
-				StateValueEvaluator: currentlyTrue,
+				StateValueEvaluator: currentlyTrue, // TV on
 			},
 			{
-				ProbGivenTrue:       10.0 / 14,
-				ProbGivenFalse:      9.9 / 10,
+				ProbGivenTrue:       10.0 / 14, // Probability of measuring TV off when house occupied
+				ProbGivenFalse:      9.9 / 10,  // Probability of measuring TV off when house not occupied
 				HalfLife:            0,
 				Weight:              1.0,
-				StateValueEvaluator: currentlyFalse,
+				StateValueEvaluator: currentlyFalse, // TV off
 			},
 		},
 		"lights": {
@@ -150,7 +150,7 @@ func TestApplyBayesianInferenceWithDuration2(t *testing.T) {
 	bayesianModel := BayesianModel{
 		Prior:       14.0 / 24,
 		Threshold:   0.8,
-		Likelihoods: likelihoods,
+		Likelihoods: houseOccupiedLikelihoods,
 	}
 	posterior, decision := inferPosterior(bayesianModel, &observations)
 
@@ -161,6 +161,77 @@ func TestApplyBayesianInferenceWithDuration2(t *testing.T) {
 	// check if posterior is between 0.974 and 0.975
 	if posterior < 0.974 || posterior > 0.975 {
 		t.Errorf("Posterior %.4f should be between 0.974 and 0.975", posterior)
+	}
+}
+
+func TestApplyBayesianInferenceWithDuration3(t *testing.T) {
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+	slog.SetDefault(logger)
+
+	// Test case from  https://docs.google.com/spreadsheets/d/1pcsifVnXngaSsyH4zPPVYuF-13gTvgSMZGnCqFI1auE/edit?gid=982845486#gid=982845486
+	// Originally from https://docs.google.com/spreadsheets/d/17aDaO8Na2FiLXdlBmpJA1AGsGEGnGaZG24eJTSz1gko/edit?gid=982845486#gid=982845486
+	inBedLikelihoods := map[StateKey][]LikelihoodModel{
+		"livingroom_motion": plusComplement(LikelihoodModel{
+			ProbGivenTrue:       0.3 / 6,
+			ProbGivenFalse:      3.6 / (24 - 6),
+			HalfLife:            0,
+			Weight:              1.0,
+			StateValueEvaluator: currentlyTrue,
+		}),
+		"basement_motion": plusComplement(LikelihoodModel{
+			ProbGivenTrue:       3.0 / 6,
+			ProbGivenFalse:      5.4 / (24 - 6),
+			HalfLife:            0,
+			Weight:              1.0,
+			StateValueEvaluator: currentlyTrue,
+		}),
+		"bedroom_motion": plusComplement(LikelihoodModel{
+			ProbGivenTrue:       3.0 / 6,
+			ProbGivenFalse:      1.8 / (24 - 6),
+			HalfLife:            0,
+			Weight:              1.0,
+			StateValueEvaluator: currentlyTrue,
+		}),
+		"sun": plusComplement(LikelihoodModel{
+			ProbGivenTrue:       4.2 / 6,
+			ProbGivenFalse:      8.1 / (24 - 6),
+			HalfLife:            0,
+			Weight:              1.0,
+			StateValueEvaluator: currentlyTrue,
+		}),
+		"android": plusComplement(LikelihoodModel{
+			ProbGivenTrue:       5.7 / 6,
+			ProbGivenFalse:      1.8 / (24 - 6),
+			HalfLife:            0,
+			Weight:              1.0,
+			StateValueEvaluator: currentlyTrue,
+		}),
+	}
+
+	observations := NewStateValueMap()
+
+	observations.setState(StateKey("livingroom_motion"), false)
+	observations.setState(StateKey("basement_motion"), false)
+	observations.setState(StateKey("bedroom_motion"), false)
+	observations.setState(StateKey("sun"), true)
+	observations.setState(StateKey("android"), true)
+
+	bayesianModel := BayesianModel{
+		Prior:       6.0 / 24,
+		Threshold:   0.5,
+		Likelihoods: inBedLikelihoods,
+	}
+	posterior, decision := inferPosterior(bayesianModel, &observations)
+
+	if !decision {
+		t.Errorf("Expected decision to be true with posterior %.4f", posterior)
+	}
+
+	if posterior < 0.69 || posterior > 0.70 {
+		t.Errorf("Posterior %.4f should be between 0.69 and 0.70", posterior)
 	}
 
 }

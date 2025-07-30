@@ -57,16 +57,18 @@ type Observation struct {
 	Timestamp time.Time // When the observation occurred
 }
 
-// Converts a probability to log-odds (logit):
-// logit(p) = ln(p / (1 - p))
-func logOdds(p float64) float64 {
-	return math.Log(p / (1 - p))
-}
-
-// Converts log-odds back to a probability using the sigmoid function:
-// sigmoid(x) = 1 / (1 + e^(-x))
-func sigmoid(logit float64) float64 {
-	return 1 / (1 + math.Exp(-logit))
+func plusComplement(likelihoodModel LikelihoodModel) []LikelihoodModel {
+	complement := LikelihoodModel{
+		ProbGivenTrue:  (1 - likelihoodModel.ProbGivenTrue),
+		ProbGivenFalse: (1 - likelihoodModel.ProbGivenFalse),
+		HalfLife:       likelihoodModel.HalfLife,
+		Weight:         likelihoodModel.Weight,
+		StateValueEvaluator: func(sv StateValue) (bool, time.Duration) {
+			b, duration := likelihoodModel.StateValueEvaluator(sv)
+			return !b, duration
+		},
+	}
+	return []LikelihoodModel{likelihoodModel, complement}
 }
 
 // Applies exponential decay to a probability based on how old the observation is.
