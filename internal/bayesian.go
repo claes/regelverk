@@ -43,6 +43,20 @@ type LikelihoodModel struct {
 	StateValueEvaluator func(StateValue) (bool, time.Duration)
 }
 
+func (likelihoodModel LikelihoodModel) plusComplement() []LikelihoodModel {
+	complement := LikelihoodModel{
+		ProbGivenTrue:  (1 - likelihoodModel.ProbGivenTrue),
+		ProbGivenFalse: (1 - likelihoodModel.ProbGivenFalse),
+		HalfLife:       likelihoodModel.HalfLife,
+		Weight:         likelihoodModel.Weight,
+		StateValueEvaluator: func(sv StateValue) (bool, time.Duration) {
+			b, duration := likelihoodModel.StateValueEvaluator(sv)
+			return !b, duration
+		},
+	}
+	return []LikelihoodModel{likelihoodModel, complement}
+}
+
 var currentlyTrue = func(value StateValue) (bool, time.Duration) {
 	return value.currentlyTrue(), 0
 }
@@ -55,20 +69,6 @@ type Observation struct {
 	Name      string
 	Matched   bool      // Whether the evidence was observed (true) or absent (false)
 	Timestamp time.Time // When the observation occurred
-}
-
-func plusComplement(likelihoodModel LikelihoodModel) []LikelihoodModel {
-	complement := LikelihoodModel{
-		ProbGivenTrue:  (1 - likelihoodModel.ProbGivenTrue),
-		ProbGivenFalse: (1 - likelihoodModel.ProbGivenFalse),
-		HalfLife:       likelihoodModel.HalfLife,
-		Weight:         likelihoodModel.Weight,
-		StateValueEvaluator: func(sv StateValue) (bool, time.Duration) {
-			b, duration := likelihoodModel.StateValueEvaluator(sv)
-			return !b, duration
-		},
-	}
-	return []LikelihoodModel{likelihoodModel, complement}
 }
 
 // Applies exponential decay to a probability based on how old the observation is.

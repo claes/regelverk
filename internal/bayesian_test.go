@@ -1,9 +1,7 @@
 package regelverk
 
 import (
-	"log/slog"
 	"math"
-	"os"
 	"testing"
 	"time"
 )
@@ -83,10 +81,10 @@ func TestApplyBayesianInferenceWithDuration(t *testing.T) {
 
 func TestApplyBayesianInferenceWithDuration2(t *testing.T) {
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-	slog.SetDefault(logger)
+	// logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	// 	Level: slog.LevelDebug,
+	// }))
+	// slog.SetDefault(logger)
 
 	// Test case from  https://docs.google.com/spreadsheets/d/16u9RVKRUVjTraX7J26rvuaLKQGxwUN-0pbal97TRY5w/edit?gid=0#gid=0
 	// Originally from https://docs.google.com/spreadsheets/d/1sV5WHM0GTG9oXGuO7QMOOHZDVdWVY0D9bTVLUmSM4co/edit?gid=0#gid=0
@@ -166,49 +164,49 @@ func TestApplyBayesianInferenceWithDuration2(t *testing.T) {
 
 func TestApplyBayesianInferenceWithDuration3(t *testing.T) {
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-	slog.SetDefault(logger)
+	// logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	// 	Level: slog.LevelDebug,
+	// }))
+	// slog.SetDefault(logger)
 
 	// Test case from  https://docs.google.com/spreadsheets/d/1pcsifVnXngaSsyH4zPPVYuF-13gTvgSMZGnCqFI1auE/edit?gid=982845486#gid=982845486
 	// Originally from https://docs.google.com/spreadsheets/d/17aDaO8Na2FiLXdlBmpJA1AGsGEGnGaZG24eJTSz1gko/edit?gid=982845486#gid=982845486
 	inBedLikelihoods := map[StateKey][]LikelihoodModel{
-		"livingroom_motion": plusComplement(LikelihoodModel{
+		"livingroom_motion": LikelihoodModel{
 			ProbGivenTrue:       0.3 / 6,
 			ProbGivenFalse:      3.6 / (24 - 6),
 			HalfLife:            0,
 			Weight:              1.0,
 			StateValueEvaluator: currentlyTrue,
-		}),
-		"basement_motion": plusComplement(LikelihoodModel{
+		}.plusComplement(),
+		"basement_motion": LikelihoodModel{
 			ProbGivenTrue:       3.0 / 6,
 			ProbGivenFalse:      5.4 / (24 - 6),
 			HalfLife:            0,
 			Weight:              1.0,
 			StateValueEvaluator: currentlyTrue,
-		}),
-		"bedroom_motion": plusComplement(LikelihoodModel{
+		}.plusComplement(),
+		"bedroom_motion": LikelihoodModel{
 			ProbGivenTrue:       3.0 / 6,
 			ProbGivenFalse:      1.8 / (24 - 6),
 			HalfLife:            0,
 			Weight:              1.0,
 			StateValueEvaluator: currentlyTrue,
-		}),
-		"sun": plusComplement(LikelihoodModel{
+		}.plusComplement(),
+		"sun": LikelihoodModel{
 			ProbGivenTrue:       4.2 / 6,
 			ProbGivenFalse:      8.1 / (24 - 6),
 			HalfLife:            0,
 			Weight:              1.0,
 			StateValueEvaluator: currentlyTrue,
-		}),
-		"android": plusComplement(LikelihoodModel{
+		}.plusComplement(),
+		"android": LikelihoodModel{
 			ProbGivenTrue:       5.7 / 6,
 			ProbGivenFalse:      1.8 / (24 - 6),
 			HalfLife:            0,
 			Weight:              1.0,
 			StateValueEvaluator: currentlyTrue,
-		}),
+		}.plusComplement(),
 	}
 
 	observations := NewStateValueMap()
