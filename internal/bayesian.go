@@ -150,7 +150,6 @@ func applyBayes(prior float64, likelihood LikelihoodModel, matched bool, age tim
 
 func inferPosterior(bayesianModel BayesianModel, stateValueMap *StateValueMap) (float64, bool) {
 
-	now := time.Now()
 	p := bayesianModel.Prior
 
 	for key, likelihoods := range bayesianModel.Likelihoods {

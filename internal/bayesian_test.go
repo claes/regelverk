@@ -60,7 +60,7 @@ func TestApplyBayesianInferenceWithDuration(t *testing.T) {
 	observations := NewStateValueMap()
 	observations.setState(StateKey("motion"), true)
 	s, _ := observations.getState(StateKey("motion"))
-	s.lastUpdate = time.Now().Add(-30 * time.Minute)
+	s.lastUpdate = nowFunc().Add(-30 * time.Minute)
 	observations.setStateValue(StateKey("motion"), s)
 
 	bayesianModel := BayesianModel{
