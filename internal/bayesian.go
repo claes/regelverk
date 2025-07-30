@@ -44,17 +44,24 @@ type LikelihoodModel struct {
 }
 
 func (likelihoodModel LikelihoodModel) plusComplement() []LikelihoodModel {
-	complement := LikelihoodModel{
-		ProbGivenTrue:  (1 - likelihoodModel.ProbGivenTrue),
-		ProbGivenFalse: (1 - likelihoodModel.ProbGivenFalse),
-		HalfLife:       likelihoodModel.HalfLife,
-		Weight:         likelihoodModel.Weight,
-		StateValueEvaluator: func(sv StateValue) (bool, time.Duration) {
-			b, duration := likelihoodModel.StateValueEvaluator(sv)
-			return !b, duration
-		},
+
+	if likelihoodModel.StateValueEvaluator == nil {
+		// Can't complement in this case, no obvious default
+		slog.Warn(("Can't complement a likelihood model without StateValueEvaluator"), "likelihoodmodel", likelihoodModel)
+		return []LikelihoodModel{likelihoodModel}
+	} else {
+		complement := LikelihoodModel{
+			ProbGivenTrue:  (1 - likelihoodModel.ProbGivenTrue),
+			ProbGivenFalse: (1 - likelihoodModel.ProbGivenFalse),
+			HalfLife:       likelihoodModel.HalfLife,
+			Weight:         likelihoodModel.Weight,
+			StateValueEvaluator: func(sv StateValue) (bool, time.Duration) {
+				b, duration := likelihoodModel.StateValueEvaluator(sv)
+				return !b, duration
+			},
+		}
+		return []LikelihoodModel{likelihoodModel, complement}
 	}
-	return []LikelihoodModel{likelihoodModel, complement}
 }
 
 var currentlyTrue = func(value StateValue) (bool, time.Duration) {
