@@ -127,7 +127,7 @@ func translatePerformKeypress(keyPress *cec.KeyPress, keyboard uinput.Keyboard) 
 		case 115: //Green
 			keycode = uinput.KeyTab // Kodi fullscreen
 		case 116: //Yellow
-			keycode = uinput.KeyEnter
+			keycode = uinput.KeyEsc // Escape from playing
 		case 83: //Guide
 			keycode = uinput.KeyEnter
 		case 68:
