@@ -11,7 +11,7 @@ import (
 type tvState int
 
 const (
-	stateTvOff = iota
+	stateTvOff tvState = iota
 	stateTvOffLong
 	stateTvOn
 )
@@ -25,35 +25,36 @@ type TVController struct {
 }
 
 func (c *TVController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.name = "tv"
+	c.Name = "tv"
 	c.masterController = masterController
 
 	var initialState tvState
-	if masterController.stateValueMap.requireTrue("tvpower") {
+	if masterController.stateValueMap.currentlyTrue("tvPower") {
 		initialState = stateTvOn
-	} else if masterController.stateValueMap.requireFalse("tvpower") {
+	} else if masterController.stateValueMap.currentlyFalse("tvPower") {
 		initialState = stateTvOff
 	} else {
 		return nil
 	}
 
-	c.stateMachine = stateless.NewStateMachine(initialState)
-	c.stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
+	stateMachine := stateless.NewStateMachine(initialState)
+	stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
-	c.stateMachine.Configure(stateTvOn).
+	stateMachine.Configure(stateTvOn).
 		OnEntry(c.turnOnTvAppliances).
 		Permit("mqttEvent", stateTvOff, masterController.guardStateTvOff)
 
-	c.stateMachine.Configure(stateTvOff).
+	stateMachine.Configure(stateTvOff).
 		OnEntry(c.turnOffTvAppliances).
 		Permit("mqttEvent", stateTvOn, masterController.guardStateTvOn).
 		Permit("mqttEvent", stateTvOffLong, masterController.guardStateTvOffLong)
 
-	c.stateMachine.Configure(stateTvOffLong).
+	stateMachine.Configure(stateTvOffLong).
 		OnEntry(c.turnOffTvAppliancesLong).
 		Permit("mqttEvent", stateTvOn, masterController.guardStateTvOn)
 
-	c.isInitialized = true
+	c.stateMachine = stateMachine
+	c.SetInitialized()
 	return nil
 }
 
@@ -75,7 +76,7 @@ func tvPowerOffOutput() []MQTTPublish {
 	return []MQTTPublish{
 		{
 			Topic:    "zigbee2mqtt/ikea_uttag/set",
-			Payload:  "{\"state\": \"OFF\", \"power_on_behavior\": \"ON\"}",
+			Payload:  `{"state": "OFF", "power_on_behavior": "ON"}`,
 			Qos:      2,
 			Retained: false,
 			Wait:     0 * time.Second,
@@ -99,7 +100,7 @@ func tvPowerOnOutput() []MQTTPublish {
 	result := []MQTTPublish{
 		{
 			Topic:    "zigbee2mqtt/ikea_uttag/set",
-			Payload:  "{\"state\": \"ON\", \"power_on_behavior\": \"ON\"}",
+			Payload:  `{"state": "ON", "power_on_behavior": "ON"}`,
 			Qos:      2,
 			Retained: false,
 			Wait:     0 * time.Second,

@@ -25,13 +25,13 @@ type BedroomController struct {
 }
 
 func (c *BedroomController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.name = "bedroom"
+	c.Name = "bedroom"
 	c.masterController = masterController
 
 	// var initialState tvState
-	// if masterController.stateValueMap.requireTrue("tvpower") {
+	// if masterController.stateValueMap.requireTrue("tvPower") {
 	// 	initialState = stateTvOn
-	// } else if masterController.stateValueMap.requireFalse("tvpower") {
+	// } else if masterController.stateValueMap.requireFalse("tvPower") {
 	// 	initialState = stateTvOff
 	// } else {
 	// 	return nil
@@ -61,22 +61,22 @@ func (c *BedroomController) Initialize(masterController *MasterController) []MQT
 		for {
 			now := time.Now()
 			if now.Hour() == 9 && now.Minute() == 0 {
-				c.stateMachine.Fire("blindsup")
+				c.StateMachineFire("blindsup")
 			} else if now.Hour() == 21 && now.Minute() == 0 {
-				c.stateMachine.Fire("blindsdown")
+				c.StateMachineFire("blindsdown")
 			}
 
 			if now.Hour() == 8 && now.Minute() == 0 {
-				c.stateMachine.Fire("timer")
+				c.StateMachineFire("timer")
 			} else if now.Hour() == 20 && now.Minute() == 0 {
-				c.stateMachine.Fire("timer")
+				c.StateMachineFire("timer")
 			}
 
 			time.Sleep(1 * time.Minute)
 		}
 	}()
 
-	c.isInitialized = true
+	c.SetInitialized()
 	return nil
 }
 
@@ -99,7 +99,7 @@ func bedroomBlindsRefreshOutput() []MQTTPublish {
 	return []MQTTPublish{
 		{
 			Topic:    "zigbee2mqtt/blinds-bedroom/get",
-			Payload:  "{\"state\": \"\"}",
+			Payload:  `{"state": ""}`,
 			Qos:      2,
 			Retained: false,
 		},
@@ -114,13 +114,13 @@ func bedroomBlindsOutput(open bool) []MQTTPublish {
 	return []MQTTPublish{
 		{
 			Topic:    "zigbee2mqtt/blinds-bedroom/set",
-			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+			Payload:  fmt.Sprintf(`{"state": "%s"}`, state),
 			Qos:      2,
 			Retained: true,
 		},
 		{
 			Topic:    "zigbee2mqtt/blinds-bedroom/get",
-			Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+			Payload:  fmt.Sprintf(`{"state": "%s"}`, state),
 			Qos:      2,
 			Wait:     60 * time.Second,
 			Retained: true,

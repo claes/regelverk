@@ -36,13 +36,13 @@ type SnapcastController struct {
 }
 
 func (c *SnapcastController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.name = "snapcast"
+	c.Name = "snapcast"
 	c.masterController = masterController
 
 	// var initialState snapcastState
-	// if masterController.stateValueMap.requireTrue("tvpower") {
+	// if masterController.stateValueMap.requireTrue("tvPower") {
 	// 	initialState = stateSnapcastOff
-	// } else if masterController.stateValueMap.requireFalse("tvpower") {
+	// } else if masterController.stateValueMap.requireFalse("tvPower") {
 	// 	initialState = stateSnapcastOn
 	// } else {
 	// 	return nil
@@ -62,7 +62,7 @@ func (c *SnapcastController) Initialize(masterController *MasterController) []MQ
 
 	c.eventHandlers = append(c.eventHandlers, c.customProcessEvent)
 
-	c.isInitialized = true
+	c.SetInitialized()
 	return nil
 }
 
@@ -77,7 +77,8 @@ func (c *SnapcastController) customProcessEvent(ev MQTTEvent) []MQTTPublish {
 
 func (c *SnapcastController) turnOnSnapcast(_ context.Context, _ ...any) error {
 	for _, sinkInput := range c.pulseAudioState.SinkInputs {
-		if sinkInput.Properties["application.process.binary"] == "kodi.bin" {
+		if sinkInput.Properties["application.process.binary"] == "kodi-x11" ||
+			sinkInput.Properties["application.process.binary"] == "kodi.bin" { // "kodi.bin" when Flatpak
 			events := snapcastOnOutput(sinkInput.SinkInputIndex, "Snapcast")
 			c.addEventsToPublish(events)
 		}
@@ -87,7 +88,8 @@ func (c *SnapcastController) turnOnSnapcast(_ context.Context, _ ...any) error {
 
 func (c *SnapcastController) turnOffSnapcast(_ context.Context, _ ...any) error {
 	for _, sinkInput := range c.pulseAudioState.SinkInputs {
-		if sinkInput.Properties["application.process.binary"] == "kodi.bin" {
+		if sinkInput.Properties["application.process.binary"] == "kodi-x11" ||
+			sinkInput.Properties["application.process.binary"] == "kodi.bin" { // "kodi.bin" when Flatpak
 			events := snapcastOffOutput(sinkInput.SinkInputIndex, "alsa_output.pci-0000_00_0e.0.hdmi-stereo")
 			c.addEventsToPublish(events)
 		}

@@ -11,30 +11,34 @@ import (
 	"sync"
 )
 
-func ParseConfig() (Config, *bool, *bool) {
+func ParseConfig() Config {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	mqttBroker := flag.String("mqttBroker", "tcp://localhost:1883", "MQTT broker URL")
-	mqttTopicPrefix := flag.String("mqttTopicPrefix", "", "MQTT topic prefix")
-	mqttUserName := flag.String("mqttUserName", "", "MQTT username")
-	mqttPasswordFile := flag.String("mqttPasswordFile", "", "MQTT password file")
-	httpListenAddress := flag.String("httpListenAddress", ":8080", "HTTP listen address")
-	rotelSerialPort := flag.String("rotelSerialPort", "", "Rotel serial port")
-	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
-	snapcastServer := flag.String("snapcastServer", "", "Snapcast server address")
-	pulseServer := flag.String("pulseServer", "", "Pulse server")
-	mpdServer := flag.String("mpdServer", "", "MPD server")
-	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password file")
-	routerAddress := flag.String("routerAddress", "", "Mikrotik router address:port")
-	routerUsername := flag.String("routerUsername", "", "Mikrotik router username")
-	routerPasswordFile := flag.String("routerPasswordFile", "", "Mikrotik router password file")
 	bluetoothAddress := flag.String("bluetoothAddress", "", "Bluetooth MAC address")
+	hidProductID := flag.String("hidProductId", "", "HID product id")
+	hidVendorID := flag.String("hidVendorId", "", "HID vendor id")
+	httpListenAddress := flag.String("httpListenAddress", ":8080", "HTTP listen address")
+	collectMetrics := flag.Bool("collectMetrics", false, "true/false whether to collect metrics")
+	collectDebugMetrics := flag.Bool("collectDebugMetrics", false, "true/false whether to collect debug metrics")
 	metricsAddress := flag.String("metricsAddress", "", "Metrics address")
 	metricsRealm := flag.String("metricsRealm", "", "Metrics realm")
+	mpdPasswordFile := flag.String("mpdPasswordFile", "", "MPD password file")
+	mpdServer := flag.String("mpdServer", "", "MPD server")
+	mqttBroker := flag.String("mqttBroker", "tcp://localhost:1883", "MQTT broker URL")
+	mqttPasswordFile := flag.String("mqttPasswordFile", "", "MQTT password file")
+	mqttTopicPrefix := flag.String("mqttTopicPrefix", "", "MQTT topic prefix")
+	mqttUserName := flag.String("mqttUserName", "", "MQTT username")
+	pulseServer := flag.String("pulseServer", "", "Pulse server")
+	rotelSerialPort := flag.String("rotelSerialPort", "", "Rotel serial port")
+	routerAddress := flag.String("routerAddress", "", "Mikrotik router address:port")
+	routerPasswordFile := flag.String("routerPasswordFile", "", "Mikrotik router password file")
+	routerUsername := flag.String("routerUsername", "", "Mikrotik router username")
+	samsungTVAddress := flag.String("samsungTVAddress", "", "Samsung TV address")
+	snapcastServer := flag.String("snapcastServer", "", "Snapcast server address")
+	telegramTokenFile := flag.String("telegramTokenFile", "", "Telegram bot token file")
 
 	help := flag.Bool("help", false, "Print help")
 	debug := flag.Bool("debug", false, "Debug logging")
-	dryRun := flag.Bool("dry_run", false, "Dry run (do not publish)")
 	flag.Parse()
 
 	if *help {
@@ -51,24 +55,30 @@ func ParseConfig() (Config, *bool, *bool) {
 	}
 
 	config := Config{
-		MQTTBroker:         *mqttBroker,
-		MQTTTopicPrefix:    *mqttTopicPrefix,
-		MQTTUserName:       *mqttUserName,
-		MQTTPasswordFile:   *mqttPasswordFile,
-		WebAddress:         *httpListenAddress,
-		RotelSerialPort:    *rotelSerialPort,
-		SamsungTvAddress:   *samsungTVAddress,
-		SnapcastServer:     *snapcastServer,
-		MpdServer:          *mpdServer,
-		MpdPasswordFile:    *mpdPasswordFile,
-		RouterAddress:      *routerAddress,
-		RouterUsername:     *routerUsername,
-		RouterPasswordFile: *routerPasswordFile,
-		BluetoothAddress:   *bluetoothAddress,
-		Pulseserver:        *pulseServer,
-		MetricsAddress:     *metricsAddress,
-		MetricsRealm:       *metricsRealm}
-	return config, debug, dryRun
+		BluetoothAddress:    *bluetoothAddress,
+		HIDProductID:        *hidProductID,
+		HIDVendorID:         *hidVendorID,
+		CollectMetrics:      *collectMetrics,
+		CollectDebugMetrics: *collectDebugMetrics,
+		MetricsAddress:      *metricsAddress,
+		MetricsRealm:        *metricsRealm,
+		MpdPasswordFile:     *mpdPasswordFile,
+		MpdServer:           *mpdServer,
+		MQTTBroker:          *mqttBroker,
+		MQTTPasswordFile:    *mqttPasswordFile,
+		MQTTTopicPrefix:     *mqttTopicPrefix,
+		MQTTUserName:        *mqttUserName,
+		Pulseserver:         *pulseServer,
+		RotelSerialPort:     *rotelSerialPort,
+		RouterAddress:       *routerAddress,
+		RouterPasswordFile:  *routerPasswordFile,
+		RouterUsername:      *routerUsername,
+		SamsungTvAddress:    *samsungTVAddress,
+		SnapcastServer:      *snapcastServer,
+		TelegramTokenFile:   *telegramTokenFile,
+		WebAddress:          *httpListenAddress,
+	}
+	return config
 }
 
 func printHelp() {
@@ -77,8 +87,7 @@ func printHelp() {
 	flag.PrintDefaults()
 }
 
-func StartRegelverk(config Config, loops []ControlLoop, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller,
-	dryRun *bool, debug *bool) {
+func StartRegelverk(config Config, bridgeWrappers *[]BridgeWrapper, controllers *[]Controller) {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -91,7 +100,7 @@ func StartRegelverk(config Config, loops []ControlLoop, bridgeWrappers *[]Bridge
 	go func() {
 		defer wg.Done()
 		slog.Info("Initializing Regelverk", "config", config)
-		err := runRegelverk(ctx, config, loops, bridgeWrappers, controllers, dryRun, debug)
+		err := runRegelverk(ctx, config, bridgeWrappers, controllers)
 		if err != nil {
 			slog.Error("Error initializing regelverk", "error", err)
 		}

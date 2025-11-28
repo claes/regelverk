@@ -3,6 +3,7 @@ package regelverk
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"github.com/qmuntal/stateless"
 )
@@ -23,19 +24,25 @@ type LivingroomController struct {
 }
 
 func (c *LivingroomController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.name = "livingroom"
+	c.Name = "livingroom"
 	c.masterController = masterController
 
-	// var initialState tvState
-	// if masterController.stateValueMap.requireTrue("tvpower") {
-	// 	initialState = stateTvOn
-	// } else if masterController.stateValueMap.requireFalse("tvpower") {
-	// 	initialState = stateTvOff
-	// } else {
-	// 	return nil
-	// }
+	var initialState livingroomLamp
+	if masterController.stateValueMap.currentlyTrue("livingroomFloorlamp") {
+		initialState = stateLivingroomFloorlampOn
+	} else if masterController.stateValueMap.currentlyFalse("livingroomFloorlamp") {
+		initialState = stateLivingroomFloorlampOff
+	} else {
+		const maxBackoff = 128 * time.Second
+		if c.checkBackoff() {
+			c.extendBackoff(maxBackoff)
+			return []MQTTPublish{requestIkeaTretaktPower("zigbee2mqtt/livingroom-floorlamp/get")}
+		} else {
+			return nil
+		}
+	}
 
-	c.stateMachine = stateless.NewStateMachine(stateLivingroomFloorlampOff) // can this be reliable determined early on? probably not
+	c.stateMachine = stateless.NewStateMachine(initialState)
 	c.stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
 	c.stateMachine.Configure(stateLivingroomFloorlampOn).
@@ -46,7 +53,7 @@ func (c *LivingroomController) Initialize(masterController *MasterController) []
 		OnEntry(c.turnOffLivingroomFloorlamp).
 		Permit("mqttEvent", stateLivingroomFloorlampOn, c.masterController.guardTurnOnLivingroomLamp)
 
-	c.isInitialized = true
+	c.SetInitialized()
 	return nil
 }
 

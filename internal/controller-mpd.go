@@ -24,19 +24,19 @@ type MPDController struct {
 }
 
 func (c *MPDController) Initialize(masterController *MasterController) []MQTTPublish {
-	c.name = "mpd"
+	c.Name = "mpd"
 	c.masterController = masterController
 
-	// var initialState tvState
-	// if masterController.stateValueMap.requireTrue("tvpower") {
-	// 	initialState = stateTvOn
-	// } else if masterController.stateValueMap.requireFalse("tvpower") {
-	// 	initialState = stateTvOff
-	// } else {
-	// 	return nil
-	// }
+	var initialState mpdState
+	if masterController.stateValueMap.currentlyTrue("mpdPlay") {
+		initialState = mpdStateOn
+	} else if masterController.stateValueMap.currentlyFalse("mpdPlay") {
+		initialState = mpdStateOff
+	} else {
+		return nil
+	}
 
-	c.stateMachine = stateless.NewStateMachine(mpdStateOff)
+	c.stateMachine = stateless.NewStateMachine(initialState)
 	c.stateMachine.SetTriggerParameters("mqttEvent", reflect.TypeOf(MQTTEvent{}))
 
 	c.stateMachine.Configure(mpdStateOn).
@@ -46,7 +46,7 @@ func (c *MPDController) Initialize(masterController *MasterController) []MQTTPub
 	c.stateMachine.Configure(mpdStateOff).
 		Permit("mqttEvent", mpdStateOn, c.masterController.guardStateMPDOn)
 
-	c.isInitialized = true
+	c.SetInitialized()
 	return nil
 }
 

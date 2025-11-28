@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/sj14/astral/pkg/astral"
@@ -109,7 +110,7 @@ func ComputeTimeOfDay(currentTime time.Time, lat, long float64) TimeOfDay {
 }
 
 func foo() {
-	today := time.Now()
+	today := nowFunc()
 	location, _ := time.LoadLocation("CET")
 	midnight := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, location)
 
@@ -120,38 +121,72 @@ func foo() {
 	}
 }
 
+type StateKey string
+
+var nowFunc = time.Now
+
+const (
+	NoKey StateKey = ""
+)
+
 type StateValue struct {
 	value        bool
 	isDefined    bool
-	lastUpdate   time.Time
-	lastChange   time.Time
+	lastUpdate   time.Time // Last time this state was updated (incl refreshed even if value was not changed)
+	lastChange   time.Time // Last time the state was changed (value was changed differently than before)
 	lastSetTrue  time.Time
 	lastSetFalse time.Time
 }
 
-func (f StateValue) Age() time.Duration {
-	return time.Since(f.lastUpdate)
-}
-
 type StateValueMap struct {
-	stateValueMap map[string]StateValue
-	callbacks     []func(key string, value, new, updated bool)
+	svMap             map[StateKey]StateValue
+	mu                sync.RWMutex
+	observerCallbacks []func(key StateKey, value, new, updated bool)
+	mutatorCallbacks  []func(key StateKey) (StateKey, bool)
 }
 
 func NewStateValueMap() StateValueMap {
 	return StateValueMap{
-		stateValueMap: make(map[string]StateValue),
+		svMap: make(map[StateKey]StateValue),
 	}
 }
 
-func (s *StateValueMap) registerCallback(callback func(key string, value, new, updated bool)) {
-	s.callbacks = append(s.callbacks, callback)
+func (s *StateValueMap) registerObserverCallback(callback func(key StateKey, value, new, updated bool)) {
+	s.observerCallbacks = append(s.observerCallbacks, callback)
 }
 
-func (s *StateValueMap) setState(key string, value bool) {
-	existingState, exists := s.stateValueMap[key]
+func (s *StateValueMap) registerMutatorCallback(callback func(key StateKey) (StateKey, bool)) {
+	s.mutatorCallbacks = append(s.mutatorCallbacks, callback)
+}
 
-	now := time.Now()
+func (s *StateValueMap) setStateValue(key StateKey, value StateValue) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	s.svMap[key] = value
+}
+
+func (s *StateValueMap) setState(key StateKey, value bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.updateStateUnsafe(key, value)
+
+	for _, callback := range s.mutatorCallbacks {
+		dependentKey, associatedValue := callback(key)
+		s.updateStateUnsafe(dependentKey, associatedValue)
+	}
+}
+
+// Don't call this from outside, use setState instead
+func (s *StateValueMap) updateStateUnsafe(key StateKey, value bool) {
+
+	if key == NoKey {
+		return
+	}
+
+	existingState, exists := s.svMap[key]
+
+	now := nowFunc()
 	var updatedState StateValue
 	stateNew := false
 	stateUpdate := false
@@ -163,6 +198,7 @@ func (s *StateValueMap) setState(key string, value bool) {
 			existingState.lastChange = now
 			stateUpdate = true
 		}
+		existingState.lastUpdate = now
 		updatedState = existingState
 	} else {
 		// Not exists
@@ -175,66 +211,177 @@ func (s *StateValueMap) setState(key string, value bool) {
 		stateNew = true
 	}
 
-	if value {
-		updatedState.lastSetTrue = now
-	} else {
-		updatedState.lastSetFalse = now
+	if stateUpdate || stateNew {
+		if value {
+			updatedState.lastSetTrue = now
+		} else {
+			updatedState.lastSetFalse = now
+		}
 	}
 
-	for _, callback := range s.callbacks {
+	for _, callback := range s.observerCallbacks {
 		callback(key, value, stateNew, stateUpdate)
 	}
 
-	s.stateValueMap[key] = updatedState
+	s.svMap[key] = updatedState
 }
 
-func (s *StateValueMap) getState(key string) StateValue {
-	stateValue, exists := s.stateValueMap[key]
+func (s *StateValueMap) getState(key StateKey) (StateValue, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
 	stateValue.isDefined = exists
-	return stateValue
+	return stateValue, exists
 }
 
-func (s *StateValueMap) requireTrue(key string) bool {
-	stateValue, exists := s.stateValueMap[key]
+func (s *StateValueMap) currentlyTrue(key StateKey) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
 	if !exists {
 		return false
 	} else {
-		return stateValue.value
+		return stateValue.currentlyTrue()
 	}
 }
 
-func (s *StateValueMap) requireFalse(key string) bool {
-	stateValue, exists := s.stateValueMap[key]
+func (s *StateValueMap) currentlyFalse(key StateKey) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
 	if !exists {
 		return false
 	} else {
-		return !stateValue.value
+		return stateValue.currentlyFalse()
 	}
 }
 
-func (s *StateValueMap) requireTrueRecently(key string, duration time.Duration) bool {
-	stateValue, exists := s.stateValueMap[key]
+// Require it has consistently been true
+func (s *StateValueMap) continuouslyTrue(key StateKey, duration time.Duration) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
 	if !exists {
 		return false
 	} else {
-		return stateValue.value || time.Since(stateValue.lastSetTrue) < duration
+		return stateValue.continuouslyTrue(duration)
 	}
 }
 
-func (s *StateValueMap) requireTrueNotRecently(key string, duration time.Duration) bool {
-	stateValue, exists := s.stateValueMap[key]
+// Require it has been true at some point during duration
+func (s *StateValueMap) recentlyTrue(key StateKey, duration time.Duration) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
 	if !exists {
 		return false
 	} else {
-		return !stateValue.value && time.Since(stateValue.lastSetTrue) > duration
+		return stateValue.recentlyTrue(duration)
 	}
+}
+
+// Require it has consistently been false
+func (s *StateValueMap) continuouslyFalse(key StateKey, duration time.Duration) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
+	if !exists {
+		return false
+	}
+	return stateValue.continuouslyFalse(duration)
+}
+
+// Require it has been false at some point during duration
+func (s *StateValueMap) recentlyFalse(key StateKey, duration time.Duration) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	stateValue, exists := s.svMap[key]
+	if !exists {
+		return false
+	}
+	return stateValue.recentlyFalse(duration)
+}
+
+func (stateValue *StateValue) currentlyTrue() bool {
+	return stateValue.value
+}
+
+func (stateValue *StateValue) currentlyFalse() bool {
+	return !stateValue.value
+}
+
+// continuouslyTrue reports whether the signal has been true
+// for the entire interval (now−d , now].
+func (s *StateValue) continuouslyTrue(d time.Duration) bool {
+	if !s.value || s.lastSetTrue.IsZero() {
+		return false
+	}
+	cut := nowFunc().Add(-d)
+	return s.lastSetTrue.Before(cut) || s.lastSetTrue.Equal(cut)
+}
+
+// continuouslyFalse is the dual of ContinuouslyTrue.
+func (s *StateValue) continuouslyFalse(d time.Duration) bool {
+	if s.value || s.lastSetFalse.IsZero() {
+		return false
+	}
+	cut := nowFunc().Add(-d)
+	return s.lastSetFalse.Before(cut) || s.lastSetFalse.Equal(cut)
+}
+
+func (s *StateValue) recentlyTrue(d time.Duration) bool {
+	if s.value {
+		return true
+	}
+	if s.lastSetTrue.IsZero() {
+		return false
+	}
+	cut := nowFunc().Add(-d)
+
+	if s.lastSetTrue.Before(cut) {
+		//lastSetTrue is before cut and lastSetFalse is after cut, thus the switch happened after
+		return s.lastSetFalse.After(cut)
+	} else {
+		return true // lastSetTrue is within window
+	}
+}
+
+func (s *StateValue) recentlyFalse(d time.Duration) bool {
+	if !s.isDefined {
+		return false
+	}
+	if !s.value {
+		return true
+	}
+	if s.lastSetFalse.IsZero() {
+		return false
+	}
+	cut := nowFunc().Add(-d)
+
+	if s.lastSetFalse.Before(cut) {
+		//lastSetFalse is before cut and lastSetTrue is after cut, thus the switch happened after
+		return s.lastSetTrue.After(cut)
+	} else {
+		return true // lastSetFalse is within window
+	}
+
 }
 
 func (s *StateValueMap) LogState() {
-	now := time.Now()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	now := nowFunc()
 
 	var params [][]any
-	for key, stateValue := range s.stateValueMap {
+	for key, stateValue := range s.svMap {
 
 		secondsSinceLastUpdate := int64(-1)
 		if !stateValue.lastUpdate.IsZero() {

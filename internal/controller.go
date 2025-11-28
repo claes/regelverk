@@ -2,54 +2,14 @@ package regelverk
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
-	pulseaudiomqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
-	routerosmqtt "github.com/claes/mqtt-bridges/routeros-mqtt/lib"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/qmuntal/stateless"
 )
-
-type MetricsConfig struct {
-	MetricsAddress string
-	MetricsRealm   string
-}
-type MasterController struct {
-	stateValueMap StateValueMap
-	controllers   *[]Controller
-	mu            sync.Mutex
-	pushMetrics   bool
-	metricsConfig MetricsConfig
-}
-
-func CreateMasterController() MasterController {
-	return MasterController{stateValueMap: NewStateValueMap()}
-}
-
-func (l *MasterController) Init() {
-	if len(l.metricsConfig.MetricsAddress) > 0 {
-		slog.Info("Reigstering state value callback in master controller")
-		l.stateValueMap.registerCallback(l.StateValueCallback)
-	}
-}
-
-func (l *MasterController) StateValueCallback(key string, value, new, updated bool) {
-	gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`statevalue{name="%s"}`, key), nil)
-	if value {
-		gauge.Set(1)
-	} else {
-		gauge.Set(0)
-	}
-	if new || updated {
-		l.pushMetrics = true
-	}
-}
 
 type Controller interface {
 	sync.Locker
@@ -59,76 +19,48 @@ type Controller interface {
 	ProcessEvent(ev MQTTEvent) []MQTTPublish
 }
 
-type BaseController struct {
-	name             string
-	masterController *MasterController
-	stateMachine     *stateless.StateMachine
-	eventsToPublish  []MQTTPublish
-	isInitialized    bool
-	eventHandlers    []func(ev MQTTEvent) []MQTTPublish
-	mu               sync.Mutex
+type MasterController struct {
+	mqttClient     mqtt.Client
+	stateValueMap  StateValueMap
+	controllers    *[]Controller
+	mu             sync.Mutex
+	pushMetrics    bool
+	metricsConfig  MetricsConfig
+	config         Config
+	eventCallbacks []func(MQTTEvent)
 }
 
-func (c *BaseController) Lock() {
-	c.mu.Lock()
+type MetricsConfig struct {
+	CollectMetrics      bool
+	CollectDebugMetrics bool
+	MetricsAddress      string
+	MetricsRealm        string
 }
 
-func (c *BaseController) Unlock() {
-	c.mu.Unlock()
+func CreateMasterController() MasterController {
+	return MasterController{stateValueMap: NewStateValueMap()}
 }
 
-func (c *BaseController) SetInitialized() {
-	c.isInitialized = true
-
-	firstStateInt, ok := c.stateMachine.MustState().(int)
-	if ok {
-		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
-		gauge.Set(float64(firstStateInt))
-		c.masterController.pushMetrics = true
+func (l *MasterController) Init() {
+	l.registerEventCallbacks()
+	if l.metricsConfig.CollectMetrics {
+		slog.Info("Registering state value callback in master controller")
+		l.stateValueMap.registerObserverCallback(l.StateValueCallback)
 	}
 }
 
-func (c *BaseController) IsInitialized() bool {
-	return c.isInitialized
-}
-
-func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	slog.Debug("Process event", "name", c.name)
-
-	// In case special handling is needed that is not part of base processing
-	// Under normal circumstances, state machine should be able to handle most
-	for _, eventHandler := range c.eventHandlers {
-		c.addEventsToPublish(eventHandler(ev))
+func (l *MasterController) StateValueCallback(key StateKey, value, new, updated bool) {
+	if l.metricsConfig.CollectMetrics {
+		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`statevalue{name="%s",realm="%s"}`, key, l.metricsConfig.MetricsRealm), nil)
+		if value {
+			gauge.Set(1)
+		} else {
+			gauge.Set(0)
+		}
+		if new || updated {
+			l.pushMetrics = true
+		}
 	}
-
-	slog.Debug("Fire event", "name", c.name)
-	beforeState := c.stateMachine.MustState()
-	c.stateMachine.Fire("mqttEvent", ev)
-
-	eventsToPublish := c.getAndResetEventsToPublish()
-	afterState := c.stateMachine.MustState()
-	slog.Debug("Event fired", "fsm", c.name, "beforeState", beforeState,
-		"afterState", afterState)
-
-	if intState, ok := afterState.(interface{ ToInt() int }); ok {
-		i := intState.ToInt()
-		gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state{controller="%s"}`, c.name), nil)
-		gauge.Set(float64(i))
-	} else {
-		slog.Error("State does not implement ToInt", "state", afterState)
-	}
-
-	return eventsToPublish
-}
-
-func (c *BaseController) addEventsToPublish(events []MQTTPublish) {
-	c.eventsToPublish = append(c.eventsToPublish, events...)
-}
-
-func (c *BaseController) getAndResetEventsToPublish() []MQTTPublish {
-	events := c.eventsToPublish
-	c.eventsToPublish = []MQTTPublish{}
-	return events
 }
 
 func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQTTEvent) {
@@ -137,15 +69,7 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 	defer masterController.mu.Unlock()
 
 	masterController.pushMetrics = false // Reset
-	masterController.detectPhonePresent(ev)
-	masterController.detectLivingroomPresence(ev)
-	masterController.detectLivingroomFloorlampState(ev)
-	masterController.detectNighttime(ev)
-	masterController.detectTVPower(ev)
-	masterController.detectMPDPlay(ev)
-	masterController.detectKitchenAmpPower(ev)
-	masterController.detectKitchenAudioPlaying(ev)
-	masterController.detectBedroomBlindsOpen(ev)
+	masterController.executeEventCallbacks(ev)
 
 	for _, c := range *masterController.controllers {
 		controller := c
@@ -169,12 +93,17 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 			}
 
 			for _, result := range toPublish {
-				count = count + 1
 				go func(toPublish MQTTPublish) {
 					if toPublish.Wait != 0 {
 						time.Sleep(toPublish.Wait)
 					}
 					client.Publish(toPublish.Topic, toPublish.Qos, toPublish.Retained, toPublish.Payload)
+
+					if masterController.metricsConfig.CollectDebugMetrics {
+						counter := metrics.GetOrCreateCounter(fmt.Sprintf(`regelverk_mqtt_published{topic="%s",realm="%s"}`,
+							toPublish.Topic, masterController.metricsConfig.MetricsRealm))
+						counter.Inc()
+					}
 				}(result)
 			}
 		}()
@@ -183,7 +112,7 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 }
 
 func (masterController *MasterController) checkPushMetrics() {
-	if masterController.pushMetrics {
+	if masterController.metricsConfig.CollectMetrics && masterController.pushMetrics {
 		ctx := context.Background()
 		metrics.PushMetrics(ctx, "http://"+masterController.metricsConfig.MetricsAddress+"/api/v1/import/prometheus", false, nil)
 		// ctx := context.Background()
@@ -199,212 +128,96 @@ func (masterController *MasterController) checkPushMetrics() {
 // Guards
 
 func (l *MasterController) guardStateMPDOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrue("mpdPlay")
-	slog.Debug("guardStateMPDOn", "check", check)
+	check := l.stateValueMap.currentlyTrue("mpdPlay")
 	return check
 }
 
 func (l *MasterController) guardStateMPDOff(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireFalse("mpdPlay")
-	slog.Debug("guardStateMPDOff", "check", check)
+	check := l.stateValueMap.currentlyFalse("mpdPlay")
 	return check
 }
 
 func (l *MasterController) guardStateSnapcastOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrue("snapcast")
-	slog.Debug("guardStateSnapcastOn", "check", check)
+	check := l.stateValueMap.currentlyTrue("snapcast")
 	return check
 }
 
 func (l *MasterController) guardStateSnapcastOff(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireFalse("snapcast")
-	slog.Debug("guardStateSnapcastOff", "check", check)
+	check := l.stateValueMap.currentlyFalse("snapcast")
 	return check
 }
 
 func (l *MasterController) guardTurnOnLivingroomLamp(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrue("phonePresent") &&
-		l.stateValueMap.requireTrue("nighttime") &&
-		l.stateValueMap.requireTrueRecently("livingroomPresence", 10*time.Minute)
-	slog.Debug("guardTurnOnLamp", "check", check)
+	check := l.stateValueMap.currentlyTrue("phonePresent") &&
+		l.stateValueMap.currentlyTrue("nighttime") &&
+		l.stateValueMap.recentlyTrue("livingroomPresence", 10*time.Minute)
 	return check
 }
 
 func (l *MasterController) guardTurnOffLivingroomLamp(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireFalse("phonePresent") ||
-		l.stateValueMap.requireFalse("nighttime") ||
-		l.stateValueMap.requireTrueNotRecently("livingroomPresence", 10*time.Minute)
-	slog.Debug("guardTurnOffLamp", "check", check)
+	check := l.stateValueMap.currentlyFalse("phonePresent") ||
+		l.stateValueMap.currentlyFalse("nighttime") ||
+		!l.stateValueMap.recentlyTrue("livingroomPresence", 10*time.Minute)
 	return check
 }
 
 func (l *MasterController) guardStateTvOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrue("tvpower")
-	slog.Debug("guardStateTvOn", "check", check)
+	check := l.stateValueMap.currentlyTrue("tvPower")
 	return check
 }
 
 func (l *MasterController) guardStateTvOff(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireFalse("tvpower")
-	slog.Debug("guardStateTvOff", "check", check)
+	check := l.stateValueMap.currentlyFalse("tvPower")
 	return check
 }
 
 func (l *MasterController) guardStateTvOffLong(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrueNotRecently("tvpower", 30*time.Minute)
-	slog.Debug("guardStateTvOff", "check", check)
+	check := !l.stateValueMap.recentlyTrue("tvPower", 30*time.Minute)
 	return check
 }
 
 func (l *MasterController) guardStateKitchenAmpOn(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrue("kitchenaudioplaying")
-	slog.Debug("guardStateKitchenAmpOn", "check", check)
+	check := l.stateValueMap.currentlyTrue("kitchenAudioPlaying")
 	return check
 }
 
 func (l *MasterController) guardStateKitchenAmpOff(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrueNotRecently("kitchenaudioplaying", 10*time.Minute)
-	slog.Debug("guardStateKitchenAmpOn", "check", check)
+	check := !l.stateValueMap.recentlyTrue("kitchenAudioPlaying", 10*time.Minute)
 	return check
 }
 
 func (l *MasterController) guardStateBedroomBlindsOpen(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireFalse("nighttime")
-	slog.Debug("guardStateBedroomBlindsOpen", "check", check)
+	check := l.stateValueMap.currentlyFalse("nighttime")
 	return check
 }
 
 func (l *MasterController) guardStateBedroomBlindsClosed(_ context.Context, _ ...any) bool {
-	check := l.stateValueMap.requireTrue("nighttime")
-	slog.Debug("guardStateBedroomBlindsClosed", "check", check)
+	check := l.stateValueMap.currentlyTrue("nighttime")
 	return check
 }
 
+func (l *MasterController) requireTrueByKey(key StateKey) func(context.Context, ...any) bool {
+	return func(_ context.Context, _ ...any) bool {
+		check := l.stateValueMap.currentlyTrue(key)
+		return check
+	}
+}
+
+func (l *MasterController) requireTrueSinceByKey(key StateKey, duration time.Duration) func(context.Context, ...any) bool {
+	return func(_ context.Context, _ ...any) bool {
+		check := l.stateValueMap.continuouslyTrue(key, duration)
+		return check
+	}
+}
+
+func (l *MasterController) requireFalseByKey(key StateKey) func(context.Context, ...any) bool {
+	return func(_ context.Context, _ ...any) bool {
+		check := l.stateValueMap.currentlyFalse(key)
+		return check
+	}
+}
+
 // Detections
-
-func (l *MasterController) detectPhonePresent(ev MQTTEvent) {
-	if ev.Topic == "routeros/wificlients" {
-		var wifiClients []routerosmqtt.WifiClient
-
-		err := json.Unmarshal(ev.Payload.([]byte), &wifiClients)
-		if err != nil {
-			slog.Error("Could not parse payload", "topic", "routeros/wificlients", "error", err)
-			return
-		}
-		found := false
-		for _, wifiClient := range wifiClients {
-			if wifiClient.MacAddress == "AA:73:49:2B:D8:45" {
-				found = true
-				break
-			}
-		}
-		slog.Debug("detectPhonePresent", "phonePresent", found)
-		l.stateValueMap.setState("phonePresent", found)
-	}
-}
-
-func (l *MasterController) detectLivingroomPresence(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/livingroom-presence" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["occupancy"]
-		if !exists || val == nil {
-			return
-		}
-		l.stateValueMap.setState("livingroomPresence", val.(bool))
-	}
-}
-
-func (l *MasterController) detectLivingroomFloorlampState(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/livingroom-floorlamp" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["state"]
-		if !exists || val == nil {
-			return
-		}
-		state := val.(string)
-		on := false
-		if state == "ON" {
-			on = true
-		}
-		l.stateValueMap.setState("livingroomFloorlamp", on)
-	}
-}
-
-func (l *MasterController) detectNighttime(ev MQTTEvent) {
-	if ev.Topic == "regelverk/ticker/timeofday" {
-		l.stateValueMap.setState("nighttime", ev.Payload.(TimeOfDay) == Nighttime)
-	}
-}
-
-func (l *MasterController) detectTVPower(ev MQTTEvent) {
-	if ev.Topic == "regelverk/state/tvpower" {
-		tvPower, err := strconv.ParseBool(string(ev.Payload.([]byte)))
-		if err != nil {
-			slog.Error("Could not parse payload", "topic", "regelverk/state/tvpower", "error", err)
-		}
-		l.stateValueMap.setState("tvpower", tvPower)
-	}
-}
-
-func (l *MasterController) detectMPDPlay(ev MQTTEvent) {
-	if ev.Topic == "mpd/status" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["state"]
-		if !exists || val == nil {
-			return
-		}
-		l.stateValueMap.setState("mpdPlay", val.(string) == "play")
-	}
-}
-
-func (l *MasterController) detectKitchenAmpPower(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/kitchen-amp" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["state"]
-		if !exists || val == nil {
-			return
-		}
-		l.stateValueMap.setState("kitchenamppower", val.(string) == "ON")
-	}
-}
-
-func (l *MasterController) detectKitchenAudioPlaying(ev MQTTEvent) {
-	if ev.Topic == "kitchen/pulseaudio/state" {
-		var pulseaudioState pulseaudiomqtt.PulseAudioState
-		err := json.Unmarshal(ev.Payload.([]byte), &pulseaudioState)
-		if err != nil {
-			slog.Error("Could not parse payload", "topic", "kitchen/pulseaudio/state", "error", err)
-			return
-		}
-		l.stateValueMap.setState("kitchenaudioplaying", pulseaudioState.DefaultSink.State == 0)
-	}
-}
-
-func (l *MasterController) detectBedroomBlindsOpen(ev MQTTEvent) {
-	if ev.Topic == "zigbee2mqtt/blinds-bedroom" {
-		m := parseJSONPayload(ev)
-		if m == nil {
-			return
-		}
-		val, exists := m["position"]
-		if !exists || val == nil {
-			return
-		}
-		l.stateValueMap.setState("bedroomblindsopen", val.(float64) > 50)
-	}
-}
 
 func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 	state := "OFF"
@@ -413,8 +226,17 @@ func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 	}
 	return MQTTPublish{
 		Topic:    topic,
-		Payload:  fmt.Sprintf("{\"state\": \"%s\"}", state),
+		Payload:  fmt.Sprintf(`{"state": "%s"}`, state),
 		Qos:      2,
 		Retained: true,
+	}
+}
+
+func requestIkeaTretaktPower(topic string) MQTTPublish {
+	return MQTTPublish{
+		Topic:    topic,
+		Payload:  `{"state": ""}`,
+		Qos:      2,
+		Retained: false,
 	}
 }

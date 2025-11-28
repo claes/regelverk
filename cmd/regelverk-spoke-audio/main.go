@@ -6,16 +6,15 @@ import (
 
 func main() {
 
-	config, debug, dryRun := internal.ParseConfig()
-
-	loops := []internal.ControlLoop{}
+	config := internal.ParseConfig()
 
 	bridgeWrappers := []internal.BridgeWrapper{
+		&internal.AudioBridgeWrapper{},
 		&internal.PulseaudioBridgeWrapper{},
 		&internal.BluezBridgeWrapper{},
 	}
 
 	controllers := &[]internal.Controller{}
 
-	internal.StartRegelverk(config, loops, &bridgeWrappers, controllers, dryRun, debug)
+	internal.StartRegelverk(config, &bridgeWrappers, controllers)
 }
