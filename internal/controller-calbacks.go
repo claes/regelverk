@@ -245,6 +245,36 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(val any) (StateKey, bool) { return "mpdPlay", val.(string) == "play" },
 		nil,
 	))
+
+	// Vindstyrka
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/vindstyrka", "humidity")
+		},
+		nil,
+		func(val any) (string, float64) { return "indoorHumidity", val.(float64) },
+	))
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/vindstyrka", "temperature")
+		},
+		nil,
+		func(val any) (string, float64) { return "indoorTemperature", val.(float64) },
+	))
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/vindstyrka", "pm25")
+		},
+		nil,
+		func(val any) (string, float64) { return "indoorPm25", val.(float64) },
+	))
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/vindstyrka", "voc_index")
+		},
+		nil,
+		func(val any) (string, float64) { return "indoorVocIndex", val.(float64) },
+	))
 }
 
 // func (masterController *MasterController) createBayesianCallback(bayesianStateKey StateKey, bayesianModel BayesianModel) func(key StateKey) (StateKey, bool) {
