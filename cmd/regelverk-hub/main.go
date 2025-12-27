@@ -27,7 +27,7 @@ func main() {
 		&internal.KitchenController{},
 		//&internal.KitchenFreezerDoorController{},
 		&internal.DoorReminderController{
-			Name:            "kitchenfreezerdoor",
+			BaseController:  internal.BaseController{Name: "kitchenfreezerdoor"},
 			SensorName:      "freezer-door",
 			StateOpenKey:    "freezerDoorOpen",
 			OpenLongLimit:   10 * time.Second,
@@ -37,7 +37,7 @@ func main() {
 			ReminderPayload: `embed://assets/ping.wav`,
 		},
 		&internal.DoorReminderController{
-			Name:            "kitchenfridgedoor",
+			BaseController:  internal.BaseController{Name: "kitchenfridgedoor"},
 			SensorName:      "fridge-door",
 			StateOpenKey:    "fridgeDoorOpen",
 			OpenLongLimit:   10 * time.Second,
