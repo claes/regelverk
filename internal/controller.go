@@ -26,6 +26,7 @@ type ControllerDebugState struct {
 	Initialized           bool          `json:"initialized"`
 	StateMachineState     any           `json:"stateMachineState,omitempty"`
 	StateMachineStateText string        `json:"stateMachineStateText,omitempty"`
+	StateMachine          string        `json:"stateMachine,omitempty"`
 	BackoffUntil          time.Time     `json:"backoffUntil,omitempty"`
 	LastBackoffDuration   time.Duration `json:"lastBackoffDuration,omitempty"`
 }

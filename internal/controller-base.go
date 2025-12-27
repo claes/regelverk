@@ -66,6 +66,7 @@ func (c *BaseController) DebugState() ControllerDebugState {
 		Initialized:           c.isInitialized,
 		StateMachineState:     state,
 		StateMachineStateText: stateText,
+		StateMachine:          c.stateMachine.String(),
 		BackoffUntil:          c.backoffUntil,
 		LastBackoffDuration:   c.lastBackoffDuration,
 	}
