@@ -8,6 +8,7 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+//go:generate stringer -type=doorState
 type doorState int
 
 const (

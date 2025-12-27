@@ -8,6 +8,7 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+//go:generate stringer -type=livingroomLamp
 type livingroomLamp int
 
 const (

@@ -7,6 +7,7 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+//go:generate stringer -type=homePresenceState
 type homePresenceState int
 
 const (

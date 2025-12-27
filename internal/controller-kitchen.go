@@ -9,6 +9,7 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+//go:generate stringer -type=kitchenAmpState
 type kitchenAmpState int
 
 const (

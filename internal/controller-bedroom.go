@@ -9,6 +9,7 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+//go:generate stringer -type=blindsState
 type blindsState int
 
 const (
