@@ -10,6 +10,7 @@ type DebugController struct {
 	masterController *MasterController
 	mu               sync.Mutex
 	initialized      bool
+	Name             string
 }
 
 func (c *DebugController) Lock() {
@@ -26,13 +27,21 @@ func (c *DebugController) IsInitialized() bool {
 
 func (c *DebugController) Initialize(masterController *MasterController) []MQTTPublish {
 	c.masterController = masterController
-	http.HandleFunc("/debug/statevaluemap", c.stateValueMapHandler)
+	c.Name = "debug"
+	http.HandleFunc("/debug/state", c.stateValueMapHandler)
 	c.initialized = true
 	return nil
 }
 
 func (c *DebugController) ProcessEvent(_ MQTTEvent) []MQTTPublish {
 	return nil
+}
+
+func (c *DebugController) DebugState() ControllerDebugState {
+	return ControllerDebugState{
+		Name:        c.Name,
+		Initialized: c.initialized,
+	}
 }
 
 func (c *DebugController) stateValueMapHandler(w http.ResponseWriter, r *http.Request) {
@@ -42,11 +51,25 @@ func (c *DebugController) stateValueMapHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	snapshot := c.masterController.stateValueMap.Snapshot()
+	controllerStates := []ControllerDebugState{}
+	if c.masterController.controllers != nil {
+		for _, controller := range *c.masterController.controllers {
+			controllerStates = append(controllerStates, controller.DebugState())
+		}
+	}
+
+	payload := struct {
+		StateValueMap map[string]StateValueDebug `json:"stateValueMap"`
+		Controllers   []ControllerDebugState     `json:"controllers"`
+	}{
+		StateValueMap: snapshot,
+		Controllers:   controllerStates,
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(snapshot); err != nil {
+	if err := encoder.Encode(payload); err != nil {
 		http.Error(w, "failed to encode stateValueMap", http.StatusInternalServerError)
 		return
 	}

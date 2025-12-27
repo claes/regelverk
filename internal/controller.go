@@ -17,6 +17,17 @@ type Controller interface {
 	IsInitialized() bool
 	Initialize(sm *MasterController) []MQTTPublish
 	ProcessEvent(ev MQTTEvent) []MQTTPublish
+	DebugState() ControllerDebugState
+}
+
+// ControllerDebugState provides a JSON-friendly snapshot of a controller.
+type ControllerDebugState struct {
+	Name                  string        `json:"name"`
+	Initialized           bool          `json:"initialized"`
+	StateMachineState     any           `json:"stateMachineState,omitempty"`
+	StateMachineStateText string        `json:"stateMachineStateText,omitempty"`
+	BackoffUntil          time.Time     `json:"backoffUntil,omitempty"`
+	LastBackoffDuration   time.Duration `json:"lastBackoffDuration,omitempty"`
 }
 
 type MasterController struct {

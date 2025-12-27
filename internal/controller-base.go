@@ -53,6 +53,24 @@ func (c *BaseController) IsInitialized() bool {
 	return c.isInitialized
 }
 
+func (c *BaseController) DebugState() ControllerDebugState {
+	var state any
+	var stateText string
+	if c.stateMachine != nil {
+		state = c.stateMachine.MustState()
+		stateText = fmt.Sprint(state)
+	}
+
+	return ControllerDebugState{
+		Name:                  c.Name,
+		Initialized:           c.isInitialized,
+		StateMachineState:     state,
+		StateMachineStateText: stateText,
+		BackoffUntil:          c.backoffUntil,
+		LastBackoffDuration:   c.lastBackoffDuration,
+	}
+}
+
 func (c *BaseController) checkBackoff() bool {
 	return time.Now().After(c.backoffUntil)
 }
