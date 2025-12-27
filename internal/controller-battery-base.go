@@ -23,7 +23,6 @@ func (t batteryState) ToInt() int {
 type BatteryReminderController struct {
 	BaseController
 	cancelFunc          context.CancelFunc
-	Name                string
 	StateBatteryPoorKey StateKey
 	ReminderPeriod      time.Duration
 	MaxReminders        int

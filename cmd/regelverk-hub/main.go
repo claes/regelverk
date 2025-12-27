@@ -47,7 +47,7 @@ func main() {
 			ReminderPayload: `embed://assets/ping.wav`,
 		},
 		&internal.BatteryReminderController{
-			Name:                "balconydoorbattery",
+			BaseController:      internal.BaseController{Name: "balconydoorbattery"},
 			StateBatteryPoorKey: "balconyDoorBatteryLow",
 			ReminderPeriod:      24 * time.Hour,
 			MaxReminders:        20,
@@ -55,7 +55,7 @@ func main() {
 			ReminderPayload:     `Battery balcony door is low`,
 		},
 		&internal.BatteryReminderController{
-			Name:                "kitchenfeezerdoorbattery",
+			BaseController:      internal.BaseController{Name: "kitchenfreezerdoorbattery"},
 			StateBatteryPoorKey: "freezerDoorBatteryLow",
 			ReminderPeriod:      24 * time.Hour,
 			MaxReminders:        20,
@@ -63,7 +63,7 @@ func main() {
 			ReminderPayload:     `Battery freezer door is low`,
 		},
 		&internal.BatteryReminderController{
-			Name:                "kitchenfridgedoorbattery",
+			BaseController:      internal.BaseController{Name: "kitchenfridgedoorbattery"},
 			StateBatteryPoorKey: "fridgeDoorBatteryLow",
 			ReminderPeriod:      24 * time.Hour,
 			MaxReminders:        20,

@@ -23,8 +23,7 @@ func (t doorState) ToInt() int {
 
 type DoorReminderController struct {
 	BaseController
-	cancelFunc context.CancelFunc
-	//Name            string
+	cancelFunc      context.CancelFunc
 	SensorName      string
 	StateOpenKey    StateKey // "freezerDoorOpen"
 	OpenLongLimit   time.Duration
