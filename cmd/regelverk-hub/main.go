@@ -74,6 +74,7 @@ func main() {
 		&internal.BedroomController{},
 		&internal.SnapcastController{},
 		&internal.WebController{},
+		&internal.DebugController{},
 	}
 
 	internal.StartRegelverk(config, bridgeWrappers, controllers)
