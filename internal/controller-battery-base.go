@@ -8,6 +8,7 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+//go:generate stringer -type=batteryState
 type batteryState int
 
 const (
@@ -22,7 +23,6 @@ func (t batteryState) ToInt() int {
 type BatteryReminderController struct {
 	BaseController
 	cancelFunc          context.CancelFunc
-	Name                string
 	StateBatteryPoorKey StateKey
 	ReminderPeriod      time.Duration
 	MaxReminders        int

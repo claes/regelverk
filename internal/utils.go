@@ -159,6 +159,35 @@ func (s *StateValueMap) registerMutatorCallback(callback func(key StateKey) (Sta
 	s.mutatorCallbacks = append(s.mutatorCallbacks, callback)
 }
 
+// StateValueDebug is an exported view of a StateValue used for debugging output.
+type StateValueDebug struct {
+	Value        bool      `json:"value"`
+	IsDefined    bool      `json:"isDefined"`
+	LastUpdate   time.Time `json:"lastUpdate"`
+	LastChange   time.Time `json:"lastChange"`
+	LastSetTrue  time.Time `json:"lastSetTrue"`
+	LastSetFalse time.Time `json:"lastSetFalse"`
+}
+
+// Snapshot returns a copy of the current stateValueMap suitable for JSON encoding.
+func (s *StateValueMap) Snapshot() map[string]StateValueDebug {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	snapshot := make(map[string]StateValueDebug, len(s.svMap))
+	for key, stateValue := range s.svMap {
+		snapshot[string(key)] = StateValueDebug{
+			Value:        stateValue.value,
+			IsDefined:    stateValue.isDefined,
+			LastUpdate:   stateValue.lastUpdate,
+			LastChange:   stateValue.lastChange,
+			LastSetTrue:  stateValue.lastSetTrue,
+			LastSetFalse: stateValue.lastSetFalse,
+		}
+	}
+	return snapshot
+}
+
 func (s *StateValueMap) setStateValue(key StateKey, value StateValue) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

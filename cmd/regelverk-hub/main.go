@@ -27,7 +27,7 @@ func main() {
 		&internal.KitchenController{},
 		//&internal.KitchenFreezerDoorController{},
 		&internal.DoorReminderController{
-			Name:            "kitchenfreezerdoor",
+			BaseController:  internal.BaseController{Name: "kitchenfreezerdoor"},
 			SensorName:      "freezer-door",
 			StateOpenKey:    "freezerDoorOpen",
 			OpenLongLimit:   10 * time.Second,
@@ -37,7 +37,7 @@ func main() {
 			ReminderPayload: `embed://assets/ping.wav`,
 		},
 		&internal.DoorReminderController{
-			Name:            "kitchenfridgedoor",
+			BaseController:  internal.BaseController{Name: "kitchenfridgedoor"},
 			SensorName:      "fridge-door",
 			StateOpenKey:    "fridgeDoorOpen",
 			OpenLongLimit:   10 * time.Second,
@@ -47,7 +47,7 @@ func main() {
 			ReminderPayload: `embed://assets/ping.wav`,
 		},
 		&internal.BatteryReminderController{
-			Name:                "balconydoorbattery",
+			BaseController:      internal.BaseController{Name: "balconydoorbattery"},
 			StateBatteryPoorKey: "balconyDoorBatteryLow",
 			ReminderPeriod:      24 * time.Hour,
 			MaxReminders:        20,
@@ -55,7 +55,7 @@ func main() {
 			ReminderPayload:     `Battery balcony door is low`,
 		},
 		&internal.BatteryReminderController{
-			Name:                "kitchenfeezerdoorbattery",
+			BaseController:      internal.BaseController{Name: "kitchenfreezerdoorbattery"},
 			StateBatteryPoorKey: "freezerDoorBatteryLow",
 			ReminderPeriod:      24 * time.Hour,
 			MaxReminders:        20,
@@ -63,7 +63,7 @@ func main() {
 			ReminderPayload:     `Battery freezer door is low`,
 		},
 		&internal.BatteryReminderController{
-			Name:                "kitchenfridgedoorbattery",
+			BaseController:      internal.BaseController{Name: "kitchenfridgedoorbattery"},
 			StateBatteryPoorKey: "fridgeDoorBatteryLow",
 			ReminderPeriod:      24 * time.Hour,
 			MaxReminders:        20,
@@ -74,6 +74,7 @@ func main() {
 		&internal.BedroomController{},
 		&internal.SnapcastController{},
 		&internal.WebController{},
+		&internal.DebugController{},
 	}
 
 	internal.StartRegelverk(config, bridgeWrappers, controllers)

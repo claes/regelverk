@@ -14,6 +14,7 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+//go:generate stringer -type=snapcastState
 type snapcastState int
 
 const (

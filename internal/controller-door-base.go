@@ -8,6 +8,7 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+//go:generate stringer -type=doorState
 type doorState int
 
 const (
@@ -23,7 +24,6 @@ func (t doorState) ToInt() int {
 type DoorReminderController struct {
 	BaseController
 	cancelFunc      context.CancelFunc
-	Name            string
 	SensorName      string
 	StateOpenKey    StateKey // "freezerDoorOpen"
 	OpenLongLimit   time.Duration

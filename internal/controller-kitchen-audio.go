@@ -12,6 +12,7 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
+//go:generate stringer -type=kitchenAudioState
 type kitchenAudioState int
 
 const (
