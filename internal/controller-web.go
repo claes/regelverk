@@ -87,8 +87,8 @@ func (l *WebController) Initialize(masterController *MasterController) []MQTTPub
 	}()
 
 	// Needed?
-	l.rotelStateUpdated = make(chan struct{})
-	l.pulseaudioStateUpdated = make(chan struct{})
+	l.rotelStateUpdated = make(chan struct{}, 1)
+	l.pulseaudioStateUpdated = make(chan struct{}, 1)
 
 	l.SetInitialized()
 
@@ -115,14 +115,14 @@ func (l *WebController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		if err != nil {
 			slog.Error("Could not unmarshal rotel state", "rotelstate", ev.Payload)
 		} else {
-			l.rotelStateUpdated <- struct{}{}
+			l.notifyRotelStateUpdated()
 		}
 	case "pulseaudio/state":
 		err := json.Unmarshal(ev.Payload.([]byte), &l.pulseAudioState)
 		if err != nil {
 			slog.Error("Could not unmarshal pulseaudio state", "pulseaudiostate", ev.Payload)
 		} else {
-			l.pulseaudioStateUpdated <- struct{}{}
+			l.notifyPulseaudioStateUpdated()
 		}
 
 		// case "regelverk/ticker/1s":
@@ -148,6 +148,20 @@ func (l *WebController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		// 	}
 	}
 	return nil
+}
+
+func (l *WebController) notifyRotelStateUpdated() {
+	select {
+	case l.rotelStateUpdated <- struct{}{}:
+	default:
+	}
+}
+
+func (l *WebController) notifyPulseaudioStateUpdated() {
+	select {
+	case l.pulseaudioStateUpdated <- struct{}{}:
+	default:
+	}
 }
 
 func (l *WebController) mainHandler(w http.ResponseWriter, r *http.Request) {
