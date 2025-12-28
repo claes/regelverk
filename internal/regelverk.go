@@ -184,7 +184,7 @@ func parseJSONPayload(ev MQTTEvent) map[string]interface{} {
 	payloadJson := string(ev.Payload.([]byte))
 	err := json.Unmarshal([]byte(payloadJson), &payload)
 	if err != nil {
-		slog.Error("Error parsing JSON payload", "payload", ev.Payload)
+		slog.Error("Error parsing JSON payload", "payload", ev.Payload, "topic", ev.Topic, "error", err)
 		return nil
 	}
 	m := payload.(map[string]interface{})
