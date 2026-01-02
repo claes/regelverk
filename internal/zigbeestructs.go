@@ -224,42 +224,42 @@ func getUnmarshaller(topic string) func([]byte) (interface{}, error) {
 	return nil
 }
 
-func logZigbeeMetricsForTopic(r interface{}, topic string) bool {
-	v := reflect.ValueOf(r)
-	t := reflect.TypeOf(r)
+// func logZigbeeMetricsForTopic(r interface{}, topic string) bool {
+// 	v := reflect.ValueOf(r)
+// 	t := reflect.TypeOf(r)
 
-	push := false
-	for i := 0; i < v.NumField(); i++ {
-		field := t.Field(i)
-		jsonTag := field.Tag.Get("json")
-		if jsonTag == "" {
-			continue
-		}
-		value := v.Field(i).Interface()
-		switch v.Field(i).Kind() {
-		case reflect.Float64:
-			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
-				topic, jsonTag), nil)
-			gauge.Set(value.(float64))
-			push = true
-		case reflect.Int64:
-			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
-				topic, jsonTag), nil)
-			gauge.Set(float64(value.(int64)))
-			push = true
-		case reflect.Bool:
-			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
-				topic, jsonTag), nil)
-			if value.(bool) {
-				gauge.Set(1.0)
-			} else {
-				gauge.Set(0.0)
-			}
-			push = true
-		}
-	}
-	return push
-}
+// 	push := false
+// 	for i := 0; i < v.NumField(); i++ {
+// 		field := t.Field(i)
+// 		jsonTag := field.Tag.Get("json")
+// 		if jsonTag == "" {
+// 			continue
+// 		}
+// 		value := v.Field(i).Interface()
+// 		switch v.Field(i).Kind() {
+// 		case reflect.Float64:
+// 			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
+// 				topic, jsonTag), nil)
+// 			gauge.Set(value.(float64))
+// 			push = true
+// 		case reflect.Int64:
+// 			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
+// 				topic, jsonTag), nil)
+// 			gauge.Set(float64(value.(int64)))
+// 			push = true
+// 		case reflect.Bool:
+// 			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
+// 				topic, jsonTag), nil)
+// 			if value.(bool) {
+// 				gauge.Set(1.0)
+// 			} else {
+// 				gauge.Set(0.0)
+// 			}
+// 			push = true
+// 		}
+// 	}
+// 	return push
+// }
 
 func logZigbeeMetrics(ev MQTTEvent) bool {
 	unmarshallerFunc := getUnmarshaller(ev.Topic)
@@ -268,7 +268,38 @@ func logZigbeeMetrics(ev MQTTEvent) bool {
 		if err != nil {
 			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
 		} else if device != nil {
-			return logZigbeeMetricsForTopic(device, ev.Topic)
+			topic := ev.Topic
+			v := reflect.ValueOf(device)
+			t := reflect.TypeOf(device)
+			push := false
+			for i := 0; i < v.NumField(); i++ {
+				field := t.Field(i)
+				jsonTag := field.Tag.Get("json")
+				if jsonTag == "" {
+					continue
+				}
+				value := v.Field(i).Interface()
+				gaugeString := fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`, topic, jsonTag)
+				switch v.Field(i).Kind() {
+				case reflect.Float64:
+					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
+					gauge.Set(value.(float64))
+					push = true
+				case reflect.Int64:
+					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
+					gauge.Set(float64(value.(int64)))
+					push = true
+				case reflect.Bool:
+					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
+					if value.(bool) {
+						gauge.Set(1.0)
+					} else {
+						gauge.Set(0.0)
+					}
+					push = true
+				}
+			}
+			return push
 		}
 	}
 	return false
