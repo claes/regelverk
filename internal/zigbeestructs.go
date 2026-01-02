@@ -2,8 +2,17 @@ package regelverk
 
 import (
 	"encoding/json"
+	"fmt"
+	"log/slog"
+	"reflect"
 	"time"
+
+	"github.com/VictoriaMetrics/metrics"
 )
+
+// Created using command line like
+// quicktype -l go -o parasoll.go parasoll.json
+// where parasoll.json is from Zigbee2MQTT state tab of the device
 
 // IKEA tretakt power plug
 
@@ -180,4 +189,87 @@ type IkeaParasollUpdate struct {
 	InstalledVersion int64  `json:"installed_version"`
 	LatestVersion    int64  `json:"latest_version"`
 	State            string `json:"state"`
+}
+
+func getUnmarshaller(topic string) func([]byte) (interface{}, error) {
+	switch topic {
+	case "zigbee2mqtt/freezer-door", "zigbee2mqtt/fridge-door":
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalIkeaParasoll(data)
+		}
+	case "zigbee2mqtt/kitchen-sink":
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalIkeaInspelning(data)
+		}
+	case
+		"zigbee2mqtt/livingroom-floorlamp",
+		"zigbee2mqtt/kitchen-computer",
+		"zigbee2mqtt/kitchen-amp":
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalIkeaTretakt(data)
+		}
+	case "zigbee2mqtt/livingroom-presence":
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalIkeaVallhorn(data)
+		}
+	case "zigbee2mqtt/tv-power":
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalTS011F(data)
+		}
+	case "zigbee2mqtt/vindstyrka":
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalIkeaVindstyrka(data)
+		}
+	}
+	return nil
+}
+
+func logZigbeeMetricsForTopic(r interface{}, topic string) bool {
+	v := reflect.ValueOf(r)
+	t := reflect.TypeOf(r)
+
+	push := false
+	for i := 0; i < v.NumField(); i++ {
+		field := t.Field(i)
+		jsonTag := field.Tag.Get("json")
+		if jsonTag == "" {
+			continue
+		}
+		value := v.Field(i).Interface()
+		switch v.Field(i).Kind() {
+		case reflect.Float64:
+			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
+				topic, jsonTag), nil)
+			gauge.Set(value.(float64))
+			push = true
+		case reflect.Int64:
+			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
+				topic, jsonTag), nil)
+			gauge.Set(float64(value.(int64)))
+			push = true
+		case reflect.Bool:
+			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
+				topic, jsonTag), nil)
+			if value.(bool) {
+				gauge.Set(1.0)
+			} else {
+				gauge.Set(0.0)
+			}
+			push = true
+		}
+	}
+	return push
+}
+
+func logZigbeeMetrics(ev MQTTEvent) bool {
+	unmarshallerFunc := getUnmarshaller(ev.Topic)
+	if unmarshallerFunc != nil {
+		device, err := unmarshallerFunc(ev.Payload.([]byte))
+		if err != nil {
+			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
+		} else if device != nil {
+			return logZigbeeMetricsForTopic(device, ev.Topic)
+		}
+	}
+	return false
 }

@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/VictoriaMetrics/metrics"
 	pulsemqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
 	rotelmqtt "github.com/claes/mqtt-bridges/rotel-mqtt/lib"
 	"github.com/gorilla/websocket"
@@ -126,85 +125,7 @@ func (l *WebController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 			l.notifyPulseaudioStateUpdated()
 		}
 	}
-
-	unmarshallerFunc := getUnmarshaller(ev.Topic)
-	if unmarshallerFunc != nil {
-		device, err := unmarshallerFunc(ev.Payload.([]byte))
-		if err != nil {
-			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
-		} else if device != nil {
-			l.logMetrics(device, ev.Topic)
-		}
-	}
 	return nil
-}
-
-func getUnmarshaller(topic string) func([]byte) (interface{}, error) {
-	switch topic {
-	case "zigbee2mqtt/freezer-door", "zigbee2mqtt/fridge-door":
-		return func(data []byte) (interface{}, error) {
-			return UnmarshalIkeaParasoll(data)
-		}
-	case "zigbee2mqtt/kitchen-sink":
-		return func(data []byte) (interface{}, error) {
-			return UnmarshalIkeaInspelning(data)
-		}
-	case
-		"zigbee2mqtt/livingroom-floorlamp",
-		"zigbee2mqtt/kitchen-computer",
-		"zigbee2mqtt/kitchen-amp":
-		return func(data []byte) (interface{}, error) {
-			return UnmarshalIkeaTretakt(data)
-		}
-	case "zigbee2mqtt/livingroom-presence":
-		return func(data []byte) (interface{}, error) {
-			return UnmarshalIkeaVallhorn(data)
-		}
-	case "zigbee2mqtt/tv-power":
-		return func(data []byte) (interface{}, error) {
-			return UnmarshalTS011F(data)
-		}
-	case "zigbee2mqtt/vindstyrka":
-		return func(data []byte) (interface{}, error) {
-			return UnmarshalIkeaVindstyrka(data)
-		}
-	}
-	return nil
-}
-
-func (l *WebController) logMetrics(r interface{}, topic string) {
-	v := reflect.ValueOf(r)
-	t := reflect.TypeOf(r)
-
-	for i := 0; i < v.NumField(); i++ {
-		field := t.Field(i)
-		jsonTag := field.Tag.Get("json")
-		if jsonTag == "" {
-			continue
-		}
-		value := v.Field(i).Interface()
-		switch v.Field(i).Kind() {
-		case reflect.Float64:
-			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
-				topic, jsonTag), nil)
-			gauge.Set(value.(float64))
-			l.masterController.pushMetrics = true
-		case reflect.Int64:
-			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
-				topic, jsonTag), nil)
-			gauge.Set(float64(value.(int64)))
-			l.masterController.pushMetrics = true
-		case reflect.Bool:
-			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
-				topic, jsonTag), nil)
-			if value.(bool) {
-				gauge.Set(1.0)
-			} else {
-				gauge.Set(0.0)
-			}
-			l.masterController.pushMetrics = true
-		}
-	}
 }
 
 func (l *WebController) notifyRotelStateUpdated() {
