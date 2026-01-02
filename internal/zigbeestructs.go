@@ -127,7 +127,7 @@ type IkeaVindstyrkaUpdate struct {
 
 // IKEA Vallhorn presence sensor
 
-func UnmarshalVallhorn(data []byte) (IkeaVallhorn, error) {
+func UnmarshalIkeaVallhorn(data []byte) (IkeaVallhorn, error) {
 	var r IkeaVallhorn
 	err := json.Unmarshal(data, &r)
 	return r, err
