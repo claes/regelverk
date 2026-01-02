@@ -224,43 +224,6 @@ func getUnmarshaller(topic string) func([]byte) (interface{}, error) {
 	return nil
 }
 
-// func logZigbeeMetricsForTopic(r interface{}, topic string) bool {
-// 	v := reflect.ValueOf(r)
-// 	t := reflect.TypeOf(r)
-
-// 	push := false
-// 	for i := 0; i < v.NumField(); i++ {
-// 		field := t.Field(i)
-// 		jsonTag := field.Tag.Get("json")
-// 		if jsonTag == "" {
-// 			continue
-// 		}
-// 		value := v.Field(i).Interface()
-// 		switch v.Field(i).Kind() {
-// 		case reflect.Float64:
-// 			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
-// 				topic, jsonTag), nil)
-// 			gauge.Set(value.(float64))
-// 			push = true
-// 		case reflect.Int64:
-// 			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
-// 				topic, jsonTag), nil)
-// 			gauge.Set(float64(value.(int64)))
-// 			push = true
-// 		case reflect.Bool:
-// 			gauge := metrics.GetOrCreateGauge(fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`,
-// 				topic, jsonTag), nil)
-// 			if value.(bool) {
-// 				gauge.Set(1.0)
-// 			} else {
-// 				gauge.Set(0.0)
-// 			}
-// 			push = true
-// 		}
-// 	}
-// 	return push
-// }
-
 func logZigbeeMetrics(ev MQTTEvent) bool {
 	unmarshallerFunc := getUnmarshaller(ev.Topic)
 	if unmarshallerFunc != nil {
@@ -269,8 +232,9 @@ func logZigbeeMetrics(ev MQTTEvent) bool {
 			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
 		} else if device != nil {
 			topic := ev.Topic
-			v := reflect.ValueOf(device)
 			t := reflect.TypeOf(device)
+			n := t.Name()
+			v := reflect.ValueOf(device)
 			push := false
 			for i := 0; i < v.NumField(); i++ {
 				field := t.Field(i)
@@ -279,7 +243,7 @@ func logZigbeeMetrics(ev MQTTEvent) bool {
 					continue
 				}
 				value := v.Field(i).Interface()
-				gaugeString := fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s"}`, topic, jsonTag)
+				gaugeString := fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s",deviceName="%s"}`, topic, jsonTag, n)
 				switch v.Field(i).Kind() {
 				case reflect.Float64:
 					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
