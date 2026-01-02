@@ -33,7 +33,6 @@ type WebController struct {
 	BaseController
 	rotelState             rotelmqtt.RotelState
 	pulseAudioState        pulsemqtt.PulseAudioState
-	kitchenPlug            IkeaInspelning
 	upgrader               websocket.Upgrader
 	rotelStateUpdated      chan struct{}
 	pulseaudioStateUpdated chan struct{}
@@ -126,13 +125,43 @@ func (l *WebController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		} else {
 			l.notifyPulseaudioStateUpdated()
 		}
-	case "zigbee2mqtt/kitchen-sink":
-		var err error
-		l.kitchenPlug, err = UnmarshalIkeaInspelning(ev.Payload.([]byte))
+	case "zigbee2mqtt/freezer-door", "zigbee2mqtt/fridge-door":
+		device, err := UnmarshalIkeaParasoll(ev.Payload.([]byte))
 		if err != nil {
-			slog.Error("Could not unmarshal kitchen sink power plug state", "payload", ev.Payload)
+			slog.Error("Could not unmarshal json state", "payload", ev.Payload, "topic", ev.Topic)
 		} else {
-			l.logMetrics(l.kitchenPlug, ev.Topic)
+			l.logMetrics(device, ev.Topic)
+		}
+	case "zigbee2mqtt/kitchen-sink":
+		device, err := UnmarshalIkeaInspelning(ev.Payload.([]byte))
+		if err != nil {
+			slog.Error("Could not unmarshal json state", "payload", ev.Payload, "topic", ev.Topic)
+		} else {
+			l.logMetrics(device, ev.Topic)
+		}
+	case
+		"zigbee2mqtt/livingroom-floorlamp",
+		"zigbee2mqtt/kitchen-computer",
+		"zigbee2mqtt/kitchen-amp":
+		device, err := UnmarshalIkeaTretakt(ev.Payload.([]byte))
+		if err != nil {
+			slog.Error("Could not unmarshal json state", "payload", ev.Payload, "topic", ev.Topic)
+		} else {
+			l.logMetrics(device, ev.Topic)
+		}
+	case "zigbee2mqtt/livingroom-presence":
+		device, err := UnmarshalIkeaVallhorn(ev.Payload.([]byte))
+		if err != nil {
+			slog.Error("Could not unmarshal json state", "payload", ev.Payload, "topic", ev.Topic)
+		} else {
+			l.logMetrics(device, ev.Topic)
+		}
+	case "zigbee2mqtt/tv-power":
+		device, err := UnmarshalTS011F(ev.Payload.([]byte))
+		if err != nil {
+			slog.Error("Could not unmarshal json state", "payload", ev.Payload, "topic", ev.Topic)
+		} else {
+			l.logMetrics(device, ev.Topic)
 		}
 
 		// case "regelverk/ticker/1s":
