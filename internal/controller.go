@@ -77,6 +77,8 @@ func (l *MasterController) StateValueCallback(key StateKey, value, new, updated 
 
 func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQTTEvent) {
 
+	logZigbeeMetrics(ev)
+
 	masterController.mu.Lock()
 	defer masterController.mu.Unlock()
 

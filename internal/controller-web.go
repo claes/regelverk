@@ -124,28 +124,6 @@ func (l *WebController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		} else {
 			l.notifyPulseaudioStateUpdated()
 		}
-
-		// case "regelverk/ticker/1s":
-		// 	_, _, second := time.Now().Clock()
-		// 	if second%10 == 0 {
-		// 		returnList := []MQTTPublish{
-		// 			{
-		// 				Topic:    "rotel/command/initialize",
-		// 				Payload:  "true",
-		// 				Qos:      2,
-		// 				Retained: false,
-		// 				Wait:     0 * time.Second,
-		// 			},
-		// 			{
-		// 				Topic:    "pulseaudio/initialize",
-		// 				Payload:  "true",
-		// 				Qos:      2,
-		// 				Retained: false,
-		// 				Wait:     0 * time.Second,
-		// 			},
-		// 		}
-		// 		return returnList
-		// 	}
 	}
 	return nil
 }
