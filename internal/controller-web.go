@@ -132,8 +132,7 @@ func (l *WebController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		if err != nil {
 			slog.Error("Could not unmarshal kitchen sink power plug state", "payload", ev.Payload)
 		} else {
-			topic := "zigbee2mqtt/kitchen-sink"
-			l.logMetrics(&l.kitchenPlug, topic)
+			l.logMetrics(l.kitchenPlug, ev.Topic)
 		}
 
 		// case "regelverk/ticker/1s":
