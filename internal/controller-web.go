@@ -125,66 +125,49 @@ func (l *WebController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		} else {
 			l.notifyPulseaudioStateUpdated()
 		}
-	case "zigbee2mqtt/freezer-door", "zigbee2mqtt/fridge-door":
-		device, err := UnmarshalIkeaParasoll(ev.Payload.([]byte))
+	}
+
+	unmarshallerFunc := getUnmarshaller(ev.Topic)
+	if unmarshallerFunc != nil {
+		device, err := unmarshallerFunc(ev.Payload.([]byte))
 		if err != nil {
-			slog.Error("Could not unmarshal json state", "payload", ev.Payload, "topic", ev.Topic)
-		} else {
+			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
+		} else if device != nil {
 			l.logMetrics(device, ev.Topic)
 		}
+	}
+	return nil
+}
+
+func getUnmarshaller(topic string) func([]byte) (interface{}, error) {
+	switch topic {
+	case "zigbee2mqtt/freezer-door", "zigbee2mqtt/fridge-door":
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalIkeaParasoll(data)
+		}
 	case "zigbee2mqtt/kitchen-sink":
-		device, err := UnmarshalIkeaInspelning(ev.Payload.([]byte))
-		if err != nil {
-			slog.Error("Could not unmarshal json state", "payload", ev.Payload, "topic", ev.Topic)
-		} else {
-			l.logMetrics(device, ev.Topic)
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalIkeaInspelning(data)
 		}
 	case
 		"zigbee2mqtt/livingroom-floorlamp",
 		"zigbee2mqtt/kitchen-computer",
 		"zigbee2mqtt/kitchen-amp":
-		device, err := UnmarshalIkeaTretakt(ev.Payload.([]byte))
-		if err != nil {
-			slog.Error("Could not unmarshal json state", "payload", ev.Payload, "topic", ev.Topic)
-		} else {
-			l.logMetrics(device, ev.Topic)
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalIkeaTretakt(data)
 		}
 	case "zigbee2mqtt/livingroom-presence":
-		device, err := UnmarshalIkeaVallhorn(ev.Payload.([]byte))
-		if err != nil {
-			slog.Error("Could not unmarshal json state", "payload", ev.Payload, "topic", ev.Topic)
-		} else {
-			l.logMetrics(device, ev.Topic)
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalIkeaVallhorn(data)
 		}
 	case "zigbee2mqtt/tv-power":
-		device, err := UnmarshalTS011F(ev.Payload.([]byte))
-		if err != nil {
-			slog.Error("Could not unmarshal json state", "payload", ev.Payload, "topic", ev.Topic)
-		} else {
-			l.logMetrics(device, ev.Topic)
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalTS011F(data)
 		}
-
-		// case "regelverk/ticker/1s":
-		// 	_, _, second := time.Now().Clock()
-		// 	if second%10 == 0 {
-		// 		returnList := []MQTTPublish{
-		// 			{
-		// 				Topic:    "rotel/command/initialize",
-		// 				Payload:  "true",
-		// 				Qos:      2,
-		// 				Retained: false,
-		// 				Wait:     0 * time.Second,
-		// 			},
-		// 			{
-		// 				Topic:    "pulseaudio/initialize",
-		// 				Payload:  "true",
-		// 				Qos:      2,
-		// 				Retained: false,
-		// 				Wait:     0 * time.Second,
-		// 			},
-		// 		}
-		// 		return returnList
-		// 	}
+	case "zigbee2mqtt/vindstyrka":
+		return func(data []byte) (interface{}, error) {
+			return UnmarshalIkeaVindstyrka(data)
+		}
 	}
 	return nil
 }
