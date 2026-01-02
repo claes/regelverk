@@ -126,15 +126,15 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 			counter.Add(len(eventsToPublish))
 		}
 		if intState, ok := beforeState.(interface{ ToInt() int }); ok {
-			beforeStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_before{controller="%s",realm="%s"}`,
-				c.Name, c.masterController.metricsConfig.MetricsRealm), nil)
+			beforeStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_before{controller="%s",realm="%s",state="%s"}`,
+				c.Name, c.masterController.metricsConfig.MetricsRealm, beforeState), nil)
 			beforeStateGauge.Set(float64(intState.ToInt()))
 		} else {
 			slog.Error("State does not implement ToInt", "state", afterState)
 		}
 		if intState, ok := afterState.(interface{ ToInt() int }); ok {
-			afterStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_after{controller="%s",realm="%s"}`,
-				c.Name, c.masterController.metricsConfig.MetricsRealm), nil)
+			afterStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_after{controller="%s",realm="%s",state="%s"}`,
+				c.Name, c.masterController.metricsConfig.MetricsRealm, afterState), nil)
 			afterStateGauge.Set(float64(intState.ToInt()))
 		} else {
 			slog.Error("State does not implement ToInt", "state", afterState)
