@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 // Created using command line like
@@ -279,8 +280,13 @@ func logZigbeeMetrics(ev MQTTEvent) bool {
 	return false
 }
 
-func parseZ2MDevices(ev MQTTEvent) bool {
-	slog.Info("parseZ2MDevices1", "topic", ev.Topic)
+func (masterController *MasterController) initZ2MDevices(_ mqtt.Client, m mqtt.Message) {
+	ev := MQTTEvent{
+		Timestamp: time.Now(),
+		Topic:     m.Topic(),
+		Payload:   m.Payload(),
+	}
+
 	switch ev.Topic {
 	case "zigbee2mqtt/bridge/devices":
 		slog.Info("parseZ2MDevices2", "topic", ev.Topic)
@@ -292,5 +298,4 @@ func parseZ2MDevices(ev MQTTEvent) bool {
 			slog.Info("Parsed Zigbee2MQTT devices", "noOfDevices", len(z2mDevices))
 		}
 	}
-	return false
 }

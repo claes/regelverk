@@ -94,20 +94,15 @@ func setupMQTTClient(config Config, masterController *MasterController) error {
 		SetPassword(mqttPassword).
 		SetClientID("regelverk-" + host).
 		SetOnConnectHandler(func(client mqtt.Client) {
-
-			subscriptions :=
-				map[string]byte{
-					"zigbee2mqtt/bridge/devices": 1,
-					"#":                          1}
-			token := client.SubscribeMultiple(subscriptions, masterController.handle)
-
-			// token := client.Subscribe(
-			// 	topic,
-			// 	1, /* minimal QoS level zero: at most once, best-effort delivery */
-			// 	masterController.handle)
+			topic := "#"
+			token := client.Subscribe(topic, 1, masterController.handle)
 			if token.Wait() && token.Error() != nil {
-				slog.Error("Error creating MQTT client", "error", token.Error())
-				os.Exit(1)
+				slog.Error("Error subscribing to MQTT topic", "error", token.Error(), "topic", topic)
+			}
+			topic = "zigbee2mqtt/bridge/devices"
+			token = client.Subscribe(topic, 1, masterController.initZ2MDevices)
+			if token.Wait() && token.Error() != nil {
+				slog.Error("Error subscribing to MQTT topic", "error", token.Error(), "topic", topic)
 			}
 		}).
 		SetConnectRetry(true).

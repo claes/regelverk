@@ -79,8 +79,6 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 
 	logZigbeeMetrics(ev)
 
-	parseZ2MDevices(ev)
-
 	masterController.mu.Lock()
 	defer masterController.mu.Unlock()
 
