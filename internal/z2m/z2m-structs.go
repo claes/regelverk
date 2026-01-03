@@ -244,7 +244,7 @@ func InitZ2MDevices(_ mqtt.Client, m mqtt.Message) {
 			if b, err := json.MarshalIndent(z2mDevices, "", "  "); err != nil {
 				slog.Error("Could not pretty-print devices", "error", err)
 			} else {
-				slog.Info("Zigbee2MQTT devices (pretty)", "devices", string(b))
+				slog.Info("Zigbee2MQTT devices (pretty)", "devices", slog.StringValue(string(b)))
 			}
 		}
 	}
