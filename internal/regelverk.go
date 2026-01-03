@@ -101,7 +101,11 @@ func setupMQTTClient(config Config, masterController *MasterController) error {
 				slog.Error("Error subscribing to MQTT topic", "error", token.Error(), "topic", topic)
 			}
 			topic = "zigbee2mqtt/bridge/devices"
-			token = client.Subscribe(topic, 1, z2m.InitZ2MDevices)
+			token = client.Subscribe(topic, 1, func(c mqtt.Client, m mqtt.Message) {
+				// Also pass through the normal handler so the shared state store is updated.
+				masterController.handle(c, m)
+				z2m.InitZ2MDevices(c, m)
+			})
 			if token.Wait() && token.Error() != nil {
 				slog.Error("Error subscribing to MQTT topic", "error", token.Error(), "topic", topic)
 			}
