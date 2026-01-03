@@ -191,7 +191,17 @@ type IkeaParasollUpdate struct {
 	State            string `json:"state"`
 }
 
-func getUnmarshaller(topic string) func([]byte) (interface{}, error) {
+// func getTypeUnmarshaller(topic string) func([]byte) (interface{}, error) {
+// 	switch topic {
+// 	case "zigbee2mqtt/bridge/devices":
+// 		return func(data []byte) (interface{}, error) {
+// 			return UnmarshalZ2MDevices(data)
+// 		}
+// 	}
+// 	return nil
+// }
+
+func getDeviceUnmarshaller(topic string) func([]byte) (interface{}, error) {
 	switch topic {
 	case "zigbee2mqtt/freezer-door", "zigbee2mqtt/fridge-door":
 		return func(data []byte) (interface{}, error) {
@@ -225,7 +235,7 @@ func getUnmarshaller(topic string) func([]byte) (interface{}, error) {
 }
 
 func logZigbeeMetrics(ev MQTTEvent) bool {
-	unmarshallerFunc := getUnmarshaller(ev.Topic)
+	unmarshallerFunc := getDeviceUnmarshaller(ev.Topic)
 	if unmarshallerFunc != nil {
 		device, err := unmarshallerFunc(ev.Payload.([]byte))
 		if err != nil {
@@ -264,6 +274,19 @@ func logZigbeeMetrics(ev MQTTEvent) bool {
 				}
 			}
 			return push
+		}
+	}
+	return false
+}
+
+func parseZ2MDevices(ev MQTTEvent) bool {
+	switch ev.Topic {
+	case "zigbee2mqtt/bridge/devices":
+		z2mDevices, err := UnmarshalZ2MDevices(ev.Payload.([]byte))
+		if err != nil {
+			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
+		} else if z2mDevices != nil {
+			slog.Info("Parsed Zigbee2MQTT devices", "noOfDevices", len(z2mDevices))
 		}
 	}
 	return false
