@@ -100,10 +100,11 @@ func setupMQTTClient(config Config, masterController *MasterController) error {
 			if token.Wait() && token.Error() != nil {
 				slog.Error("Error subscribing to MQTT topic", "error", token.Error(), "topic", topic)
 			}
+			// Since Z2M state is persisted in MQTT, we need to subscribe to the devices topic explicitly
 			topic = "zigbee2mqtt/bridge/devices"
 			token = client.Subscribe(topic, 1, func(c mqtt.Client, m mqtt.Message) {
-				// Also pass through the normal handler so the shared state store is updated.
-				masterController.handle(c, m)
+				// Let InitZ2MDevices perform its logging/side effects; the wildcard
+				// subscription will still deliver the message to the main handler.
 				z2m.InitZ2MDevices(c, m)
 			})
 			if token.Wait() && token.Error() != nil {
