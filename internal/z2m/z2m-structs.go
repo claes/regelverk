@@ -241,11 +241,11 @@ func InitZ2MDevices(_ mqtt.Client, m mqtt.Message) {
 		if err != nil {
 			slog.Error("Could not unmarshal json state", "topic", m.Topic(), "payload", m.Payload(), "error", err)
 		} else if z2mDevices != nil {
-			if b, err := json.MarshalIndent(z2mDevices, "", "  "); err != nil {
-				slog.Error("Could not pretty-print devices", "error", err)
-			} else {
-				//fmt.Println("Zigbee2MQTT devices (pretty):", string(b))
-			}
+			// if b, err := json.MarshalIndent(z2mDevices, "", "  "); err != nil {
+			// 	slog.Error("Could not pretty-print devices", "error", err)
+			// } else {
+			// 	fmt.Println("Zigbee2MQTT devices (pretty):", string(b))
+			// }
 		}
 	}
 }
