@@ -289,9 +289,7 @@ func (masterController *MasterController) initZ2MDevices(_ mqtt.Client, m mqtt.M
 
 	switch ev.Topic {
 	case "zigbee2mqtt/bridge/devices":
-		slog.Info("parseZ2MDevices2", "topic", ev.Topic)
 		z2mDevices, err := UnmarshalZ2MDevices(ev.Payload.([]byte))
-		slog.Info("parseZ2MDevices3", "topic", ev.Topic)
 		if err != nil {
 			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
 		} else if z2mDevices != nil {
