@@ -86,14 +86,14 @@ func (r *TS011F) Marshal() ([]byte, error) {
 }
 
 type TS011F struct {
-	Current           int64        `json:"current"`
+	Current           float64      `json:"current"`
 	Energy            float64      `json:"energy"`
 	LastSeen          time.Time    `json:"last_seen"`
-	Linkquality       int64        `json:"linkquality"`
-	Power             int64        `json:"power"`
+	Linkquality       float64      `json:"linkquality"`
+	Power             float64      `json:"power"`
 	Update            TS011FUpdate `json:"update"`
 	UpdateAvailable   bool         `json:"update_available"`
-	Voltage           int64        `json:"voltage"`
+	Voltage           float64      `json:"voltage"`
 	ChildLock         string       `json:"child_lock"`
 	IndicatorMode     string       `json:"indicator_mode"`
 	PowerOutageMemory string       `json:"power_outage_memory"`
