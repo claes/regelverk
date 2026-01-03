@@ -280,9 +280,12 @@ func logZigbeeMetrics(ev MQTTEvent) bool {
 }
 
 func parseZ2MDevices(ev MQTTEvent) bool {
+	slog.Info("parseZ2MDevices1", "topic", ev.Topic)
 	switch ev.Topic {
 	case "zigbee2mqtt/bridge/devices":
+		slog.Info("parseZ2MDevices2", "topic", ev.Topic)
 		z2mDevices, err := UnmarshalZ2MDevices(ev.Payload.([]byte))
+		slog.Info("parseZ2MDevices3", "topic", ev.Topic)
 		if err != nil {
 			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
 		} else if z2mDevices != nil {
