@@ -28,7 +28,7 @@ func (r *IkeaTretakt) Marshal() ([]byte, error) {
 
 type IkeaTretakt struct {
 	LastSeen        time.Time         `json:"last_seen"`
-	Linkquality     int64             `json:"linkquality"`
+	Linkquality     float64           `json:"linkquality"`
 	State           string            `json:"state"`
 	Update          IkeaTretaktUpdate `json:"update"`
 	UpdateAvailable bool              `json:"update_available"`
@@ -37,9 +37,9 @@ type IkeaTretakt struct {
 }
 
 type IkeaTretaktUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
 //IKEA Inspelning power plug
@@ -58,7 +58,7 @@ type IkeaInspelning struct {
 	Current         float64              `json:"current"`
 	Energy          float64              `json:"energy"`
 	LastSeen        time.Time            `json:"last_seen"`
-	Linkquality     int64                `json:"linkquality"`
+	Linkquality     float64              `json:"linkquality"`
 	Power           float64              `json:"power"`
 	PowerOnBehavior string               `json:"power_on_behavior"`
 	State           string               `json:"state"`
@@ -68,9 +68,9 @@ type IkeaInspelning struct {
 }
 
 type IkeaInspelningUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
 // TS011F Power plug
@@ -101,9 +101,9 @@ type TS011F struct {
 }
 
 type TS011FUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
 // IKEA Vindstyrka sensor
@@ -119,19 +119,19 @@ func (r *IkeaVindstyrka) Marshal() ([]byte, error) {
 }
 
 type IkeaVindstyrka struct {
-	Humidity    int64                `json:"humidity"`
-	Linkquality int64                `json:"linkquality"`
-	Pm25        int64                `json:"pm25"`
-	Temperature int64                `json:"temperature"`
+	Humidity    float64              `json:"humidity"`
+	Linkquality float64              `json:"linkquality"`
+	Pm25        float64              `json:"pm25"`
+	Temperature float64              `json:"temperature"`
 	Update      IkeaVindstyrkaUpdate `json:"update"`
-	VocIndex    int64                `json:"voc_index"`
+	VocIndex    float64              `json:"voc_index"`
 	Identify    interface{}          `json:"identify"`
 }
 
 type IkeaVindstyrkaUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
 // IKEA Vallhorn presence sensor
@@ -147,19 +147,19 @@ func (r *IkeaVallhorn) Marshal() ([]byte, error) {
 }
 
 type IkeaVallhorn struct {
-	Battery         int64              `json:"battery"`
-	Illuminance     int64              `json:"illuminance"`
+	Battery         float64            `json:"battery"`
+	Illuminance     float64            `json:"illuminance"`
 	LastSeen        time.Time          `json:"last_seen"`
-	Linkquality     int64              `json:"linkquality"`
+	Linkquality     float64            `json:"linkquality"`
 	Occupancy       bool               `json:"occupancy"`
 	Update          IkeaVallhornUpdate `json:"update"`
 	UpdateAvailable bool               `json:"update_available"`
 }
 
 type IkeaVallhornUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
 // IKEA Parasoll door sensor
@@ -175,20 +175,20 @@ func (r *IkeaParasoll) Marshal() ([]byte, error) {
 }
 
 type IkeaParasoll struct {
-	Battery         int64              `json:"battery"`
+	Battery         float64            `json:"battery"`
 	Contact         bool               `json:"contact"`
 	LastSeen        time.Time          `json:"last_seen"`
-	Linkquality     int64              `json:"linkquality"`
+	Linkquality     float64            `json:"linkquality"`
 	Update          IkeaParasollUpdate `json:"update"`
 	UpdateAvailable bool               `json:"update_available"`
-	Voltage         int64              `json:"voltage"`
+	Voltage         float64            `json:"voltage"`
 	Identify        interface{}        `json:"identify"`
 }
 
 type IkeaParasollUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
 // func getTypeUnmarshaller(topic string) func([]byte) (interface{}, error) {
