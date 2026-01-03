@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
+	"github.com/claes/regelverk/internal/z2m"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -100,7 +101,7 @@ func setupMQTTClient(config Config, masterController *MasterController) error {
 				slog.Error("Error subscribing to MQTT topic", "error", token.Error(), "topic", topic)
 			}
 			topic = "zigbee2mqtt/bridge/devices"
-			token = client.Subscribe(topic, 1, masterController.initZ2MDevices)
+			token = client.Subscribe(topic, 1, z2m.InitZ2MDevices)
 			if token.Wait() && token.Error() != nil {
 				slog.Error("Error subscribing to MQTT topic", "error", token.Error(), "topic", topic)
 			}

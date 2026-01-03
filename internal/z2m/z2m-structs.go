@@ -1,13 +1,12 @@
-package regelverk
+package z2m
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
-	"reflect"
 	"time"
 
-	"github.com/VictoriaMetrics/metrics"
+	// "github.com/claes/regelverk/internal" // Commented out to avoid import cycle
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -202,7 +201,7 @@ type IkeaParasollUpdate struct {
 // 	return nil
 // }
 
-func getDeviceUnmarshaller(topic string) func([]byte) (interface{}, error) {
+func GetDeviceUnmarshaller(topic string) func([]byte) (interface{}, error) {
 	switch topic {
 	case "zigbee2mqtt/freezer-door", "zigbee2mqtt/fridge-door":
 		return func(data []byte) (interface{}, error) {
@@ -235,63 +234,12 @@ func getDeviceUnmarshaller(topic string) func([]byte) (interface{}, error) {
 	return nil
 }
 
-func logZigbeeMetrics(ev MQTTEvent) bool {
-	unmarshallerFunc := getDeviceUnmarshaller(ev.Topic)
-	if unmarshallerFunc != nil {
-		device, err := unmarshallerFunc(ev.Payload.([]byte))
-		if err != nil {
-			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
-		} else if device != nil {
-			topic := ev.Topic
-			t := reflect.TypeOf(device)
-			n := t.Name()
-			v := reflect.ValueOf(device)
-			push := false
-			for i := 0; i < v.NumField(); i++ {
-				field := t.Field(i)
-				jsonTag := field.Tag.Get("json")
-				if jsonTag == "" {
-					continue
-				}
-				value := v.Field(i).Interface()
-				gaugeString := fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s",deviceName="%s"}`, topic, jsonTag, n)
-				switch v.Field(i).Kind() {
-				case reflect.Float64:
-					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
-					gauge.Set(value.(float64))
-					push = true
-				case reflect.Int64:
-					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
-					gauge.Set(float64(value.(int64)))
-					push = true
-				case reflect.Bool:
-					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
-					if value.(bool) {
-						gauge.Set(1.0)
-					} else {
-						gauge.Set(0.0)
-					}
-					push = true
-				}
-			}
-			return push
-		}
-	}
-	return false
-}
-
-func (masterController *MasterController) initZ2MDevices(_ mqtt.Client, m mqtt.Message) {
-	ev := MQTTEvent{
-		Timestamp: time.Now(),
-		Topic:     m.Topic(),
-		Payload:   m.Payload(),
-	}
-
-	switch ev.Topic {
+func InitZ2MDevices(_ mqtt.Client, m mqtt.Message) {
+	switch m.Topic() {
 	case "zigbee2mqtt/bridge/devices":
-		z2mDevices, err := UnmarshalZ2MDevices(ev.Payload.([]byte))
+		z2mDevices, err := UnmarshalDevices(m.Payload())
 		if err != nil {
-			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
+			slog.Error("Could not unmarshal json state", "topic", m.Topic(), "payload", m.Payload(), "error", err)
 		} else if z2mDevices != nil {
 			slog.Info("Parsed Zigbee2MQTT devices", "noOfDevices", len(z2mDevices))
 		}
