@@ -2,6 +2,7 @@ package regelverk
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"sync"
 )
@@ -26,6 +27,8 @@ func (c *DebugController) IsInitialized() bool {
 }
 
 func (c *DebugController) Initialize(masterController *MasterController) []MQTTPublish {
+	slog.Info("Setting up debug HTTP handlers")
+
 	c.masterController = masterController
 	c.Name = "debug"
 	http.HandleFunc("/debug/statevalues", c.stateValueMapHandler)
