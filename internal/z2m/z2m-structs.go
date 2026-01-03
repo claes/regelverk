@@ -2,7 +2,6 @@ package z2m
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -245,7 +244,7 @@ func InitZ2MDevices(_ mqtt.Client, m mqtt.Message) {
 			if b, err := json.MarshalIndent(z2mDevices, "", "  "); err != nil {
 				slog.Error("Could not pretty-print devices", "error", err)
 			} else {
-				fmt.Println("Zigbee2MQTT devices (pretty):", string(b))
+				//fmt.Println("Zigbee2MQTT devices (pretty):", string(b))
 			}
 		}
 	}
