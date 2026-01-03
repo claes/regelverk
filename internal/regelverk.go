@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
+	"github.com/claes/regelverk/internal/z2m"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -94,18 +95,21 @@ func setupMQTTClient(config Config, masterController *MasterController) error {
 		SetPassword(mqttPassword).
 		SetClientID("regelverk-" + host).
 		SetOnConnectHandler(func(client mqtt.Client) {
-			const topic = "#"
-			token := client.Subscribe(
-				topic,
-				1, /* minimal QoS level zero: at most once, best-effort delivery */
-				masterController.handle)
+			topic := "#"
+			token := client.Subscribe(topic, 1, masterController.handle)
 			if token.Wait() && token.Error() != nil {
-				slog.Error("Error creating MQTT client", "error", token.Error())
-				os.Exit(1)
+				slog.Error("Error subscribing to MQTT topic", "error", token.Error(), "topic", topic)
 			}
-			slog.Info("Subscribed to topic", "topic", topic)
+			topic = "zigbee2mqtt/bridge/devices"
+			token = client.Subscribe(topic, 1, z2m.InitZ2MDevices)
+			if token.Wait() && token.Error() != nil {
+				slog.Error("Error subscribing to MQTT topic", "error", token.Error(), "topic", topic)
+			}
 		}).
-		SetConnectRetry(true)
+		SetConnectRetry(true).
+		SetConnectRetryInterval(5 * time.Second).
+		SetKeepAlive(30 * time.Second).
+		SetPingTimeout(10 * time.Second)
 
 	client := mqtt.NewClient(opts)
 	slog.Info("Connecting to MQTT broker", "broker", config.MQTTBroker)

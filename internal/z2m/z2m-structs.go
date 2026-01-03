@@ -1,13 +1,14 @@
-package regelverk
+package z2m
 
 import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"reflect"
 	"time"
 
-	"github.com/VictoriaMetrics/metrics"
+	// "github.com/claes/regelverk/internal" // Commented out to avoid import cycle
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 // Created using command line like
@@ -28,7 +29,7 @@ func (r *IkeaTretakt) Marshal() ([]byte, error) {
 
 type IkeaTretakt struct {
 	LastSeen        time.Time         `json:"last_seen"`
-	Linkquality     int64             `json:"linkquality"`
+	Linkquality     float64           `json:"linkquality"`
 	State           string            `json:"state"`
 	Update          IkeaTretaktUpdate `json:"update"`
 	UpdateAvailable bool              `json:"update_available"`
@@ -37,9 +38,9 @@ type IkeaTretakt struct {
 }
 
 type IkeaTretaktUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
 //IKEA Inspelning power plug
@@ -58,7 +59,7 @@ type IkeaInspelning struct {
 	Current         float64              `json:"current"`
 	Energy          float64              `json:"energy"`
 	LastSeen        time.Time            `json:"last_seen"`
-	Linkquality     int64                `json:"linkquality"`
+	Linkquality     float64              `json:"linkquality"`
 	Power           float64              `json:"power"`
 	PowerOnBehavior string               `json:"power_on_behavior"`
 	State           string               `json:"state"`
@@ -68,9 +69,9 @@ type IkeaInspelning struct {
 }
 
 type IkeaInspelningUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
 // TS011F Power plug
@@ -86,14 +87,14 @@ func (r *TS011F) Marshal() ([]byte, error) {
 }
 
 type TS011F struct {
-	Current           int64        `json:"current"`
+	Current           float64      `json:"current"`
 	Energy            float64      `json:"energy"`
 	LastSeen          time.Time    `json:"last_seen"`
-	Linkquality       int64        `json:"linkquality"`
-	Power             int64        `json:"power"`
+	Linkquality       float64      `json:"linkquality"`
+	Power             float64      `json:"power"`
 	Update            TS011FUpdate `json:"update"`
 	UpdateAvailable   bool         `json:"update_available"`
-	Voltage           int64        `json:"voltage"`
+	Voltage           float64      `json:"voltage"`
 	ChildLock         string       `json:"child_lock"`
 	IndicatorMode     string       `json:"indicator_mode"`
 	PowerOutageMemory string       `json:"power_outage_memory"`
@@ -101,9 +102,9 @@ type TS011F struct {
 }
 
 type TS011FUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
 // IKEA Vindstyrka sensor
@@ -119,19 +120,19 @@ func (r *IkeaVindstyrka) Marshal() ([]byte, error) {
 }
 
 type IkeaVindstyrka struct {
-	Humidity    int64                `json:"humidity"`
-	Linkquality int64                `json:"linkquality"`
-	Pm25        int64                `json:"pm25"`
-	Temperature int64                `json:"temperature"`
+	Humidity    float64              `json:"humidity"`
+	Linkquality float64              `json:"linkquality"`
+	Pm25        float64              `json:"pm25"`
+	Temperature float64              `json:"temperature"`
 	Update      IkeaVindstyrkaUpdate `json:"update"`
-	VocIndex    int64                `json:"voc_index"`
+	VocIndex    float64              `json:"voc_index"`
 	Identify    interface{}          `json:"identify"`
 }
 
 type IkeaVindstyrkaUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
 // IKEA Vallhorn presence sensor
@@ -147,19 +148,19 @@ func (r *IkeaVallhorn) Marshal() ([]byte, error) {
 }
 
 type IkeaVallhorn struct {
-	Battery         int64              `json:"battery"`
-	Illuminance     int64              `json:"illuminance"`
+	Battery         float64            `json:"battery"`
+	Illuminance     float64            `json:"illuminance"`
 	LastSeen        time.Time          `json:"last_seen"`
-	Linkquality     int64              `json:"linkquality"`
+	Linkquality     float64            `json:"linkquality"`
 	Occupancy       bool               `json:"occupancy"`
 	Update          IkeaVallhornUpdate `json:"update"`
 	UpdateAvailable bool               `json:"update_available"`
 }
 
 type IkeaVallhornUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
 // IKEA Parasoll door sensor
@@ -175,23 +176,33 @@ func (r *IkeaParasoll) Marshal() ([]byte, error) {
 }
 
 type IkeaParasoll struct {
-	Battery         int64              `json:"battery"`
+	Battery         float64            `json:"battery"`
 	Contact         bool               `json:"contact"`
 	LastSeen        time.Time          `json:"last_seen"`
-	Linkquality     int64              `json:"linkquality"`
+	Linkquality     float64            `json:"linkquality"`
 	Update          IkeaParasollUpdate `json:"update"`
 	UpdateAvailable bool               `json:"update_available"`
-	Voltage         int64              `json:"voltage"`
+	Voltage         float64            `json:"voltage"`
 	Identify        interface{}        `json:"identify"`
 }
 
 type IkeaParasollUpdate struct {
-	InstalledVersion int64  `json:"installed_version"`
-	LatestVersion    int64  `json:"latest_version"`
-	State            string `json:"state"`
+	InstalledVersion float64 `json:"installed_version"`
+	LatestVersion    float64 `json:"latest_version"`
+	State            string  `json:"state"`
 }
 
-func getUnmarshaller(topic string) func([]byte) (interface{}, error) {
+// func getTypeUnmarshaller(topic string) func([]byte) (interface{}, error) {
+// 	switch topic {
+// 	case "zigbee2mqtt/bridge/devices":
+// 		return func(data []byte) (interface{}, error) {
+// 			return UnmarshalZ2MDevices(data)
+// 		}
+// 	}
+// 	return nil
+// }
+
+func GetDeviceUnmarshaller(topic string) func([]byte) (interface{}, error) {
 	switch topic {
 	case "zigbee2mqtt/freezer-door", "zigbee2mqtt/fridge-door":
 		return func(data []byte) (interface{}, error) {
@@ -224,47 +235,18 @@ func getUnmarshaller(topic string) func([]byte) (interface{}, error) {
 	return nil
 }
 
-func logZigbeeMetrics(ev MQTTEvent) bool {
-	unmarshallerFunc := getUnmarshaller(ev.Topic)
-	if unmarshallerFunc != nil {
-		device, err := unmarshallerFunc(ev.Payload.([]byte))
+func InitZ2MDevices(_ mqtt.Client, m mqtt.Message) {
+	switch m.Topic() {
+	case "zigbee2mqtt/bridge/devices":
+		z2mDevices, err := UnmarshalDevices(m.Payload())
 		if err != nil {
-			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
-		} else if device != nil {
-			topic := ev.Topic
-			t := reflect.TypeOf(device)
-			n := t.Name()
-			v := reflect.ValueOf(device)
-			push := false
-			for i := 0; i < v.NumField(); i++ {
-				field := t.Field(i)
-				jsonTag := field.Tag.Get("json")
-				if jsonTag == "" {
-					continue
-				}
-				value := v.Field(i).Interface()
-				gaugeString := fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s",deviceName="%s"}`, topic, jsonTag, n)
-				switch v.Field(i).Kind() {
-				case reflect.Float64:
-					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
-					gauge.Set(value.(float64))
-					push = true
-				case reflect.Int64:
-					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
-					gauge.Set(float64(value.(int64)))
-					push = true
-				case reflect.Bool:
-					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
-					if value.(bool) {
-						gauge.Set(1.0)
-					} else {
-						gauge.Set(0.0)
-					}
-					push = true
-				}
+			slog.Error("Could not unmarshal json state", "topic", m.Topic(), "payload", m.Payload(), "error", err)
+		} else if z2mDevices != nil {
+			if b, err := json.MarshalIndent(z2mDevices, "", "  "); err != nil {
+				slog.Error("Could not pretty-print devices", "error", err)
+			} else {
+				fmt.Println("Zigbee2MQTT devices (pretty):", string(b))
 			}
-			return push
 		}
 	}
-	return false
 }

@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"reflect"
 	"sync"
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
+	"github.com/claes/regelverk/internal/z2m"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -253,4 +256,49 @@ func requestIkeaTretaktPower(topic string) MQTTPublish {
 		Qos:      2,
 		Retained: false,
 	}
+}
+
+func logZigbeeMetrics(ev MQTTEvent) bool {
+	unmarshallerFunc := z2m.GetDeviceUnmarshaller(ev.Topic)
+	if unmarshallerFunc != nil {
+		device, err := unmarshallerFunc(ev.Payload.([]byte))
+		if err != nil {
+			slog.Error("Could not unmarshal json state", "topic", ev.Topic, "payload", ev.Payload, "error", err)
+		} else if device != nil {
+			topic := ev.Topic
+			t := reflect.TypeOf(device)
+			n := t.Name()
+			v := reflect.ValueOf(device)
+			push := false
+			for i := 0; i < v.NumField(); i++ {
+				field := t.Field(i)
+				jsonTag := field.Tag.Get("json")
+				if jsonTag == "" {
+					continue
+				}
+				value := v.Field(i).Interface()
+				gaugeString := fmt.Sprintf(`zigbee_state{topic="%s",attribute="%s",deviceName="%s"}`, topic, jsonTag, n)
+				switch v.Field(i).Kind() {
+				case reflect.Float64:
+					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
+					gauge.Set(value.(float64))
+					push = true
+				case reflect.Int64:
+					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
+					gauge.Set(float64(value.(int64)))
+					push = true
+				case reflect.Bool:
+					gauge := metrics.GetOrCreateGauge(gaugeString, nil)
+					if value.(bool) {
+						gauge.Set(1.0)
+					} else {
+						gauge.Set(0.0)
+					}
+					push = true
+				}
+			}
+			return push
+		}
+	}
+	return false
 }
