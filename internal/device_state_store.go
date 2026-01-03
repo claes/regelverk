@@ -92,6 +92,24 @@ func (s *DeviceStateStore) Z2MUpdates() <-chan struct{} {
 	return s.z2mUpdated
 }
 
+// DeviceStateDebug is a JSON-friendly snapshot of the cached device state.
+type DeviceStateDebug struct {
+	Rotel      rotelmqtt.RotelState      `json:"rotel"`
+	PulseAudio pulsemqtt.PulseAudioState `json:"pulseaudio"`
+	Z2MDevices z2m.Devices               `json:"z2mDevices"`
+}
+
+func (s *DeviceStateStore) DebugSnapshot() DeviceStateDebug {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return DeviceStateDebug{
+		Rotel:      s.rotelState,
+		PulseAudio: s.pulseState,
+		Z2MDevices: s.z2mDevices,
+	}
+}
+
 // UpdateFromEvent ingests known MQTT state topics into the shared cache.
 // Returns true if the event was handled.
 func (s *DeviceStateStore) UpdateFromEvent(ev MQTTEvent) bool {
