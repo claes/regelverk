@@ -2,7 +2,6 @@ package regelverk
 
 import (
 	"embed"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -14,7 +13,6 @@ import (
 	"strings"
 
 	pulsemqtt "github.com/claes/mqtt-bridges/pulseaudio-mqtt/lib"
-	rotelmqtt "github.com/claes/mqtt-bridges/rotel-mqtt/lib"
 	"github.com/gorilla/websocket"
 	"github.com/qmuntal/stateless"
 )
@@ -30,11 +28,8 @@ const (
 
 type WebController struct {
 	BaseController
-	rotelState             rotelmqtt.RotelState
-	pulseAudioState        pulsemqtt.PulseAudioState
-	upgrader               websocket.Upgrader
-	rotelStateUpdated      chan struct{}
-	pulseaudioStateUpdated chan struct{}
+	upgrader         websocket.Upgrader
+	deviceStateStore *DeviceStateStore
 }
 
 func IsInitialized() bool {
@@ -44,6 +39,7 @@ func IsInitialized() bool {
 func (l *WebController) Initialize(masterController *MasterController) []MQTTPublish {
 	l.Name = "web"
 	l.masterController = masterController
+	l.deviceStateStore = masterController.deviceStateStore
 
 	// Define a dummy state machine as the basecontroller assumes that
 	l.stateMachine = stateless.NewStateMachine(initialWebState)
@@ -86,10 +82,6 @@ func (l *WebController) Initialize(masterController *MasterController) []MQTTPub
 		}
 	}()
 
-	// Needed?
-	l.rotelStateUpdated = make(chan struct{}, 1)
-	l.pulseaudioStateUpdated = make(chan struct{}, 1)
-
 	l.SetInitialized()
 
 	return []MQTTPublish{
@@ -109,37 +101,7 @@ func (l *WebController) Initialize(masterController *MasterController) []MQTTPub
 }
 
 func (l *WebController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
-	switch ev.Topic {
-	case "rotel/state":
-		err := json.Unmarshal(ev.Payload.([]byte), &l.rotelState)
-		if err != nil {
-			slog.Error("Could not unmarshal rotel state", "rotelstate", ev.Payload)
-		} else {
-			l.notifyRotelStateUpdated()
-		}
-	case "pulseaudio/state":
-		err := json.Unmarshal(ev.Payload.([]byte), &l.pulseAudioState)
-		if err != nil {
-			slog.Error("Could not unmarshal pulseaudio state", "pulseaudiostate", ev.Payload)
-		} else {
-			l.notifyPulseaudioStateUpdated()
-		}
-	}
 	return nil
-}
-
-func (l *WebController) notifyRotelStateUpdated() {
-	select {
-	case l.rotelStateUpdated <- struct{}{}:
-	default:
-	}
-}
-
-func (l *WebController) notifyPulseaudioStateUpdated() {
-	select {
-	case l.pulseaudioStateUpdated <- struct{}{}:
-	default:
-	}
 }
 
 func (l *WebController) mainHandler(w http.ResponseWriter, r *http.Request) {
@@ -185,12 +147,12 @@ func (l *WebController) rotelSourceRenderer(w io.Writer, currentSource string) {
 func (l *WebController) pulseaudioSinkHandler(w http.ResponseWriter, r *http.Request) {
 	selectedSink := r.FormValue("pulseaudio-sink")
 	l.masterController.mqttClient.Publish("pulseaudio/sink/default/set", 2, false, selectedSink)
-	l.pulseaudioSinkRenderer(w, selectedSink)
+	l.pulseaudioSinkRenderer(w, l.deviceStateStore.GetPulse(), selectedSink)
 }
 
-func (l *WebController) pulseaudioSinkRenderer(w io.Writer, currentSink string) {
+func (l *WebController) pulseaudioSinkRenderer(w io.Writer, state pulsemqtt.PulseAudioState, currentSink string) {
 	fmt.Fprintf(w, "<select id='pulseaudio-sink' name='pulseaudio-sink' hx-post='/pulseaudio/sink' hx-trigger='change' hx-swap-oob='true'>")
-	for _, sink := range l.pulseAudioState.Sinks {
+	for _, sink := range state.Sinks {
 		selected := ""
 		if sink.Id == currentSink {
 			selected = "selected"
@@ -203,14 +165,14 @@ func (l *WebController) pulseaudioSinkRenderer(w io.Writer, currentSink string) 
 func (l *WebController) pulseaudioProfileHandler(w http.ResponseWriter, r *http.Request) {
 	selectedProfile := r.FormValue("pulseaudio-profile")
 	l.masterController.mqttClient.Publish("pulseaudio/cardprofile/0/set", 2, false, selectedProfile)
-	l.pulseaudioProfileRenderer(w, selectedProfile)
+	l.pulseaudioProfileRenderer(w, l.deviceStateStore.GetPulse(), selectedProfile)
 }
 
-func (l *WebController) pulseaudioProfileRenderer(w io.Writer, currentProfile string) {
-	if len(l.pulseAudioState.Cards) > 0 {
+func (l *WebController) pulseaudioProfileRenderer(w io.Writer, state pulsemqtt.PulseAudioState, currentProfile string) {
+	if len(state.Cards) > 0 {
 		fmt.Fprintf(w, "<select id='pulseaudio-profile' name='pulseaudio-profile' hx-post='/pulseaudio/profile' hx-trigger='change' hx-swap-oob='true'>")
 
-		for _, profile := range l.pulseAudioState.Cards[0].Profiles {
+		for _, profile := range state.Cards[0].Profiles {
 			selected := ""
 			if profile.Name == currentProfile {
 				selected = "selected"
@@ -476,36 +438,39 @@ func (l *WebController) rotelStateWs(w http.ResponseWriter, req *http.Request) {
 			break
 		}
 
-		l.rotelDisplayRenderer(socketWriter, l.rotelState.Display)
+		rotelState := l.deviceStateStore.GetRotel()
+		pulseState := l.deviceStateStore.GetPulse()
 
-		l.rotelSourceRenderer(socketWriter, l.rotelState.Source)
+		l.rotelDisplayRenderer(socketWriter, rotelState.Display)
 
-		l.rotelToneRenderer(socketWriter, l.rotelState.Tone)
+		l.rotelSourceRenderer(socketWriter, rotelState.Source)
 
-		l.rotelMuteRenderer(socketWriter, l.rotelState.Mute)
+		l.rotelToneRenderer(socketWriter, rotelState.Tone)
 
-		l.rotelVolumeRenderer(socketWriter, l.rotelState.Volume)
+		l.rotelMuteRenderer(socketWriter, rotelState.Mute)
 
-		l.rotelBalanceRenderer(socketWriter, l.rotelState.Balance)
+		l.rotelVolumeRenderer(socketWriter, rotelState.Volume)
 
-		l.rotelBassRenderer(socketWriter, l.rotelState.Bass)
+		l.rotelBalanceRenderer(socketWriter, rotelState.Balance)
 
-		l.rotelTrebleRenderer(socketWriter, l.rotelState.Treble)
+		l.rotelBassRenderer(socketWriter, rotelState.Bass)
 
-		l.rotelPowerRenderer(socketWriter, l.rotelState.State)
+		l.rotelTrebleRenderer(socketWriter, rotelState.Treble)
 
-		l.pulseaudioSinkRenderer(socketWriter, l.pulseAudioState.DefaultSink.Id)
+		l.rotelPowerRenderer(socketWriter, rotelState.State)
 
-		if len(l.pulseAudioState.ActiveProfilePerCard) > 0 {
-			l.pulseaudioProfileRenderer(socketWriter, l.pulseAudioState.ActiveProfilePerCard[0])
+		l.pulseaudioSinkRenderer(socketWriter, pulseState, pulseState.DefaultSink.Id)
+
+		if len(pulseState.ActiveProfilePerCard) > 0 {
+			l.pulseaudioProfileRenderer(socketWriter, pulseState, pulseState.ActiveProfilePerCard[0])
 		}
 
 		socketWriter.Close()
 
 		select {
-		case <-l.rotelStateUpdated:
+		case <-l.deviceStateStore.RotelUpdates():
 			continue
-		case <-l.pulseaudioStateUpdated:
+		case <-l.deviceStateStore.PulseUpdates():
 			continue
 		}
 	}
