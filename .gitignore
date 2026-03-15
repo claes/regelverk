@@ -1,5 +1,6 @@
 .direnv/
 .cache/
+.gocache/
 .envrc
 TODO.txt
 regelverk

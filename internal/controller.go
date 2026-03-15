@@ -35,14 +35,15 @@ type ControllerDebugState struct {
 }
 
 type MasterController struct {
-	mqttClient     mqtt.Client
-	stateValueMap  StateValueMap
-	controllers    *[]Controller
-	mu             sync.Mutex
-	pushMetrics    bool
-	metricsConfig  MetricsConfig
-	config         Config
-	eventCallbacks []func(MQTTEvent)
+	mqttClient       mqtt.Client
+	stateValueMap    StateValueMap
+	controllers      *[]Controller
+	mu               sync.Mutex
+	pushMetrics      bool
+	metricsConfig    MetricsConfig
+	config           Config
+	eventCallbacks   []func(MQTTEvent)
+	deviceStateStore *DeviceStateStore
 }
 
 type MetricsConfig struct {
@@ -53,7 +54,10 @@ type MetricsConfig struct {
 }
 
 func CreateMasterController() MasterController {
-	return MasterController{stateValueMap: NewStateValueMap()}
+	return MasterController{
+		stateValueMap:    NewStateValueMap(),
+		deviceStateStore: NewDeviceStateStore(),
+	}
 }
 
 func (l *MasterController) Init() {
@@ -84,6 +88,8 @@ func (masterController *MasterController) ProcessEvent(client mqtt.Client, ev MQ
 
 	masterController.mu.Lock()
 	defer masterController.mu.Unlock()
+
+	masterController.deviceStateStore.UpdateFromEvent(ev)
 
 	masterController.pushMetrics = false // Reset
 	masterController.executeEventCallbacks(ev)
