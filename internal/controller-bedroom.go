@@ -31,6 +31,8 @@ type BedroomController struct {
 func (c *BedroomController) Initialize(masterController *MasterController) []MQTTPublish {
 	c.Name = "bedroom"
 	c.masterController = masterController
+	// Use controller-specific trigger logic instead of BaseController's default
+	c.getTriggers = c.GetTriggers
 
 	// var initialState tvState
 	// if masterController.stateValueMap.requireTrue("tvPower") {

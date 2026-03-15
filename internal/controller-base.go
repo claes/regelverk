@@ -17,6 +17,7 @@ type BaseController struct {
 	eventsToPublish  []MQTTPublish
 	isInitialized    bool
 	eventHandlers    []func(ev MQTTEvent) []MQTTPublish
+	getTriggers      func(ev MQTTEvent) []string
 	mu               sync.Mutex
 
 	backoffUntil        time.Time
@@ -102,7 +103,12 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		c.addEventsToPublish(eventHandler(ev))
 	}
 
-	triggers := c.GetTriggers(ev)
+	getTriggers := c.getTriggers
+	if getTriggers == nil {
+		getTriggers = c.GetTriggers
+	}
+
+	triggers := getTriggers(ev)
 
 	var eventsToPublish []MQTTPublish
 	for _, trigger := range triggers {
