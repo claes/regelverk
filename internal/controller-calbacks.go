@@ -36,6 +36,9 @@ func processString(ev MQTTEvent, topic string) (string, bool) {
 	}
 }
 
+// First argument, a function that extracts relevant value from a MQTT event
+// Second argument, a function that maps the extracted value to a state key and value, and updates the state value map
+// Third argument, a function that maps the extracted value to a metrics key and value, and updates the metrics
 func (l *MasterController) createProcessEventFunc(extractValueFunc func(MQTTEvent) (any, bool),
 	stateValueFunc func(any) (StateKey, bool),
 	metricsGaugeFunc func(any) (string, float64)) func(MQTTEvent) {

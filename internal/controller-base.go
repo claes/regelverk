@@ -88,6 +88,10 @@ func (c *BaseController) extendBackoff(maxBackoff time.Duration) {
 	c.backoffUntil = time.Now().Add(c.lastBackoffDuration)
 }
 
+func (c *BaseController) GetTriggers(ev MQTTEvent) []string {
+	return []string{"mqttEvent"}
+}
+
 func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	slog.Debug("Process event", "name", c.Name)
 
@@ -97,53 +101,59 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		c.addEventsToPublish(eventHandler(ev))
 	}
 
-	beforeState := c.stateMachine.MustState()
-	c.StateMachineFire("mqttEvent", ev)
+	triggers := c.GetTriggers(ev)
 
-	eventsToPublish := c.getAndResetEventsToPublish()
-	afterState := c.stateMachine.MustState()
-	slog.Debug("Event fired", "fsm", c.Name, "topic", ev.Topic,
-		"beforeState", beforeState,
-		"afterState", afterState,
-		"stateDiff", (beforeState != afterState),
-		"eventsToPublish", (len(eventsToPublish) > 0),
-		"noOfEventsToPublish", len(eventsToPublish))
+	var eventsToPublish []MQTTPublish
+	for _, trigger := range triggers {
 
-	if c.masterController.metricsConfig.CollectDebugMetrics {
-		triggerStr := createTriggerString(ev)
-		if afterState != beforeState {
+		beforeState := c.stateMachine.MustState()
+		c.StateMachineFire(trigger, ev)
+
+		eventsToPublish = append(eventsToPublish, c.getAndResetEventsToPublish()...)
+		afterState := c.stateMachine.MustState()
+		slog.Debug("Event fired", "fsm", c.Name, "topic", ev.Topic, "trigger", trigger,
+			"beforeState", beforeState,
+			"afterState", afterState,
+			"stateDiff", (beforeState != afterState),
+			"eventsToPublish", (len(eventsToPublish) > 0),
+			"noOfEventsToPublish", len(eventsToPublish))
+
+		if c.masterController.metricsConfig.CollectDebugMetrics {
+			triggerStr := createTriggerStringForMetrics(ev)
+			if afterState != beforeState {
+				if intState, ok := beforeState.(interface{ ToInt() int }); ok {
+					beforeStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_change{controller="%s",trigger="%s",realm="%s"}`,
+						c.Name, triggerStr, c.masterController.metricsConfig.MetricsRealm), nil)
+					beforeStateGauge.Set(float64(intState.ToInt()))
+				} else {
+					slog.Error("State does not implement ToInt", "state", afterState)
+				}
+			}
+			if len(eventsToPublish) > 0 {
+				counter := metrics.GetOrCreateCounter(fmt.Sprintf(`fsm_state_events{controller="%s",trigger="%s",realm="%s"}`,
+					c.Name, triggerStr, c.masterController.metricsConfig.MetricsRealm))
+				counter.Add(len(eventsToPublish))
+			}
 			if intState, ok := beforeState.(interface{ ToInt() int }); ok {
-				beforeStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_change{controller="%s",trigger="%s",realm="%s"}`,
-					c.Name, triggerStr, c.masterController.metricsConfig.MetricsRealm), nil)
+				beforeStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_before{controller="%s",realm="%s",state="%s"}`,
+					c.Name, c.masterController.metricsConfig.MetricsRealm, beforeState), nil)
 				beforeStateGauge.Set(float64(intState.ToInt()))
 			} else {
 				slog.Error("State does not implement ToInt", "state", afterState)
 			}
-		}
-		if len(eventsToPublish) > 0 {
-			counter := metrics.GetOrCreateCounter(fmt.Sprintf(`fsm_state_events{controller="%s",trigger="%s",realm="%s"}`,
-				c.Name, triggerStr, c.masterController.metricsConfig.MetricsRealm))
-			counter.Add(len(eventsToPublish))
-		}
-		if intState, ok := beforeState.(interface{ ToInt() int }); ok {
-			beforeStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_before{controller="%s",realm="%s",state="%s"}`,
-				c.Name, c.masterController.metricsConfig.MetricsRealm, beforeState), nil)
-			beforeStateGauge.Set(float64(intState.ToInt()))
-		} else {
-			slog.Error("State does not implement ToInt", "state", afterState)
-		}
-		if intState, ok := afterState.(interface{ ToInt() int }); ok {
-			afterStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_after{controller="%s",realm="%s",state="%s"}`,
-				c.Name, c.masterController.metricsConfig.MetricsRealm, afterState), nil)
-			afterStateGauge.Set(float64(intState.ToInt()))
-		} else {
-			slog.Error("State does not implement ToInt", "state", afterState)
+			if intState, ok := afterState.(interface{ ToInt() int }); ok {
+				afterStateGauge := metrics.GetOrCreateGauge(fmt.Sprintf(`fsm_state_after{controller="%s",realm="%s",state="%s"}`,
+					c.Name, c.masterController.metricsConfig.MetricsRealm, afterState), nil)
+				afterStateGauge.Set(float64(intState.ToInt()))
+			} else {
+				slog.Error("State does not implement ToInt", "state", afterState)
+			}
 		}
 	}
 	return eventsToPublish
 }
 
-func createTriggerString(trigger stateless.Trigger) string {
+func createTriggerStringForMetrics(trigger stateless.Trigger) string {
 	var triggerStr string
 	switch trigger.(type) {
 	case string:

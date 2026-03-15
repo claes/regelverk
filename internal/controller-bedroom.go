@@ -23,6 +23,8 @@ func (t blindsState) ToInt() int {
 
 type BedroomController struct {
 	BaseController
+	scheduleUp   time.Time
+	scheduleDown time.Time
 }
 
 func (c *BedroomController) Initialize(masterController *MasterController) []MQTTPublish {
@@ -44,19 +46,22 @@ func (c *BedroomController) Initialize(masterController *MasterController) []MQT
 	c.stateMachine.Configure(bedroomBlindsStateOpen).
 		OnEntry(c.openBedroomBlinds).
 		Permit("blindsdown", bedroomBlindsStateClosed).
+		Permit("blindsdowntemporarily", bedroomBlindsStateClosed).
 		Ignore("blindsup").
+		Ignore("blindsuptemporarily").
 		PermitReentry("timer").
-		OnEntryFrom("timer", c.refreshBedroomBlinds)
+		OnEntryFrom("timer", c.refreshBedroomBlinds).
+		OnEntryFrom("blindsuptemporarily", c.scheduleBlindsDown)
 
 	c.stateMachine.Configure(bedroomBlindsStateClosed).
 		OnEntry(c.closeBedroomBlinds).
 		Permit("blindsup", bedroomBlindsStateOpen).
+		Permit("blindsuptemporarily", bedroomBlindsStateOpen).
 		Ignore("blindsdown").
+		Ignore("blindsdowntemporarily").
 		PermitReentry("timer").
-		OnEntryFrom("timer", c.refreshBedroomBlinds)
-
-	// TODO - how to detect state from manual actions?
-	// Any use of detectBedroomBlindsOpen /  guardStateBedroomBlindsOpen / Closed?
+		OnEntryFrom("timer", c.refreshBedroomBlinds).
+		OnEntryFrom("blindsdowntemporarily", c.scheduleBlindsUp)
 
 	go func() {
 		for {
@@ -73,11 +78,41 @@ func (c *BedroomController) Initialize(masterController *MasterController) []MQT
 				c.StateMachineFire("timer")
 			}
 
+			if !c.scheduleDown.IsZero() && now.After(c.scheduleDown) {
+				c.StateMachineFire("blindsdown")
+				c.scheduleDown = time.Time{} // unset
+			} else if !c.scheduleUp.IsZero() && now.After(c.scheduleUp) {
+				c.StateMachineFire("blindsup")
+				c.scheduleUp = time.Time{} // unset
+			}
 			time.Sleep(1 * time.Minute)
 		}
 	}()
 
 	c.SetInitialized()
+	return nil
+}
+
+// Shadowing method
+func (c *BedroomController) GetTriggers(ev MQTTEvent) []string {
+	val, _ := processJSON(ev, "zigbee2mqtt/blinds-bedroom-remote", "action")
+	if val != nil {
+		if val.(string) == "on" {
+			return []string{"blindsuptemporarily"}
+		} else if val.(string) == "off" {
+			return []string{"blindsdowntemporarily"}
+		}
+	}
+	return []string{"mqttEvent"}
+}
+
+func (c *BedroomController) scheduleBlindsDown(_ context.Context, _ ...any) error {
+	c.scheduleDown = time.Now().Add(30 * time.Minute)
+	return nil
+}
+
+func (c *BedroomController) scheduleBlindsUp(_ context.Context, _ ...any) error {
+	c.scheduleUp = time.Now().Add(30 * time.Minute)
 	return nil
 }
 
