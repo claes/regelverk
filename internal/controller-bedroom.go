@@ -3,6 +3,7 @@ package regelverk
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"time"
 
@@ -95,11 +96,14 @@ func (c *BedroomController) Initialize(masterController *MasterController) []MQT
 
 // Shadowing method
 func (c *BedroomController) GetTriggers(ev MQTTEvent) []string {
+	slog.Info("Get triggers for bedroom", "controller", c.Name, "event", ev.Topic)
 	val, _ := processJSON(ev, "zigbee2mqtt/blinds-bedroom-remote", "action")
 	if val != nil {
 		if val.(string) == "on" {
+			slog.Info("Received blinds up temporarily", "controller", c.Name)
 			return []string{"blindsuptemporarily"}
 		} else if val.(string) == "off" {
+			slog.Info("Received blinds down temporarily", "controller", c.Name)
 			return []string{"blindsdowntemporarily"}
 		}
 	}

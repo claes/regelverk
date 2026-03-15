@@ -89,6 +89,7 @@ func (c *BaseController) extendBackoff(maxBackoff time.Duration) {
 }
 
 func (c *BaseController) GetTriggers(ev MQTTEvent) []string {
+	slog.Info("Get triggers base", "controller", c.Name, "event", ev.Topic)
 	return []string{"mqttEvent"}
 }
 
