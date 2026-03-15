@@ -17,7 +17,7 @@ type BaseController struct {
 	eventsToPublish  []MQTTPublish
 	isInitialized    bool
 	eventHandlers    []func(ev MQTTEvent) []MQTTPublish
-	getTriggers      func(ev MQTTEvent) []string
+	triggerFactory   func(ev MQTTEvent) []string // For override of default event -> trigger mapping
 	mu               sync.Mutex
 
 	backoffUntil        time.Time
@@ -89,11 +89,6 @@ func (c *BaseController) extendBackoff(maxBackoff time.Duration) {
 	c.backoffUntil = time.Now().Add(c.lastBackoffDuration)
 }
 
-func (c *BaseController) GetTriggers(ev MQTTEvent) []string {
-	slog.Info("Get triggers base", "controller", c.Name, "event", ev.Topic)
-	return []string{"mqttEvent"}
-}
-
 func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 	slog.Debug("Process event", "name", c.Name)
 
@@ -103,16 +98,16 @@ func (c *BaseController) ProcessEvent(ev MQTTEvent) []MQTTPublish {
 		c.addEventsToPublish(eventHandler(ev))
 	}
 
-	getTriggers := c.getTriggers
-	if getTriggers == nil {
-		getTriggers = c.GetTriggers
+	var eventsToPublish []MQTTPublish
+	var triggers []string
+
+	if c.triggerFactory != nil {
+		triggers = c.triggerFactory(ev)
+	} else {
+		triggers = []string{"mqttEvent"}
 	}
 
-	triggers := getTriggers(ev)
-
-	var eventsToPublish []MQTTPublish
 	for _, trigger := range triggers {
-
 		beforeState := c.stateMachine.MustState()
 		c.StateMachineFire(trigger, ev)
 

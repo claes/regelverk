@@ -3,7 +3,6 @@ package regelverk
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"reflect"
 	"time"
 
@@ -32,7 +31,7 @@ func (c *BedroomController) Initialize(masterController *MasterController) []MQT
 	c.Name = "bedroom"
 	c.masterController = masterController
 	// Use controller-specific trigger logic instead of BaseController's default
-	c.getTriggers = c.GetTriggers
+	c.triggerFactory = c.createTriggers
 
 	// var initialState tvState
 	// if masterController.stateValueMap.requireTrue("tvPower") {
@@ -96,16 +95,12 @@ func (c *BedroomController) Initialize(masterController *MasterController) []MQT
 	return nil
 }
 
-// Shadowing method
-func (c *BedroomController) GetTriggers(ev MQTTEvent) []string {
+func (c *BedroomController) createTriggers(ev MQTTEvent) []string {
 	val, _ := processJSON(ev, "zigbee2mqtt/blinds-bedroom-remote", "action")
-	slog.Info("Get triggers for bedroom", "controller", c.Name, "event", ev.Topic, "action", val)
 	if val != nil {
 		if val.(string) == "on" {
-			slog.Info("Received blinds up temporarily", "controller", c.Name)
 			return []string{"blindsuptemporarily"}
 		} else if val.(string) == "off" {
-			slog.Info("Received blinds down temporarily", "controller", c.Name)
 			return []string{"blindsdowntemporarily"}
 		}
 	}
@@ -114,11 +109,13 @@ func (c *BedroomController) GetTriggers(ev MQTTEvent) []string {
 
 func (c *BedroomController) scheduleBlindsDown(_ context.Context, _ ...any) error {
 	c.scheduleDown = time.Now().Add(30 * time.Minute)
+	c.scheduleUp = time.Time{}
 	return nil
 }
 
 func (c *BedroomController) scheduleBlindsUp(_ context.Context, _ ...any) error {
 	c.scheduleUp = time.Now().Add(30 * time.Minute)
+	c.scheduleDown = time.Time{}
 	return nil
 }
 
