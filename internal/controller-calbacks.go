@@ -135,6 +135,15 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(val any) (StateKey, bool) { return "livingroomFloorlamp", val.(string) == "ON" },
 		nil,
 	))
+
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/livingroom-windowlamp", "state")
+		},
+		func(val any) (StateKey, bool) { return "livingroomWindowlamp", val.(string) == "ON" },
+		nil,
+	))
+
 	//masterController.registerEventCallback(masterController.detectTVPower)
 	// masterController.registerEventCallback(func(ev MQTTEvent) {
 	// 	if ev.Topic == "regelverk/state/tvpower" {

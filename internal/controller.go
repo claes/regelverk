@@ -170,17 +170,27 @@ func (l *MasterController) guardStateSnapcastOff(_ context.Context, _ ...any) bo
 	return check
 }
 
-func (l *MasterController) guardTurnOnLivingroomLamp(_ context.Context, _ ...any) bool {
+func (l *MasterController) guardTurnOnLivingroomFloorlamp(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.currentlyTrue("phonePresent") &&
 		l.stateValueMap.currentlyTrue("nighttime") &&
 		l.stateValueMap.recentlyTrue("livingroomPresence", 10*time.Minute)
 	return check
 }
 
-func (l *MasterController) guardTurnOffLivingroomLamp(_ context.Context, _ ...any) bool {
+func (l *MasterController) guardTurnOffLivingroomFloorlamp(_ context.Context, _ ...any) bool {
 	check := l.stateValueMap.currentlyFalse("phonePresent") ||
 		l.stateValueMap.currentlyFalse("nighttime") ||
 		!l.stateValueMap.recentlyTrue("livingroomPresence", 10*time.Minute)
+	return check
+}
+
+func (l *MasterController) guardTurnOnLivingroomWindowlamp(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.currentlyTrue("nighttime")
+	return check
+}
+
+func (l *MasterController) guardTurnOffLivingroomWindowlamp(_ context.Context, _ ...any) bool {
+	check := l.stateValueMap.currentlyFalse("nighttime")
 	return check
 }
 
@@ -241,6 +251,14 @@ func (l *MasterController) requireFalseByKey(key StateKey) func(context.Context,
 }
 
 // Detections
+
+func setIkeaKajplatsPower(topic string, on bool) MQTTPublish {
+	return setIkeaTretaktPower(topic, on)
+}
+
+func requestIkeaKajplatsPower(topic string) MQTTPublish {
+	return requestIkeaTretaktPower(topic)
+}
 
 func setIkeaTretaktPower(topic string, on bool) MQTTPublish {
 	state := "OFF"

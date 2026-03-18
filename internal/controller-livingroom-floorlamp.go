@@ -8,27 +8,27 @@ import (
 	"github.com/qmuntal/stateless"
 )
 
-//go:generate stringer -type=livingroomLamp
-type livingroomLamp int
+//go:generate stringer -type=livingroomFloorlamp
+type livingroomFloorlamp int
 
 const (
-	stateLivingroomFloorlampOff livingroomLamp = iota
+	stateLivingroomFloorlampOff livingroomFloorlamp = iota
 	stateLivingroomFloorlampOn
 )
 
-func (t livingroomLamp) ToInt() int {
+func (t livingroomFloorlamp) ToInt() int {
 	return int(t)
 }
 
-type LivingroomController struct {
+type LivingroomFloorlampController struct {
 	BaseController
 }
 
-func (c *LivingroomController) Initialize(masterController *MasterController) []MQTTPublish {
+func (c *LivingroomFloorlampController) Initialize(masterController *MasterController) []MQTTPublish {
 	c.Name = "livingroom"
 	c.masterController = masterController
 
-	var initialState livingroomLamp
+	var initialState livingroomFloorlamp
 	if masterController.stateValueMap.currentlyTrue("livingroomFloorlamp") {
 		initialState = stateLivingroomFloorlampOn
 	} else if masterController.stateValueMap.currentlyFalse("livingroomFloorlamp") {
@@ -48,22 +48,21 @@ func (c *LivingroomController) Initialize(masterController *MasterController) []
 
 	c.stateMachine.Configure(stateLivingroomFloorlampOn).
 		OnEntry(c.turnOnLivingroomFloorlamp).
-		Permit("mqttEvent", stateLivingroomFloorlampOff, c.masterController.guardTurnOffLivingroomLamp)
+		Permit("mqttEvent", stateLivingroomFloorlampOff, c.masterController.guardTurnOffLivingroomFloorlamp)
 
 	c.stateMachine.Configure(stateLivingroomFloorlampOff).
 		OnEntry(c.turnOffLivingroomFloorlamp).
-		Permit("mqttEvent", stateLivingroomFloorlampOn, c.masterController.guardTurnOnLivingroomLamp)
-
+		Permit("mqttEvent", stateLivingroomFloorlampOn, c.masterController.guardTurnOnLivingroomFloorlamp)
 	c.SetInitialized()
 	return nil
 }
 
-func (c *LivingroomController) turnOnLivingroomFloorlamp(_ context.Context, _ ...any) error {
+func (c *LivingroomFloorlampController) turnOnLivingroomFloorlamp(_ context.Context, _ ...any) error {
 	c.addEventsToPublish(livingroomFloorlampOutput(true))
 	return nil
 }
 
-func (c *LivingroomController) turnOffLivingroomFloorlamp(_ context.Context, _ ...any) error {
+func (c *LivingroomFloorlampController) turnOffLivingroomFloorlamp(_ context.Context, _ ...any) error {
 	c.addEventsToPublish(livingroomFloorlampOutput(false))
 	return nil
 }
