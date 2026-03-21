@@ -233,7 +233,7 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(val any) (string, float64) { return "freezerDoorBattery", val.(float64) },
 	))
 
-	// Fridge door
+	// Fridge
 	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
 			return processJSON(ev, "zigbee2mqtt/fridge-door", "contact")
@@ -247,6 +247,20 @@ func (masterController *MasterController) registerEventCallbacks() {
 		},
 		func(val any) (StateKey, bool) { return "fridgeDoorBatteryLow", val.(float64) < 30 },
 		func(val any) (string, float64) { return "fridgeDoorBattery", val.(float64) },
+	))
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/fridge-thermometer", "battery")
+		},
+		func(val any) (StateKey, bool) { return "fridgeThermometerBatteryLow", val.(float64) < 30 },
+		func(val any) (string, float64) { return "fridgeThermometerBattery", val.(float64) },
+	))
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "zigbee2mqtt/fridge-thermometer", "temperature")
+		},
+		func(val any) (StateKey, bool) { return "fridgeThermometerTemperatureHigh", val.(float64) > 8 },
+		func(val any) (string, float64) { return "fridgeThermometerTemperature", val.(float64) },
 	))
 
 	// MPD
