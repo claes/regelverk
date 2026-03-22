@@ -2,6 +2,7 @@ package regelverk
 
 import (
 	"context"
+	"log/slog"
 	"reflect"
 	"time"
 
@@ -61,6 +62,7 @@ func (c *LivingroomWindowlampController) Initialize(masterController *MasterCont
 func (c *LivingroomWindowlampController) createTriggers(ev MQTTEvent) []string {
 	phaseOfDay, found := processType[PhaseOfDay](ev, "regelverk/ticker/phaseofday")
 	if found {
+		slog.Info("Creating triggers for livingroom windowlamp", "phaseOfDay", phaseOfDay)
 		if phaseOfDay.Meridiem == PostMeridiem &&
 			(phaseOfDay.SolarPhase == Nighttime ||
 				phaseOfDay.SolarPhase == EveningAstronomcialTwilight ||
