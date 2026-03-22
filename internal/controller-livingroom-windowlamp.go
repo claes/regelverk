@@ -60,13 +60,12 @@ func (c *LivingroomWindowlampController) Initialize(masterController *MasterCont
 
 func (c *LivingroomWindowlampController) createTriggers(ev MQTTEvent) []string {
 
-	phase, found := processJSON(ev, "regelverk/ticker/timeofday", "phase")
-	meridiem, found := processJSON(ev, "regelverk/ticker/timeofday", "meridiem")
+	phaseOfDay, found := processType[PhaseOfDay](ev, "regelverk/ticker/phaseofday")
 	if found {
-		if meridiem == PostMeridiem &&
-			(phase == Nighttime ||
-				phase == EveningAstronomcialTwilight ||
-				phase == EveningNauticalTwilight) {
+		if phaseOfDay.Meridiem == PostMeridiem &&
+			(phaseOfDay.SolarPhase == Nighttime ||
+				phaseOfDay.SolarPhase == EveningAstronomcialTwilight ||
+				phaseOfDay.SolarPhase == EveningNauticalTwilight) {
 			return []string{"evening"}
 		} else {
 			return []string{"non-evening"}

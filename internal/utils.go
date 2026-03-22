@@ -7,17 +7,17 @@ import (
 	"github.com/sj14/astral/pkg/astral"
 )
 
-type DayPhase struct {
-	Phase    PhaseOfDay `json:"phase"`
-	Meridiem Meridiem   `json:"meridiem"`
+type PhaseOfDay struct {
+	SolarPhase SolarPhase `json:"solarPhase"`
+	Meridiem   Meridiem   `json:"meridiem"`
 }
 
-type PhaseOfDay int
+type SolarPhase int
 
 type Meridiem int
 
 const (
-	Nighttime PhaseOfDay = iota
+	Nighttime SolarPhase = iota
 	MorningAstronomicalTwilight
 	MorningNauticalTwilight
 	MorningCivilTwilight
@@ -32,7 +32,7 @@ const (
 	PostMeridiem
 )
 
-func (t PhaseOfDay) String() string {
+func (t SolarPhase) String() string {
 	switch t {
 	case Nighttime:
 		return "Nighttime"
@@ -66,7 +66,7 @@ func (t Meridiem) String() string {
 	}
 }
 
-func ComputePhaseOfDay(currentTime time.Time, lat, long float64) DayPhase {
+func ComputePhaseOfDay(currentTime time.Time, lat, long float64) PhaseOfDay {
 
 	observer := astral.Observer{
 		Latitude:  lat,
@@ -103,7 +103,7 @@ func ComputePhaseOfDay(currentTime time.Time, lat, long float64) DayPhase {
 	endNauticalTwilight, _ := astral.Dusk(observer, midnight, astral.DepressionNautical)
 	endAstronomicalTwilight, _ := astral.Dusk(observer, midnight, astral.DepressionAstronomical)
 
-	var phase PhaseOfDay
+	var phase SolarPhase
 
 	switch {
 	case currentTime.After(midnight) && currentTime.Before(startAstronomicalTwilight):
@@ -135,7 +135,7 @@ func ComputePhaseOfDay(currentTime time.Time, lat, long float64) DayPhase {
 	// fmt.Printf("Nautical twilight end %v\n", endNauticalTwilight.In(location))
 	// fmt.Printf("Astronomical twilight end, night start %v\n", endAstronomicalTwilight.In(location))
 	// fmt.Printf("Phase of the day for %v is %s\n", currentTime.In(location).Format("2006-01-02 15:04:05 MST"), phase)
-	return DayPhase{Phase: phase, Meridiem: meridiem}
+	return PhaseOfDay{SolarPhase: phase, Meridiem: meridiem}
 }
 
 func foo() {
@@ -146,6 +146,6 @@ func foo() {
 	for i := 0; i < 24*4; i++ {
 		currentHour := midnight.Add(time.Duration(i*15) * time.Minute)
 		timeOfDay := ComputePhaseOfDay(currentHour, 59, 18)
-		fmt.Printf("Phase of the day for %v is %s\n", currentHour.In(location).Format("2006-01-02 15:04:05 MST"), timeOfDay.Phase)
+		fmt.Printf("Phase of the day for %v is %s\n", currentHour.In(location).Format("2006-01-02 15:04:05 MST"), timeOfDay.SolarPhase)
 	}
 }

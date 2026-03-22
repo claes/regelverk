@@ -11,6 +11,21 @@ import (
 	routerosmqtt "github.com/claes/mqtt-bridges/routeros-mqtt/lib"
 )
 
+func processType[T any](ev MQTTEvent, topic string) (T, bool) {
+	var zero T
+
+	if ev.Topic != topic {
+		return zero, false
+	}
+
+	var result T
+	if err := json.Unmarshal(ev.Payload.([]byte), &result); err != nil {
+		slog.Error("Could not parse payload", "topic", ev.Topic, "error", err)
+		return zero, false
+	}
+	return result, true
+}
+
 func processJSON(ev MQTTEvent, topic, eventProperty string) (any, bool) {
 	if ev.Topic == topic {
 		m := parseJSONPayload(ev)
@@ -107,9 +122,9 @@ func (masterController *MasterController) registerEventCallbacks() {
 
 	masterController.registerEventCallback(masterController.createProcessEventFunc(
 		func(ev MQTTEvent) (any, bool) {
-			return processJSON(ev, "regelverk/ticker/timeofday", "phase")
+			return processType[PhaseOfDay](ev, "regelverk/ticker/phaseofday")
 		},
-		func(val any) (StateKey, bool) { return "nighttime", val.(PhaseOfDay) == Nighttime },
+		func(val any) (StateKey, bool) { return "nighttime", val.(SolarPhase) == Nighttime },
 		nil,
 	))
 
