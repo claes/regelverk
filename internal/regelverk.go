@@ -159,7 +159,6 @@ func runRegelverk(ctx context.Context, config Config, bridgeWrappers *[]BridgeWr
 		for tick := range time.Tick(1 * time.Minute) {
 			phaseOfDay := ComputePhaseOfDay(time.Now(), 59, 18)
 			phaseOfDayJson, err := json.Marshal(phaseOfDay)
-			slog.Info("Ticker tick", "tick", tick, "phaseOfDay", phaseOfDay)
 			if err != nil {
 				slog.Error("Error serializing phaseOfDay to JSON", "error", err)
 			} else {
