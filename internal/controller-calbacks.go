@@ -124,7 +124,7 @@ func (masterController *MasterController) registerEventCallbacks() {
 		func(ev MQTTEvent) (any, bool) {
 			return processType[PhaseOfDay](ev, "regelverk/ticker/phaseofday")
 		},
-		func(val any) (StateKey, bool) { return "nighttime", val.(SolarPhase) == Nighttime },
+		func(val any) (StateKey, bool) { return "nighttime", val.(PhaseOfDay).SolarPhase == Nighttime },
 		nil,
 	))
 
