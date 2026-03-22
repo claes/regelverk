@@ -157,13 +157,18 @@ func runRegelverk(ctx context.Context, config Config, bridgeWrappers *[]BridgeWr
 
 	go func() {
 		for tick := range time.Tick(1 * time.Minute) {
-			timeOfDay := ComputeTimeOfDay(time.Now(), 59, 18)
-			ev := MQTTEvent{
-				Timestamp: tick,
-				Topic:     "regelverk/ticker/timeofday",
-				Payload:   timeOfDay,
+			timeOfDay := ComputePhaseOfDay(time.Now(), 59, 18)
+			timeOfDayJson, err := json.Marshal(timeOfDay)
+			if err != nil {
+				slog.Error("Error serializing timeOfDay to JSON", "error", err)
+			} else {
+				ev := MQTTEvent{
+					Timestamp: tick,
+					Topic:     "regelverk/ticker/timeofday",
+					Payload:   timeOfDayJson,
+				}
+				masterController.ProcessEvent(masterController.mqttClient, ev)
 			}
-			masterController.ProcessEvent(masterController.mqttClient, ev)
 		}
 	}()
 

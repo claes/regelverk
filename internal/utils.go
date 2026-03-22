@@ -7,10 +7,17 @@ import (
 	"github.com/sj14/astral/pkg/astral"
 )
 
-type TimeOfDay int
+type DayPhase struct {
+	Phase    PhaseOfDay `json:"phase"`
+	Meridiem Meridiem   `json:"meridiem"`
+}
+
+type PhaseOfDay int
+
+type Meridiem int
 
 const (
-	Nighttime TimeOfDay = iota
+	Nighttime PhaseOfDay = iota
 	MorningAstronomicalTwilight
 	MorningNauticalTwilight
 	MorningCivilTwilight
@@ -20,7 +27,12 @@ const (
 	EveningAstronomcialTwilight
 )
 
-func (t TimeOfDay) String() string {
+const (
+	AnteMeridiem Meridiem = iota
+	PostMeridiem
+)
+
+func (t PhaseOfDay) String() string {
 	switch t {
 	case Nighttime:
 		return "Nighttime"
@@ -43,7 +55,18 @@ func (t TimeOfDay) String() string {
 	}
 }
 
-func ComputeTimeOfDay(currentTime time.Time, lat, long float64) TimeOfDay {
+func (t Meridiem) String() string {
+	switch t {
+	case AnteMeridiem:
+		return "AM"
+	case PostMeridiem:
+		return "PM"
+	default:
+		return "Unknown Meridieu"
+	}
+}
+
+func ComputePhaseOfDay(currentTime time.Time, lat, long float64) DayPhase {
 
 	observer := astral.Observer{
 		Latitude:  lat,
@@ -51,6 +74,14 @@ func ComputeTimeOfDay(currentTime time.Time, lat, long float64) TimeOfDay {
 		Elevation: 0.0,
 	}
 
+	var meridiem Meridiem
+	if currentTime.Before(astral.Noon(observer, currentTime)) {
+		meridiem = AnteMeridiem
+	} else {
+		meridiem = PostMeridiem
+	}
+
+	// TODO should we instead use Astral function here
 	location := currentTime.Location()
 	localMidnight := time.Date(
 		currentTime.Year(),
@@ -72,7 +103,8 @@ func ComputeTimeOfDay(currentTime time.Time, lat, long float64) TimeOfDay {
 	endNauticalTwilight, _ := astral.Dusk(observer, midnight, astral.DepressionNautical)
 	endAstronomicalTwilight, _ := astral.Dusk(observer, midnight, astral.DepressionAstronomical)
 
-	var phase TimeOfDay
+	var phase PhaseOfDay
+
 	switch {
 	case currentTime.After(midnight) && currentTime.Before(startAstronomicalTwilight):
 		phase = Nighttime
@@ -103,7 +135,7 @@ func ComputeTimeOfDay(currentTime time.Time, lat, long float64) TimeOfDay {
 	// fmt.Printf("Nautical twilight end %v\n", endNauticalTwilight.In(location))
 	// fmt.Printf("Astronomical twilight end, night start %v\n", endAstronomicalTwilight.In(location))
 	// fmt.Printf("Phase of the day for %v is %s\n", currentTime.In(location).Format("2006-01-02 15:04:05 MST"), phase)
-	return phase
+	return DayPhase{Phase: phase, Meridiem: meridiem}
 }
 
 func foo() {
@@ -113,7 +145,7 @@ func foo() {
 
 	for i := 0; i < 24*4; i++ {
 		currentHour := midnight.Add(time.Duration(i*15) * time.Minute)
-		timeOfDay := ComputeTimeOfDay(currentHour, 59, 18)
-		fmt.Printf("Phase of the day for %v is %s\n", currentHour.In(location).Format("2006-01-02 15:04:05 MST"), timeOfDay)
+		timeOfDay := ComputePhaseOfDay(currentHour, 59, 18)
+		fmt.Printf("Phase of the day for %v is %s\n", currentHour.In(location).Format("2006-01-02 15:04:05 MST"), timeOfDay.Phase)
 	}
 }

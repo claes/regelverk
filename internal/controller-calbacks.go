@@ -99,11 +99,19 @@ func (masterController *MasterController) registerEventCallbacks() {
 		}
 	})
 	// masterController.registerCallback(masterController.detectNighttime)
-	masterController.registerEventCallback(func(ev MQTTEvent) {
-		if ev.Topic == "regelverk/ticker/timeofday" {
-			masterController.stateValueMap.setState("nighttime", ev.Payload.(TimeOfDay) == Nighttime)
-		}
-	})
+	// masterController.registerEventCallback(func(ev MQTTEvent) {
+	// 	if ev.Topic == "regelverk/ticker/timeofday" {
+	// 		masterController.stateValueMap.setState("nighttime", ev.Payload.(PhaseOfDay) == Nighttime)
+	// 	}
+	// })
+
+	masterController.registerEventCallback(masterController.createProcessEventFunc(
+		func(ev MQTTEvent) (any, bool) {
+			return processJSON(ev, "regelverk/ticker/timeofday", "phase")
+		},
+		func(val any) (StateKey, bool) { return "nighttime", val.(PhaseOfDay) == Nighttime },
+		nil,
+	))
 
 	// Livingroom
 	masterController.registerEventCallback(masterController.createProcessEventFunc(

@@ -57,6 +57,24 @@ func (c *LivingroomWindowlampController) Initialize(masterController *MasterCont
 	return nil
 }
 
+func (c *LivingroomWindowlampController) createTriggers(ev MQTTEvent) []string {
+
+	phase, found := processJSON(ev, "regelverk/ticker/timeofday", "phase")
+	meridiem, found := processJSON(ev, "regelverk/ticker/timeofday", "meridiem")
+	if found {
+		if meridiem == PostMeridiem &&
+			(phase == Nighttime ||
+				phase == EveningAstronomcialTwilight ||
+				phase == EveningNauticalTwilight) {
+			return []string{"evening"}
+		} else {
+			return []string{"non-evening"}
+		}
+	}
+
+	return []string{"mqttEvent"}
+}
+
 func (c *LivingroomWindowlampController) turnOnLivingroomWindowlamp(_ context.Context, _ ...any) error {
 	c.addEventsToPublish(livingroomWindowlampOutput(true))
 	return nil
