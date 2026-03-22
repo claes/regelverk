@@ -49,17 +49,16 @@ func (c *LivingroomWindowlampController) Initialize(masterController *MasterCont
 
 	c.stateMachine.Configure(stateLivingroomWindowlampOn).
 		OnEntry(c.turnOnLivingroomWindowlamp).
-		Permit("evening", stateLivingroomWindowlampOff)
+		Permit("non-evening", stateLivingroomWindowlampOff)
 
 	c.stateMachine.Configure(stateLivingroomWindowlampOff).
 		OnEntry(c.turnOffLivingroomWindowlamp).
-		Permit("non-evening", stateLivingroomWindowlampOn)
+		Permit("evening", stateLivingroomWindowlampOn)
 	c.SetInitialized()
 	return nil
 }
 
 func (c *LivingroomWindowlampController) createTriggers(ev MQTTEvent) []string {
-
 	phaseOfDay, found := processType[PhaseOfDay](ev, "regelverk/ticker/phaseofday")
 	if found {
 		if phaseOfDay.Meridiem == PostMeridiem &&
