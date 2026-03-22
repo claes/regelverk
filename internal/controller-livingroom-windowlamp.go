@@ -27,6 +27,7 @@ type LivingroomWindowlampController struct {
 func (c *LivingroomWindowlampController) Initialize(masterController *MasterController) []MQTTPublish {
 	c.Name = "livingroom"
 	c.masterController = masterController
+	c.triggerFactory = c.createTriggers
 
 	var initialState livingroomWindowLamp
 	if masterController.stateValueMap.currentlyTrue("livingroomWindowlamp") {
@@ -48,11 +49,11 @@ func (c *LivingroomWindowlampController) Initialize(masterController *MasterCont
 
 	c.stateMachine.Configure(stateLivingroomWindowlampOn).
 		OnEntry(c.turnOnLivingroomWindowlamp).
-		Permit("mqttEvent", stateLivingroomWindowlampOff, c.masterController.guardTurnOffLivingroomWindowlamp)
+		Permit("evening", stateLivingroomWindowlampOff)
 
 	c.stateMachine.Configure(stateLivingroomWindowlampOff).
 		OnEntry(c.turnOffLivingroomWindowlamp).
-		Permit("mqttEvent", stateLivingroomWindowlampOn, c.masterController.guardTurnOnLivingroomWindowlamp)
+		Permit("non-evening", stateLivingroomWindowlampOn)
 	c.SetInitialized()
 	return nil
 }
@@ -71,7 +72,6 @@ func (c *LivingroomWindowlampController) createTriggers(ev MQTTEvent) []string {
 			return []string{"non-evening"}
 		}
 	}
-
 	return []string{"mqttEvent"}
 }
 
